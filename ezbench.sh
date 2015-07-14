@@ -33,7 +33,6 @@ do
 done
 
 # parse the options
-declare -a testsList
 function show_help {
     echo "    ezbench.sh -p <path_git_repo> -n <last n commits>"
     echo ""
@@ -147,7 +146,7 @@ do
     source $test_file || continue
     
     # Check that the user wants this test or not
-    if [ -n testsList ]; then
+    if [ -n "$testsList" ]; then
         if [[ "$testsList" != *"$test_name"* ]]; then
             continue
         fi
@@ -189,8 +188,9 @@ do
     for (( t=0; t<${#testNames[@]}; t++ ));
     do
         runFuncName=${testNames[$t]}_run
-        outTest=$($runFuncName $rounds 2> /dev/null)
-        fpsTest=$(echo $outTest | cut -d ' ' -f 1)
+        fpsTest=$($runFuncName $rounds 2> /dev/null)
+        statsTest=$(echo "$fpsTest" | $ezBenchDir/fps_stats.awk)
+        fpsTest=$(echo $statsTest | cut -d ' ' -f 1)
         if (( $(echo "${testPrevFps[$t]} == -1" | bc -l) ))
         then
                 testPrevFps[$t]=$fpsTest
@@ -198,7 +198,7 @@ do
         fpsDiff=$(echo "scale=3;100.0 - (${testPrevFps[$t]} * 100.0 / $fpsTest)" | bc)
         testPrevFps[$t]=$fpsTest
 
-        printf "	${testNames[$t]} : (diff = $fpsDiff%%) $outTest\n"
+        printf "	${testNames[$t]} : (diff = $fpsDiff%%) $statsTest\n"
     done
 
     printf "\n"
