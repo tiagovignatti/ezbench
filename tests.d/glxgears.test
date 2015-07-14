@@ -1,0 +1,9 @@
+test_name=glxgears
+test_exec_time=21
+
+glxgears_run() {
+    for (( c=0; c<$1; c++ ))
+    do
+        DISPLAY=:0 vblank_mode=0 timeout 21 glxgears 2> /dev/null | grep FPS | cut -d ' ' -f 7
+    done
+}
