@@ -165,10 +165,12 @@ do
     printf "$commit: $commitName\n"
     
     # Compile the commit and check for failure. If it failed, go to the next commit.
-    eval $makeCommand > $ezBenchDir/compile_log_${commit} 2>&1
+    date=`date +"%y-%m-%d-%T"`
+    compile_logs=$ezBenchDir/logs/${date}_compile_log_${commit}
+    eval $makeCommand > $compile_logs 2>&1
     if [ $? -ne 0 ]
     then
-        printf "    ERROR: Compilation failed, log saved in $ezBenchDir/compile_log_${commit}. Continue\n\n"
+        printf "    ERROR: Compilation failed, log saved in $compile_logs. Continue\n\n"
         git reset --hard HEAD~ > /dev/null 2> /dev/null
         continue
     fi
