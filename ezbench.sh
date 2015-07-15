@@ -13,6 +13,9 @@ lastNCommits=
 gitRepoDir=''
 ezBenchDir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
+# Default user options
+source "$ezBenchDir/test_options.sh"
+
 # initial cleanup
 rm $ezBenchDir/results 2> /dev/null > /dev/null
 mkdir $ezBenchDir/logs/ 2> /dev/null
