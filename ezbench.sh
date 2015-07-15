@@ -159,6 +159,9 @@ startTime=`date +%s`
 # Iterate through the commits
 for commit in $(git log --oneline --reverse -$lastNCommits | cut -d ' ' -f1)
 do
+    # Make sure we are in the right folder
+    cd $gitRepoDir
+
     # Select the commit of interest
     git reset --hard $commit > /dev/null
     commitName=$(git show HEAD | head -n 5 | tail -n 1 | cut -d ' ' -f 5-)
