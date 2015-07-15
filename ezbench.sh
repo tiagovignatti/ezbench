@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Thanks to stack overflow for writing most of this script! It has been tested with bash only!
+# Thanks to stack overflow for writing most of this script! It has been tested with bash and zsh only!
 # Author: Martin Peres <martin.peres@free.fr>
 
 #set -o xtrace
@@ -18,7 +18,7 @@ rm $ezBenchDir/results 2> /dev/null > /dev/null
 mkdir $ezBenchDir/logs/ 2> /dev/null
 
 # Generate the list of available tests
-declare -a availTests
+typeset -A availTests
 i=0
 for test_file in $ezBenchDir/tests.d/*.test
 do
@@ -83,26 +83,14 @@ done
 
 # Check that the list of wanted benchmarks is OK
 testsListOK=1
-function contains() {
-    local n=$#
-    local value=${!n}
-    for ((i=1;i < $#;i++)) {
-        if [ "${!i}" == "${value}" ]; then
-            echo "y"
-            return 0
-        fi
-    }
-    echo "n"
-    return 1
-}
 for test in $testsList
 do
-    if [ $(contains "${availTests[@]}" "$test") != "y" ]; then
+    if [[ ! " ${availTests[@]} " =~ " ${test} " ]]; then
         echo "The test '$test' does not exist."
         testsListOK=0
     fi
 done
-if [ $testsListOK == 0 ]; then
+if [[ $testsListOK == 0 ]]; then
     available_tests
     exit 1
 fi
@@ -113,11 +101,12 @@ exec 2>&1
 
 # function to call on exit
 function finish {
-    # to be executed on exit!
+    # to be executed on exit, possibly twice!
     git reset --hard $commit_head 2> /dev/null
     cp $ezBenchDir/results $ezBenchDir/logs/`date +"%y-%m-%d-%T"`_results
 }
 trap finish EXIT
+trap finish INT # Needed for zsh
 
 # Check the git repo
 cd $gitRepoDir
@@ -133,8 +122,8 @@ commit_head=$(git show HEAD | grep commit | cut -d ' ' -f 2)
 echo "Original commit = $commit_head"
 
 # Generate the actual list of tests
-declare -a testNames
-declare -a testPrevFps
+typeset -A testNames
+typeset -A testPrevFps
 i=0
 total_round_time=0
 printf "Tests that will be run: "
@@ -176,7 +165,7 @@ do
     printf "$commit: $commitName\n"
     
     # Compile the commit and check for failure. If it failed, go to the next commit.
-    $makeCommand > $ezBenchDir/compile_log_${commit} 2>&1
+    eval $makeCommand > $ezBenchDir/compile_log_${commit} 2>&1
     if [ $? -ne 0 ]
     then
         printf "    ERROR: Compilation failed, log saved in $ezBenchDir/compile_log_${commit}. Continue\n\n"
