@@ -1,1 +1,33 @@
+# Hooks
+#function ezbench_pre_hook() {
+
+#}
+#function ezbench_post_hook() {
+
+#}
+
+#function compile_pre_hook() {
+    # Accessible variables
+    # $commit     [RO]: SHA1 id of the current commit
+    # $commitName [RO]: Name of the commit
+#}
+#function compile_post_hook() {
+    # Accessible variables
+    # $commit     [RO]: SHA1 id of the current commit
+    # $commitName [RO]: Name of the commit
+#}
+
+#function <benchmark name>_run_pre_hook() {
+    # Accessible variables
+    # $commit     [RO]: SHA1 id of the current commit
+    # $commitName [RO]: Name of the commit
+#}
+#function <benchmark name>_run_post_hook() {
+    # Accessible variables
+    # $commit     [RO]: SHA1 id of the current commit
+    # $commitName [RO]: Name of the commit
+    # $fpsTest    [RW]: List of FPS values returned by the test
+#}
+
+# Benchmark parameters
 SYNMARK_FOLDER=/opt/SynMark2

@@ -107,6 +107,9 @@ function finish {
     # to be executed on exit, possibly twice!
     git reset --hard $commit_head 2> /dev/null
     cp $ezBenchDir/results $ezBenchDir/logs/`date +"%y-%m-%d-%T"`_results
+
+    # Execute the user-defined post hook
+    callIfDefined ezbench_post_hook
 }
 trap finish EXIT
 trap finish INT # Needed for zsh
@@ -159,6 +162,16 @@ secs=$(( ($total_round_time * $rounds + $avgBuildTime) * $lastNCommits))
 printf "Estimated run time: %02dh:%02dm:%02ds\n\n" $(($secs/3600)) $(($secs%3600/60)) $(($secs%60))
 startTime=`date +%s`
 
+# Execute the user-defined pre hook
+function callIfDefined() {
+    if [ "`type -t $1`" == 'function' ]; then
+        local funcName=$1
+        shift
+        $funcName $@
+    fi
+}
+callIfDefined ezbench_pre_hook
+
 # Iterate through the commits
 for commit in $(git log --oneline --reverse -$lastNCommits | cut -d ' ' -f1)
 do
@@ -169,7 +182,10 @@ do
     git reset --hard $commit > /dev/null
     commitName=$(git show HEAD | head -n 5 | tail -n 1 | cut -d ' ' -f 5-)
     printf "$commit: $commitName\n"
-    
+
+    # Call the user-defined pre-compile hook
+    callIfDefined compile_pre_hook
+
     # Compile the commit and check for failure. If it failed, go to the next commit.
     date=`date +"%y-%m-%d-%T"`
     compile_logs=$ezBenchDir/logs/${date}_compile_log_${commit}
@@ -181,12 +197,19 @@ do
         continue
     fi
 
+    # Call the user-defined post-compile hook
+    callIfDefined compile_post_hook
+
     # Iterate through the tests
     for (( t=0; t<${#testNames[@]}; t++ ));
     do
         # Run the benchmark
         runFuncName=${testNames[$t]}_run
+        preHookFuncName=${testNames[$t]}_run_pre_hook
+        postHookFuncName=${testNames[$t]}_run_post_hook
+        callIfDefined $preHookFuncName
         fpsTest=$($runFuncName $rounds 2> /dev/null)
+        callIfDefined $postHookFuncName
 
         # Save the raw data
         date=`date +"%y-%m-%d-%T"`
