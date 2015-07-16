@@ -1,0 +1,16 @@
+test_name=ue4-reflections
+test_exec_time=60
+
+# WARNING: Requires libframetime: https://github.com/clbr/libframetime
+
+ue4-reflections_run() {
+    cd "$UE4_REFLECTIONS_FOLDER" # Set this variable in test_options.sh
+
+    for (( c=0; c<$1; c++ ))
+    do
+        DISPLAY=:0 vblank_mode=0 LIBFRAMETIME_FILE=/tmp/frametime.log LD_PRELOAD=$LIBFRAMETIME64_SO taskset 1 timeout $test_exec_time ./ReflectionsSubway -NOSOUND -ResX=$UE4_WINDOW_SIZE_X -ResY=$UE4_WINDOW_SIZE_Y 2>&1 > /dev/null 
+    done
+
+    # read back the result, skip the first frames since they are the loading frames
+    cat /tmp/frametime.log | cut -d ' ' -f 2 | tail -n +10 | awk '{print 1000000/$0}'
+}

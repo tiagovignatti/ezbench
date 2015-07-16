@@ -29,5 +29,14 @@
     # $fpsTest    [RW]: List of FPS values returned by the test
 #}
 
+# Libraries options
+LIBFRAMETIME64_SO=/usr/lib/libframetime.so
+LIBFRAMETIME32_SO=/usr/lib32/libframetime.so
+
 # Benchmark parameters
 SYNMARK_FOLDER=/opt/SynMark2
+
+# UE4 Reflections Subway
+UE4_REFLECTIONS_FOLDER="/opt/Reflections Subway Demo/ReflectionsSubway/Binaries/Linux"
+UE4_WINDOW_SIZE_X=128
+UE4_WINDOW_SIZE_Y=80
