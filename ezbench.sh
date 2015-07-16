@@ -184,8 +184,17 @@ do
     # Iterate through the tests
     for (( t=0; t<${#testNames[@]}; t++ ));
     do
+        # Run the benchmark
         runFuncName=${testNames[$t]}_run
         fpsTest=$($runFuncName $rounds 2> /dev/null)
+
+        # Save the raw data
+        date=`date +"%y-%m-%d-%T"`
+        fps_logs=$ezBenchDir/logs/${date}_commit_${commit}_bench_${testNames[$t]}
+        echo "FPS of '${testNames[$t]}' using commit ${commit}" > $fps_logs
+        echo "$fpsTest" >> $fps_logs
+
+        # Process the data ourselves
         statsTest=$(echo "$fpsTest" | $ezBenchDir/fps_stats.awk)
         fpsTest=$(echo $statsTest | cut -d ' ' -f 1)
         if (( $(echo "${testPrevFps[$t]} == -1" | bc -l) ))
