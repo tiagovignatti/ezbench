@@ -8,7 +8,7 @@ ue4-reflections_run() {
 
     for (( c=0; c<$1; c++ ))
     do
-        DISPLAY=:0 vblank_mode=0 LIBFRAMETIME_FILE=/tmp/frametime.log LD_PRELOAD=$LIBFRAMETIME64_SO taskset 1 timeout $test_exec_time ./ReflectionsSubway -NOSOUND -ResX=$UE4_WINDOW_SIZE_X -ResY=$UE4_WINDOW_SIZE_Y 2>&1 > /dev/null 
+        DISPLAY=:0 vblank_mode=0 LIBFRAMETIME_FILE=/tmp/frametime.log LD_PRELOAD=$LIBFRAMETIME64_SO taskset 1 timeout $test_exec_time ./ReflectionsSubway -NOSOUND -ResX=$UE4_WINDOW_SIZE_X -ResY=$UE4_WINDOW_SIZE_Y > /dev/null 2>&1
     done
 
     # read back the result, skip the first frames since they are the loading frames
