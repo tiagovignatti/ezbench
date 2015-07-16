@@ -208,7 +208,7 @@ do
         preHookFuncName=${testNames[$t]}_run_pre_hook
         postHookFuncName=${testNames[$t]}_run_post_hook
         callIfDefined $preHookFuncName
-        fpsTest=$($runFuncName $rounds 2> /dev/null)
+        fpsTest=$($runFuncName $rounds)
         callIfDefined $postHookFuncName
 
         # Save the raw data
