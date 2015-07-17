@@ -17,7 +17,6 @@ ezBenchDir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 source "$ezBenchDir/test_options.sh"
 
 # initial cleanup
-rm $ezBenchDir/results 2> /dev/null > /dev/null
 mkdir $ezBenchDir/logs/ 2> /dev/null
 
 # Generate the list of available tests
@@ -99,14 +98,15 @@ if [[ $testsListOK == 0 ]]; then
 fi
 
 # redirect the output to both a log file and stdout
-exec > >(tee $ezBenchDir/results)
+logsFolder="$ezBenchDir/logs/$(date +"%y-%m-%d-%T")"
+mkdir $logsFolder || exit 1
+exec > >(tee $logsFolder/results)
 exec 2>&1
 
 # function to call on exit
 function finish {
     # to be executed on exit, possibly twice!
     git reset --hard $commit_head 2> /dev/null
-    cp $ezBenchDir/results $ezBenchDir/logs/`date +"%y-%m-%d-%T"`_results
 
     # Execute the user-defined post hook
     callIfDefined ezbench_post_hook
@@ -188,7 +188,7 @@ do
 
     # Compile the commit and check for failure. If it failed, go to the next commit.
     date=`date +"%y-%m-%d-%T"`
-    compile_logs=$ezBenchDir/logs/${date}_compile_log_${commit}
+    compile_logs=$logsFolder/${commit}_compile_log
     eval $makeCommand > $compile_logs 2>&1
     if [ $? -ne 0 ]
     then
@@ -213,7 +213,7 @@ do
 
         # Save the raw data
         date=`date +"%y-%m-%d-%T"`
-        fps_logs=$ezBenchDir/logs/${date}_commit_${commit}_bench_${testNames[$t]}
+        fps_logs=$logsFolder/${commit}_bench_${testNames[$t]}
         echo "FPS of '${testNames[$t]}' using commit ${commit}" > $fps_logs
         echo "$fpsTest" >> $fps_logs
 
