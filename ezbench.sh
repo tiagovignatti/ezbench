@@ -115,6 +115,11 @@ echo "Original commit = $commit_head"
 
 # Preserve any local modifications
 stash=`git stash create`
+if [ $? -ne 0 ]
+then
+    echo "ERROR: Unable to preserve dirty state in '$gitRepoDir'. Aborting..."
+    exit 1
+fi
 [ -n "$stash" ] && echo "Preserving work-in-progress"
 
 # function to call on exit
