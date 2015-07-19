@@ -103,18 +103,6 @@ mkdir $logsFolder || exit 1
 exec > >(tee $logsFolder/results)
 exec 2>&1
 
-# function to call on exit
-function finish {
-    # to be executed on exit, possibly twice!
-    git reset --hard $commit_head 2> /dev/null
-    [ -n "$stash" ] && git stash apply $stash > /dev/null
-
-    # Execute the user-defined post hook
-    callIfDefined ezbench_post_hook
-}
-trap finish EXIT
-trap finish INT # Needed for zsh
-
 # Check the git repo, saving then displaying the HEAD commit
 cd $gitRepoDir
 commit_head=$(git rev-parse HEAD 2>/dev/null)
@@ -128,6 +116,18 @@ echo "Original commit = $commit_head"
 # Preserve any local modifications
 stash=`git stash create`
 [ -n "$stash" ] && echo "Preserving work-in-progress"
+
+# function to call on exit
+function finish {
+    # to be executed on exit, possibly twice!
+    git reset --hard $commit_head 2> /dev/null
+    [ -n "$stash" ] && git stash apply $stash > /dev/null
+
+    # Execute the user-defined post hook
+    callIfDefined ezbench_post_hook
+}
+trap finish EXIT
+trap finish INT # Needed for zsh
 
 # Generate the actual list of tests
 typeset -A testNames
