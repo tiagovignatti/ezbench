@@ -1,6 +1,8 @@
 test_name=synmark-oglbatch7
 test_exec_time=15
 
+test -e "$SYNMARK_FOLDER/synmark2" || return 1
+
 unbuf="stdbuf -o L"
 
 synmark-oglbatch7_run() {

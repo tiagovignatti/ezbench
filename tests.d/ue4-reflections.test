@@ -3,6 +3,9 @@ test_exec_time=60
 
 # WARNING: Requires libframetime: https://github.com/clbr/libframetime
 
+test -e "$UE4_REFLECTIONS_FOLDER/ReflectionsSubway" || return 1
+test -e "$LIBFRAMETIME64_SO" || return 1
+
 ue4-reflections_run() {
     cd "$UE4_REFLECTIONS_FOLDER" # Set this variable in test_options.sh
 
