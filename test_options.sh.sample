@@ -40,3 +40,6 @@ SYNMARK_FOLDER=/opt/SynMark2
 UE4_REFLECTIONS_FOLDER="/opt/Reflections Subway Demo/ReflectionsSubway/Binaries/Linux"
 UE4_WINDOW_SIZE_X=128
 UE4_WINDOW_SIZE_Y=80
+#
+# Citybench settings
+CITYBENCH_FOLDER=/opt/replay_hbas_citybench

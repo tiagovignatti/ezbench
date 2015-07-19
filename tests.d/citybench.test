@@ -1,0 +1,16 @@
+test_name=citybench
+test_exec_time=60
+
+test -e "$CITYBENCH_FOLDER/linux_gl/replay_GL_64" || return 1
+
+unbuf="stdbuf -o L"
+
+citybench_run() {
+    cd "$CITYBENCH_FOLDER" # Set this variable in test_options.sh
+    cd linux_gl/
+
+    for (( c=0; c<$1; c++ ))
+    do
+        vblank_mode=0 taskset 1 $unbuf timeout $test_exec_time ./replay_GL_64 -f 1478
+    done | $unbuf grep fps | cut -d ' ' -f 1
+}
