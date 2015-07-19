@@ -1,11 +1,13 @@
 test_name=synmark-oglbatch7
 test_exec_time=15
 
+unbuf="stdbuf -o L"
+
 synmark-oglbatch7_run() {
     cd $SYNMARK_FOLDER # Set this variable in test_options.sh
 
     for (( c=0; c<$1; c++ ))
     do
-        ./synmark2 OglBatch7 2> /dev/null | grep FPS | cut -d ' ' -f 2
+        $unbuf ./synmark2 OglBatch7 2> /dev/null | grep FPS | cut -d ' ' -f 2
     done
 }
