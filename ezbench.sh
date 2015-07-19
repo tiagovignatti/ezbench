@@ -48,12 +48,12 @@ function show_help {
     echo "        -l: List the available tests"
 }
 function available_tests {
-    printf "Available tests: "
+    echo -n "Available tests: "
     for (( t=0; t<${#availTests[@]}; t++ ));
     do
-        printf "${availTests[$t]} "
+        echo -n "${availTests[$t]} "
     done
-    printf "\n"
+    echo
     
 }
 while getopts "h?p:n:r:b:m:l" opt; do
@@ -134,7 +134,7 @@ typeset -A testNames
 typeset -A testPrevFps
 i=0
 total_round_time=0
-printf "Tests that will be run: "
+echo -n "Tests that will be run: "
 for test_file in $ezBenchDir/tests.d/*.test
 do
     unset test_name
@@ -157,7 +157,7 @@ do
     total_round_time=$(( $total_round_time + $test_exec_time ))
     i=$(($i+1))
 done
-printf "\n"
+echo
 
 # Estimate the execution time
 num_commits=$lastNCommits
@@ -176,6 +176,17 @@ function callIfDefined() {
 }
 callIfDefined ezbench_pre_hook
 
+# ANSI colors
+c_bright_red='\e[1;31m'
+c_bright_green='\e[1;32m'
+c_bright_yellow='\e[1;33m'
+c_reset='\e[0m'
+
+bad_color=$c_bright_red
+good_color=$c_bright_green
+meh_color=$c_bright_yellow
+
+
 # Iterate through the commits
 for commit in $(git rev-list --abbrev-commit --reverse -n ${lastNCommits} HEAD) $stash
 do
@@ -187,7 +198,7 @@ do
     then
 	    git reset --hard $commit_head > /dev/null
 	    git stash apply $stash > /dev/null
-	    printf "WIP\n"
+            echo -e "${c_bright_yellow}WIP${c_reset}"
     else
 	    git reset --hard $commit > /dev/null
 	    git show --format="%Cblue%h%Creset %Cgreen%s%Creset" -s
@@ -201,7 +212,8 @@ do
     eval $makeCommand > $compile_logs 2>&1
     if [ $? -ne 0 ]
     then
-        printf "    ERROR: Compilation failed, log saved in $compile_logs. Continue\n\n"
+        echo "    ERROR: Compilation failed, log saved in $compile_logs"
+        echo
         git reset --hard HEAD~ > /dev/null 2> /dev/null
         continue
     fi
@@ -217,6 +229,7 @@ do
         error_logs=${fps_logs}.errors
 
         # Run the benchmark
+        printf "%28s: " ${testNames[$t]}
         runFuncName=${testNames[$t]}_run
         preHookFuncName=${testNames[$t]}_run_pre_hook
         postHookFuncName=${testNames[$t]}_run_post_hook
@@ -236,18 +249,23 @@ do
         # Process the data ourselves
         statsTest=$(echo "$fpsTest" | $ezBenchDir/fps_stats.awk)
         fpsTest=$(echo $statsTest | cut -d ' ' -f 1)
+        remStatsTest=$(echo $statsTest | cut -d ' ' -f 2-)
         if (( $(echo "${testPrevFps[$t]} == -1" | bc -l) ))
         then
                 testPrevFps[$t]=$fpsTest
         fi
         fpsDiff=$(echo "scale=3;($fpsTest * 100.0 / ${testPrevFps[$t]}) - 100" | bc)
         testPrevFps[$t]=$fpsTest
-
-        printf "	${testNames[$t]} : (diff = $fpsDiff%%) $statsTest\n"
+        if (( $(bc -l <<< "$fpsDiff < -1.5") == 1 )); then
+            color=$bad_color
+        elif (( $(bc -l <<< "$fpsDiff > 1.5") == 1 )); then
+            color=$good_color
+        else
+            color="$meh_color"
+        fi
+        printf "%9.2f ($color%+.2f%%$c_reset): %s\n" $fpsTest $fpsDiff "$remStatsTest"
     done
-
-    printf "\n"
-
+    echo
 done
 
 endTime=`date +%s`
