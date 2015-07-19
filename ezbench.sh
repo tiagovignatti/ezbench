@@ -139,6 +139,7 @@ typeset -A testNames
 typeset -A testPrevFps
 i=0
 total_round_time=0
+testPrevFps[-1]=-1
 echo -n "Tests that will be run: "
 for test_file in $ezBenchDir/tests.d/*.test
 do
@@ -185,6 +186,7 @@ callIfDefined ezbench_pre_hook
 c_bright_red='\e[1;31m'
 c_bright_green='\e[1;32m'
 c_bright_yellow='\e[1;33m'
+c_bright_white='\e[1;37m'
 c_reset='\e[0m'
 
 bad_color=$c_bright_red
@@ -269,7 +271,30 @@ do
             color="$meh_color"
         fi
         printf "%9.2f ($color%+.2f%%$c_reset): %s\n" $fpsTest $fpsDiff "$remStatsTest"
+        fpsALL="$fpsALL $fpsTest"
     done
+
+    # finish with the geometric mean (when we have multiple tests)
+    if [ $t -gt 1 ]; then
+        fpsALL=$(echo $fpsALL | awk '{ for (i=1; i <= NF; i++) { sum += 1/$i; n += 1 } } END { print n / sum }')
+        if (( $(echo "${testPrevFps[-1]} == -1" | bc -l) ))
+        then
+                testPrevFps[-1]=$fpsALL
+        fi
+        fpsDiff=$(echo "scale=3;($fpsALL * 100.0 / ${testPrevFps[-1]}) - 100" | bc)
+        testPrevFps[-1]=$fpsALL
+        if (( $(bc -l <<< "$fpsDiff < -1.5") == 1 )); then
+                color=$bad_color
+        elif (( $(bc -l <<< "$fpsDiff > 1.5") == 1 )); then
+                color=$good_color
+        else
+                color="$meh_color"
+        fi
+        printf "$c_bright_white%28s: %9.2f ($color%+.2f%%$c_bright_white)$c_reset\n"  \
+                "geometric mean" \
+                $fpsALL \
+                $fpsDiff
+    fi
     echo
 done
 
