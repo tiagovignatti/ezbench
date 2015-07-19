@@ -115,17 +115,14 @@ function finish {
 trap finish EXIT
 trap finish INT # Needed for zsh
 
-# Check the git repo
+# Check the git repo, saving then displaying the HEAD commit
 cd $gitRepoDir
-tmp=$(git log HEAD...HEAD~ 2> /dev/null > /dev/null)
+commit_head=$(git rev-parse HEAD 2>/dev/null)
 if [ $? -ne 0 ]
 then
-    printf "ERROR: The path '$gitRepoDir' does not contain a valid git repository. Aborting...\n"
+    echo "ERROR: The path '$gitRepoDir' does not contain a valid git repository. Aborting..."
     exit 1
 fi
-
-# Save and display the HEAD commit
-commit_head=$(git show HEAD | grep commit | cut -d ' ' -f 2)
 echo "Original commit = $commit_head"
 
 # Preserve any local modifications
@@ -180,7 +177,7 @@ function callIfDefined() {
 callIfDefined ezbench_pre_hook
 
 # Iterate through the commits
-for commit in $(git log --oneline --reverse -$lastNCommits | cut -d ' ' -f1) $stash
+for commit in $(git rev-list --abbrev-commit --reverse -n ${lastNCommits} HEAD) $stash
 do
     # Make sure we are in the right folder
     cd $gitRepoDir
