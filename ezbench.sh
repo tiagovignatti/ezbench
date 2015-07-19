@@ -163,7 +163,9 @@ done
 printf "\n"
 
 # Estimate the execution time
-secs=$(( ($total_round_time * $rounds + $avgBuildTime) * $lastNCommits))
+num_commits=$lastNCommits
+[ -n "$stash" ] && num_commits=$(($num_commits + 1))
+secs=$(( ($total_round_time * $rounds + $avgBuildTime) * $num_commits))
 printf "Estimated run time: %02dh:%02dm:%02ds\n\n" $(($secs/3600)) $(($secs%3600/60)) $(($secs%60))
 startTime=`date +%s`
 
@@ -178,14 +180,21 @@ function callIfDefined() {
 callIfDefined ezbench_pre_hook
 
 # Iterate through the commits
-for commit in $(git log --oneline --reverse -$lastNCommits | cut -d ' ' -f1)
+for commit in $(git log --oneline --reverse -$lastNCommits | cut -d ' ' -f1) $stash
 do
     # Make sure we are in the right folder
     cd $gitRepoDir
 
     # Select the commit of interest
-    git reset --hard $commit > /dev/null
-    git show --format="%Cblue%h%Creset %Cgreen%s%Creset" -s
+    if [ $commit == "$stash" ]
+    then
+	    git reset --hard $commit_head > /dev/null
+	    git stash apply $stash > /dev/null
+	    printf "WIP\n"
+    else
+	    git reset --hard $commit > /dev/null
+	    git show --format="%Cblue%h%Creset %Cgreen%s%Creset" -s
+    fi
 
     # Call the user-defined pre-compile hook
     callIfDefined compile_pre_hook
