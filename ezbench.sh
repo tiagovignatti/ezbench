@@ -180,8 +180,7 @@ do
 
     # Select the commit of interest
     git reset --hard $commit > /dev/null
-    commitName=$(git show HEAD | head -n 5 | tail -n 1 | cut -d ' ' -f 5-)
-    printf "$commit: $commitName\n"
+    git show --format="%Cblue%h%Creset %Cgreen%s%Creset" -s
 
     # Call the user-defined pre-compile hook
     callIfDefined compile_pre_hook
