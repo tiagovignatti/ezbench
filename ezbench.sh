@@ -229,7 +229,7 @@ do
         then
                 testPrevFps[$t]=$fpsTest
         fi
-        fpsDiff=$(echo "scale=3;100.0 - (${testPrevFps[$t]} * 100.0 / $fpsTest)" | bc)
+        fpsDiff=$(echo "scale=3;($fpsTest * 100.0 / ${testPrevFps[$t]}) - 100" | bc)
         testPrevFps[$t]=$fpsTest
 
         printf "	${testNames[$t]} : (diff = $fpsDiff%%) $statsTest\n"
