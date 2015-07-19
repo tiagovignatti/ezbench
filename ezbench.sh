@@ -107,6 +107,7 @@ exec 2>&1
 function finish {
     # to be executed on exit, possibly twice!
     git reset --hard $commit_head 2> /dev/null
+    [ -n "$stash" ] && git stash apply $stash > /dev/null
 
     # Execute the user-defined post hook
     callIfDefined ezbench_post_hook
@@ -126,6 +127,10 @@ fi
 # Save and display the HEAD commit
 commit_head=$(git show HEAD | grep commit | cut -d ' ' -f 2)
 echo "Original commit = $commit_head"
+
+# Preserve any local modifications
+stash=`git stash create`
+[ -n "$stash" ] && echo "Preserving work-in-progress"
 
 # Generate the actual list of tests
 typeset -A testNames
