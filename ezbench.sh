@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# Thanks to stack overflow for writing most of this script! It has been tested with bash and zsh only!
+# Thanks to stack overflow for writing most of this script! It has been tested
+# with bash and zsh only!
 # Author: Martin Peres <martin.peres@free.fr>
 
 #set -o xtrace
@@ -147,19 +148,19 @@ do
     unset test_exec_time
 
     source $test_file || continue
-    
+
     # Check that the user wants this test or not
     if [ -n "$testsList" ]; then
         if [[ "$testsList" != *"$test_name"* ]]; then
             continue
         fi
     fi
-    
+
     testNames[$i]=$test_name 
     testPrevFps[$i]=-1
-    
+
     echo -n "${testNames[$i]} "
-    
+
     total_round_time=$(( $total_round_time + $test_exec_time ))
     i=$(($i+1))
 done
@@ -203,12 +204,12 @@ do
     # Select the commit of interest
     if [ $commit == "$stash" ]
     then
-	    git reset --hard $commit_head > /dev/null
-	    git stash apply $stash > /dev/null
-            echo -e "${c_bright_yellow}WIP${c_reset}"
+        git reset --hard $commit_head > /dev/null
+        git stash apply $stash > /dev/null
+        echo -e "${c_bright_yellow}WIP${c_reset}"
     else
-	    git reset --hard $commit > /dev/null
-	    git show --format="%Cblue%h%Creset %Cgreen%s%Creset" -s
+        git reset --hard $commit > /dev/null
+        git show --format="%Cblue%h%Creset %Cgreen%s%Creset" -s
     fi
 
     # Call the user-defined pre-compile hook
@@ -259,7 +260,7 @@ do
         remStatsTest=$(echo $statsTest | cut -d ' ' -f 2-)
         if (( $(echo "${testPrevFps[$t]} == -1" | bc -l) ))
         then
-                testPrevFps[$t]=$fpsTest
+            testPrevFps[$t]=$fpsTest
         fi
         fpsDiff=$(echo "scale=3;($fpsTest * 100.0 / ${testPrevFps[$t]}) - 100" | bc)
         testPrevFps[$t]=$fpsTest
