@@ -195,10 +195,13 @@ bad_color=$c_bright_red
 good_color=$c_bright_green
 meh_color=$c_bright_yellow
 
+commitListLog="$logsFolder/commit_list"
 
 # Iterate through the commits
 for commit in $(git rev-list --abbrev-commit --reverse -n ${lastNCommits} HEAD) $stash
 do
+    # save the commit in the commit_list
+
     # Make sure we are in the right folder
     cd $gitRepoDir
 
@@ -208,9 +211,11 @@ do
         git reset --hard $commit_head > /dev/null
         git stash apply $stash > /dev/null
         echo -e "${c_bright_yellow}WIP${c_reset}"
+        echo "$commit" >> $commitListLog
     else
         git reset --hard $commit > /dev/null
         git show --format="%Cblue%h%Creset %Cgreen%s%Creset" -s
+        git show --format="%h %s" -s >> $commitListLog
     fi
 
     # Call the user-defined pre-compile hook
