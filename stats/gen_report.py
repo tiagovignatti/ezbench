@@ -10,6 +10,7 @@ import glob
 import csv
 import sys
 import os
+import re
 
 # constants
 html_name="index.html"
@@ -76,6 +77,10 @@ for commitLine in commitsLines:
     benchFiles = glob.glob("{sha1}_bench_*".format(sha1=commit.sha1));
     benchs_txt = ""
     for benchFile in benchFiles:
+        # Skip when the file is a run file (finishes by #XX)
+        if re.search(r'#\d+$', benchFile) is not None:
+            continue
+
         # Get the bench name
         bench_name = benchFile.replace("{sha1}_bench_".format(sha1=commit.sha1), "")
 

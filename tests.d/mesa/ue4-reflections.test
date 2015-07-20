@@ -9,13 +9,18 @@ test -e "$LIBFRAMETIME64_SO" || return 1
 ue4-reflections_run() {
     cd "$UE4_REFLECTIONS_FOLDER" # Set this variable in test_options.sh
 
-    rm /tmp/frametime.log 2> /dev/null
+    local resolution="-ResX=$UE4_WINDOW_SIZE_X -ResY=$UE4_WINDOW_SIZE_Y"
 
     for (( c=0; c<$1; c++ ))
     do
-        vblank_mode=0 LIBFRAMETIME_FILE=/tmp/frametime.log LD_PRELOAD=$LIBFRAMETIME64_SO taskset 1 timeout $test_exec_time ./ReflectionsSubway -NOSOUND -ResX=$UE4_WINDOW_SIZE_X -ResY=$UE4_WINDOW_SIZE_Y -BENCHMARK > /dev/null 2>&1
-    done
+        rm -f /tmp/frametime.log
 
-    # read back the result, skip the first frames since they are the loading frames
-    cat /tmp/frametime.log | cut -d ' ' -f 2 | tail -n +10 | awk '{print 1000000/$0}'
+        LIBFRAMETIME_FILE=/tmp/frametime.log LD_PRELOAD=$LIBFRAMETIME64_SO \
+        vblank_mode=0 $frametime taskset 1 timeout 60 \
+        ./ReflectionsSubway -NOSOUND -BENCHMARK $resolution > /dev/null
+
+        # read back the result, skip the first frames since they are the loading frames
+        cat /tmp/frametime.log | awk '{if (++n > 10) {print 1000000/$2}}' > $2#$c
+        awk '{sum=sum+$1} END {print sum/NR}' $2#$c
+    done
 }

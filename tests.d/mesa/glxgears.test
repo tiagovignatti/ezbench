@@ -3,11 +3,14 @@ test_exec_time=21
 
 which glxgears >/dev/null 2>&1 || return 1
 
-unbuf="stdbuf -oL"
-
 glxgears_run() {
+    local unbuf="stdbuf -oL"
+    local extract_fps="$unbuf cut -d ' '  -f7"
+
     for (( c=0; c<$1; c++ ))
     do
-        vblank_mode=0 $unbuf timeout 21 glxgears 2> /dev/null | grep FPS | cut -d ' ' -f 7
+        vblank_mode=0 $unbuf timeout 21 \
+        glxgears 2> /dev/null | eval $extract_fps > $2#$c
+        awk '{sum=sum+$1} END {print sum/NR}' $2#$c
     done
 }

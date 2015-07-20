@@ -254,12 +254,15 @@ do
         error_logs=${fps_logs}.errors
 
         # Run the benchmark
+        echo "FPS of '${testNames[$t]}' using commit ${commit}" > $fps_logs
         printf "%28s: " ${testNames[$t]}
+
         runFuncName=${testNames[$t]}_run
         preHookFuncName=${testNames[$t]}_run_pre_hook
         postHookFuncName=${testNames[$t]}_run_post_hook
+
         callIfDefined $preHookFuncName
-        fpsTest=$($runFuncName $rounds 2> $error_logs)
+        fpsTest=$($runFuncName $rounds $fps_logs 2>$error_logs)
         callIfDefined $postHookFuncName
 
         # delete the error file if it is empty
@@ -267,8 +270,6 @@ do
             rm $error_logs
         fi
 
-        # Save the raw data
-        echo "FPS of '${testNames[$t]}' using commit ${commit}" > $fps_logs
         echo "$fpsTest" >> $fps_logs
 
         # Process the data ourselves
