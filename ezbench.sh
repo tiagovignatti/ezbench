@@ -170,7 +170,8 @@ echo
 num_commits=$lastNCommits
 [ -n "$stash" ] && num_commits=$(($num_commits + 1))
 secs=$(( ($total_round_time * $rounds + $avgBuildTime) * $num_commits))
-printf "Estimated run time: %02dh:%02dm:%02ds\n\n" $(($secs/3600)) $(($secs%3600/60)) $(($secs%60))
+finishDate=$(date +"%y-%m-%d - %T" --date="$secs seconds")
+printf "Estimated finish date: $finishDate (%02dh:%02dm:%02ds)\n\n" $(($secs/3600)) $(($secs%3600/60)) $(($secs%60))
 startTime=`date +%s`
 
 # Execute the user-defined pre hook
