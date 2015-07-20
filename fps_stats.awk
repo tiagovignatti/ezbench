@@ -20,7 +20,11 @@ BEGIN {
 
 END {
 	avg = sum / NR
-	var= ((sum*sum) - sum2)/(NR-1)
+
+	if (NR > 1)
+            var= ((sum*sum) - sum2)/(NR-1)
+        else
+            var=0
 
 	qsort(array, 1, NR)
 
