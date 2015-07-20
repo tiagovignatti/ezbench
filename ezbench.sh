@@ -11,6 +11,7 @@ rounds=3
 avgBuildTime=30
 makeCommand="make -j8 install"
 lastNCommits=
+uptoCommit="HEAD"
 gitRepoDir=''
 ezBenchDir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
@@ -42,6 +43,7 @@ function show_help {
     echo "    Optional arguments:"
     echo "        -r <benchmarking rounds> (default: 3)"
     echo "        -b benchmark1 benchmark2 ..."
+    echo "        -H <git-commit-id> benchmark the commits preceeding this one"
     echo "        -m <make command> (default: 'make -j8 install')"
     echo ""
     echo "    Other actions:"
@@ -57,7 +59,7 @@ function available_tests {
     echo
     
 }
-while getopts "h?p:n:r:b:m:l" opt; do
+while getopts "h?p:n:H:r:b:m:l" opt; do
     case "$opt" in
     h|\?)
         show_help 
@@ -66,6 +68,8 @@ while getopts "h?p:n:r:b:m:l" opt; do
     p)  gitRepoDir=$OPTARG
         ;;
     n)  lastNCommits=$OPTARG
+        ;;
+    H)  uptoCommit=$OPTARG
         ;;
     r)  rounds=$OPTARG
         ;;
@@ -122,6 +126,7 @@ then
     exit 1
 fi
 [ -n "$stash" ] && echo "Preserving work-in-progress"
+[ "${uptoCommit}" == "HEAD" ] && do_stash=${stash}
 
 # function to call on exit
 function finish {
@@ -167,8 +172,8 @@ done
 echo
 
 # Estimate the execution time
-num_commits=$lastNCommits
-[ -n "$stash" ] && num_commits=$(($num_commits + 1))
+num_commits=$(git rev-list --abbrev-commit --reverse -n ${lastNCommits} ${uptoCommit} | wc -l)
+[ -n "${do_stash}" ] && num_commits=$(($num_commits + 1))
 secs=$(( ($total_round_time * $rounds + $avgBuildTime) * $num_commits))
 finishDate=$(date +"%y-%m-%d - %T" --date="$secs seconds")
 printf "Estimated finish date: $finishDate (%02dh:%02dm:%02ds)\n\n" $(($secs/3600)) $(($secs%3600/60)) $(($secs%60))
@@ -198,7 +203,7 @@ meh_color=$c_bright_yellow
 commitListLog="$logsFolder/commit_list"
 
 # Iterate through the commits
-for commit in $(git rev-list --abbrev-commit --reverse -n ${lastNCommits} HEAD) $stash
+for commit in $(git rev-list --abbrev-commit --reverse -n ${lastNCommits} ${uptoCommit}) ${do_stash}
 do
     # save the commit in the commit_list
 
