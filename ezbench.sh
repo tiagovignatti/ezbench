@@ -186,7 +186,6 @@ do
     callIfDefined compile_pre_hook
 
     # Compile the commit and check for failure. If it failed, go to the next commit.
-    date=`date +"%y-%m-%d-%T"`
     compile_logs=$logsFolder/${commit}_compile_log
     eval $makeCommand > $compile_logs 2>&1
     if [ $? -ne 0 ]
@@ -202,17 +201,24 @@ do
     # Iterate through the tests
     for (( t=0; t<${#testNames[@]}; t++ ));
     do
+        # Generate the logs file names
+        fps_logs=$logsFolder/${commit}_bench_${testNames[$t]}
+        error_logs=${fps_logs}.errors
+
         # Run the benchmark
         runFuncName=${testNames[$t]}_run
         preHookFuncName=${testNames[$t]}_run_pre_hook
         postHookFuncName=${testNames[$t]}_run_post_hook
         callIfDefined $preHookFuncName
-        fpsTest=$($runFuncName $rounds)
+        fpsTest=$($runFuncName $rounds 2> $error_logs)
         callIfDefined $postHookFuncName
 
+        # delete the error file if it is empty
+        if [ ! -s $error_logs ] ; then
+            rm $error_logs
+        fi
+
         # Save the raw data
-        date=`date +"%y-%m-%d-%T"`
-        fps_logs=$logsFolder/${commit}_bench_${testNames[$t]}
         echo "FPS of '${testNames[$t]}' using commit ${commit}" > $fps_logs
         echo "$fpsTest" >> $fps_logs
 
