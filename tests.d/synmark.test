@@ -6,6 +6,6 @@ synmark-oglbatch7_run() {
 
     for (( c=0; c<$1; c++ ))
     do
-        DISPLAY=:0 ./synmark2 OglBatch7 2> /dev/null | grep FPS | cut -d ' ' -f 2
+        ./synmark2 OglBatch7 2> /dev/null | grep FPS | cut -d ' ' -f 2
     done
 }
