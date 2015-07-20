@@ -269,11 +269,11 @@ do
         then
             testPrevFps[$t]=$fpsTest
         fi
-        fpsDiff=$(echo "scale=3;($fpsTest * 100.0 / ${testPrevFps[$t]}) - 100" | bc)
-        testPrevFps[$t]=$fpsTest
-        if (( $(bc -l <<< "$fpsDiff < -1.5") == 1 )); then
+        fpsDiff=$(echo "scale=3;($fpsTest * 100.0 / ${testPrevFps[$t]}) - 100" | bc 2>/dev/null)
+        [ $? -eq 0 ] && testPrevFps[$t]=$fpsTest
+        if (( $(bc -l <<< "$fpsDiff < -1.5" 2>/dev/null || echo 0) )); then
             color=$bad_color
-        elif (( $(bc -l <<< "$fpsDiff > 1.5") == 1 )); then
+        elif (( $(bc -l <<< "$fpsDiff > 1.5" 2>/dev/null || echo 0) )); then
             color=$good_color
         else
             color="$meh_color"
@@ -289,11 +289,11 @@ do
         then
                 testPrevFps[-1]=$fpsALL
         fi
-        fpsDiff=$(echo "scale=3;($fpsALL * 100.0 / ${testPrevFps[-1]}) - 100" | bc)
-        testPrevFps[-1]=$fpsALL
-        if (( $(bc -l <<< "$fpsDiff < -1.5") == 1 )); then
+        fpsDiff=$(echo "scale=3;($fpsALL * 100.0 / ${testPrevFps[-1]}) - 100" | bc 2>/dev/null)
+        [ $? -eq 0 ] && testPrevFps[-1]=$fpsALL
+        if (( $(bc -l <<< "$fpsDiff < -1.5" 2>/dev/null || echo 0) )); then
                 color=$bad_color
-        elif (( $(bc -l <<< "$fpsDiff > 1.5") == 1 )); then
+        elif (( $(bc -l <<< "$fpsDiff > 1.5" 2>/dev/null || echo 0) )); then
                 color=$good_color
         else
                 color="$meh_color"
