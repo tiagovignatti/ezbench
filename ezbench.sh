@@ -236,6 +236,7 @@ do
     callIfDefined compile_post_hook
 
     # Iterate through the tests
+    fpsALL=""
     for (( t=0; t<${#testNames[@]}; t++ ));
     do
         # Generate the logs file names
