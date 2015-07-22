@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 
+import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
+from scipy.stats import gaussian_kde
 from numpy import *
 import subprocess
 import argparse
@@ -74,8 +76,6 @@ for commitLine in commitsLines:
     for benchFile in benchFiles:
         # Get the bench name
         bench_name = benchFile.replace("{sha1}_bench_".format(sha1=commit.sha1), "")
-        if bench_name.endswith(".png"):
-            continue
 
         # Find the right Benchmark or create one if none are found
         try:
@@ -85,7 +85,7 @@ for commitLine in commitsLines:
             benchmarks.append(benchmark)
 
         # Create the result object
-        result = BenchResult(commit, benchmark, benchFile, report_folder + benchFile + ".png")
+        result = BenchResult(commit, benchmark, benchFile, report_folder + benchFile + ".svg")
 
         # Read the data
         with open(benchFile, 'rt') as f:
@@ -159,12 +159,36 @@ for i in range(len(benchmarks)):
 plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
            ncol=3, mode="expand", borderaxespad=0.)
 plt.savefig(report_folder + 'overview.svg', bbox_inches='tight')
+plt.close()
 
-# Generate the images (HACK, do that in python!)
+def kde_scipy(x, x_grid, bandwidth=0.2, **kwargs):
+    kde = gaussian_kde(x, bw_method=bandwidth, **kwargs)
+    return kde.evaluate(x_grid)
+
+# Generate the large images
 for commit in commits:
     for result in commit.results:
-        subprocess.call(['../../stats/test_report.R', result.data_raw_file, result.img_src_name])
+        f = plt.figure(figsize=(19.5, 2))
+        gs = gridspec.GridSpec(1, 2, width_ratios=[4, 1])
+        x = array(result.data)
+        ax1 = plt.subplot(gs[0])
+        plt.title("Time series across all the runs")
+        plt.xlabel('Run #')
+        plt.ylabel('FPS')
+        ax1.plot(x)
 
+        ax2 = plt.subplot(gs[1])
+        plt.title("FPS distribution")
+        plt.xlabel('FPS')
+        x_grid = linspace(amin(x) * 0.95, amax(x) * 1.05, 1000)
+        for bandwidth in [0.2]:
+            ax2.plot(x_grid, kde_scipy(x, x_grid, bandwidth=bandwidth),
+                    label='bw={0}'.format(bandwidth), linewidth=1, alpha=1)
+        ax2.hist(x, 100, fc='gray', histtype='stepfilled', alpha=0.3, normed=True, label='histogram')
+
+        plt.tight_layout()
+        plt.savefig(result.img_src_name, bbox_inches='tight')
+        plt.close()
 
 # Generate the report
 html_template="""
