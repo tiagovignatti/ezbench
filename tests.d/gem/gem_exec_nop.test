@@ -14,3 +14,7 @@ sudo -n true || return 1
 gem_exec_nop_run() {
     sudo $IGT_BENCHMARKS/gem_exec_nop -e 1 -r $1
 }
+
+gem_exec_nop_process() {
+    echo "${@: -1}"
+}

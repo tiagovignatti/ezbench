@@ -197,6 +197,8 @@ function callIfDefined() {
         local funcName=$1
         shift
         $funcName $@
+    else
+        return 1
     fi
 }
 callIfDefined ezbench_pre_hook
@@ -276,9 +278,10 @@ do
         runFuncName=${testNames[$t]}_run
         preHookFuncName=${testNames[$t]}_run_pre_hook
         postHookFuncName=${testNames[$t]}_run_post_hook
+        processHookFuncName=${testNames[$t]}_process
 
         callIfDefined $preHookFuncName
-        fpsTest=$($runFuncName $rounds $fps_logs 2>$error_logs)
+        output=$($runFuncName $rounds $fps_logs 2>$error_logs)
         callIfDefined $postHookFuncName
 
         # delete the error file if it is empty
@@ -286,18 +289,21 @@ do
             rm $error_logs
         fi
 
-        echo "$fpsTest" >> $fps_logs
+        echo "$output" >> $fps_logs
 
         # Process the data ourselves
-        statsTest=$(echo "$fpsTest" | $ezBenchDir/fps_stats.awk)
-        fpsTest=$(echo $statsTest | cut -d ' ' -f 1)
-        remStatsTest=$(echo $statsTest | cut -d ' ' -f 2-)
+        statistics=
+        result=$(callIfDefined $processHookFuncName "$output") || {
+            statistics=$(echo "$output" | $ezBenchDir/fps_stats.awk)
+            result=$(echo "$statistics" | cut -d ' ' -f 1)
+            statistics=$(echo "$statistics" | cut -d ' ' -f 2-)
+        }
         if (( $(echo "${testPrevFps[$t]} == -1" | bc -l) ))
         then
-            testPrevFps[$t]=$fpsTest
+            testPrevFps[$t]=$result
         fi
-        fpsDiff=$(echo "scale=3;($fpsTest * 100.0 / ${testPrevFps[$t]}) - 100" | bc 2>/dev/null)
-        [ $? -eq 0 ] && testPrevFps[$t]=$fpsTest
+        fpsDiff=$(echo "scale=3;($result * 100.0 / ${testPrevFps[$t]}) - 100" | bc 2>/dev/null)
+        [ $? -eq 0 ] && testPrevFps[$t]=$result
         if (( $(bc -l <<< "$fpsDiff < -1.5" 2>/dev/null || echo 0) )); then
             color=$bad_color
         elif (( $(bc -l <<< "$fpsDiff > 1.5" 2>/dev/null || echo 0) )); then
@@ -305,8 +311,8 @@ do
         else
             color="$meh_color"
         fi
-        printf "%9.2f ($color%+.2f%%$c_reset): %s\n" $fpsTest $fpsDiff "$remStatsTest"
-        fpsALL="$fpsALL $fpsTest"
+        printf "%9.2f ($color%+.2f%%$c_reset): %s\n" $result $fpsDiff "$statistics"
+        fpsALL="$fpsALL $result"
     done
 
     # finish with the geometric mean (when we have multiple tests)
