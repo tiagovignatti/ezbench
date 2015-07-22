@@ -62,6 +62,7 @@ if (len(commitsLines) == 0):
     sys.exit(2)
 
 # Gather all the information from the commits and generate the images
+print ("Reading the results for {0} commits".format(len(commitsLines)))
 commits_txt = ""
 table_entries_txt = ""
 for commitLine in commitsLines:
@@ -112,6 +113,13 @@ for commitLine in commitsLines:
 # Sort the list of benchmarks
 benchmarks = sorted(benchmarks, key=lambda bench: bench.full_name)
 
+# Create a folder for the results
+if not os.path.isdir(report_folder):
+    try:
+        os.mkdir(report_folder)
+    except OSError:
+        print ("Error while creating the report folder")
+
 def getResultsBenchmarkDiffs(benchmark):
     prevValue = -1
     results = []
@@ -136,14 +144,9 @@ def getResultsBenchmarkDiffs(benchmark):
 
     return results
 
-# Create a folder for the results
-try:
-    os.mkdir(report_folder)
-except OSError:
-    print ("Error while creating the report folder")
-
 # Generate the trend graph
-plt.figure(figsize=(15,3))
+print("Generating the trend graph")
+f = plt.figure(figsize=(17,3))
 plt.xlabel('Commit #')
 plt.ylabel('Perf. diff. with the prev. commit (%)')
 plt.grid(True)
@@ -166,6 +169,7 @@ def kde_scipy(x, x_grid, bandwidth=0.2, **kwargs):
     return kde.evaluate(x_grid)
 
 # Generate the large images
+print("Generating the runs' output image",end="",flush=True)
 for commit in commits:
     for result in commit.results:
         f = plt.figure(figsize=(19.5, 2))
@@ -189,6 +193,8 @@ for commit in commits:
         plt.tight_layout()
         plt.savefig(result.img_src_name, bbox_inches='tight')
         plt.close()
+        print('.',end="",flush=True)
+print(" DONE")
 
 # Generate the report
 html_template="""
@@ -247,11 +253,12 @@ commit_template="""
 bench_template="""
     <h4 id="commit_{sha1}_bench_{bench_name}">{bench_name}</h4>
 
-    <a href="{raw_data_file}">Original data</a>
+    <p><a href="{raw_data_file}">Original data</a></p>
 
     <img src="{img_src}" alt="Test's time series and density of probability" />"""
 
 # For all commits
+print("Generating the HTML")
 commits_txt = ""
 tbl_entries_txt = ""
 for commit in commits:
