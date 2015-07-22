@@ -49,7 +49,7 @@ function show_help {
     echo "        -r <benchmarking rounds> (default: 3)"
     echo "        -b benchmark1 benchmark2 ..."
     echo "        -H <git-commit-id> benchmark the commits preceeding this one"
-    echo "        -m <make command> (default: 'make -j8 install')"
+    echo "        -m <make command> (default: 'make -j8 install', '' to skip the compilation)"
     echo ""
     echo "    Other actions:"
     echo "        -h/?: Show this help message"
@@ -64,6 +64,7 @@ function available_tests {
     echo
     
 }
+no_compile=
 while getopts "h?p:n:H:r:b:m:l" opt; do
     case "$opt" in
     h|\?)
@@ -105,6 +106,12 @@ done
 if [[ $testsListOK == 0 ]]; then
     available_tests
     exit 1
+fi
+
+# Set the average compilation time to 0 when we are not compiling
+if [ -z "$makeCommand" ]
+then
+    avgBuildTime=0
 fi
 
 # redirect the output to both a log file and stdout
@@ -205,6 +212,30 @@ bad_color=$c_bright_red
 good_color=$c_bright_green
 meh_color=$c_bright_yellow
 
+function compile {
+    [ -z "$makeCommand" ] && return
+
+    compile_pre_hook
+
+    # Call the user-defined pre-compile hook
+    callIfDefined compile_pre_hook
+
+    # Compile the commit and check for failure. If it failed, go to the next commit.
+    compile_logs=$logsFolder/${commit}_compile_log
+    eval $makeCommand > $compile_logs 2>&1
+    if [ $? -ne 0 ]
+    then
+        echo "    ERROR: Compilation failed, log saved in $compile_logs"
+        echo
+        git reset --hard HEAD~ > /dev/null 2> /dev/null
+        continue
+    fi
+
+    # Call the user-defined post-compile hook
+    callIfDefined compile_post_hook
+
+}
+
 commitListLog="$logsFolder/commit_list"
 
 # Iterate through the commits
@@ -228,22 +259,7 @@ do
         git show --format="%h %s" -s >> $commitListLog
     fi
 
-    # Call the user-defined pre-compile hook
-    callIfDefined compile_pre_hook
-
-    # Compile the commit and check for failure. If it failed, go to the next commit.
-    compile_logs=$logsFolder/${commit}_compile_log
-    eval $makeCommand > $compile_logs 2>&1
-    if [ $? -ne 0 ]
-    then
-        echo "    ERROR: Compilation failed, log saved in $compile_logs"
-        echo
-        git reset --hard HEAD~ > /dev/null 2> /dev/null
-        continue
-    fi
-
-    # Call the user-defined post-compile hook
-    callIfDefined compile_post_hook
+    compile
 
     # Iterate through the tests
     fpsALL=""
