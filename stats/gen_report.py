@@ -21,11 +21,12 @@ class Benchmark:
         self.prevValue = -1
 
 class BenchResult:
-    def __init__(self, commit, benchmark, data_raw_file, img_src_name):
+    def __init__(self, commit, benchmark, data_raw_file, img_src_name, sparkline_img):
         self.commit = commit
         self.benchmark = benchmark
         self.data_raw_file = data_raw_file
         self.img_src_name = img_src_name
+        self.sparkline_img = sparkline_img
         self.data = []
 
 class Commit:
@@ -86,7 +87,9 @@ for commitLine in commitsLines:
             benchmarks.append(benchmark)
 
         # Create the result object
-        result = BenchResult(commit, benchmark, benchFile, report_folder + benchFile + ".svg")
+        result = BenchResult(commit, benchmark, benchFile,
+                             report_folder + benchFile + ".svg",
+                             report_folder + benchFile + ".spark.svg")
 
         # Read the data
         with open(benchFile, 'rt') as f:
@@ -168,6 +171,27 @@ def kde_scipy(x, x_grid, bandwidth=0.2, **kwargs):
     kde = gaussian_kde(x, bw_method=bandwidth, **kwargs)
     return kde.evaluate(x_grid)
 
+# Generate the spark lines
+print("Generating the sparklines",end="",flush=True)
+for commit in commits:
+    for result in commit.results:
+        fig, ax = plt.subplots(1,1,figsize=(1.25,.3))
+        plt.ylim(0, amax(result.data))
+        plt.plot(result.data, linewidth=0.8)
+
+        # remove all the axes
+        plt.axis('off')
+        for k,v in ax.spines.items():
+            v.set_visible(False)
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+        plt.savefig(result.sparkline_img, bbox_inches='tight', transparent=True)
+        plt.close()
+        print('.',end="",flush=True)
+print(" DONE")
+
+
 # Generate the large images
 print("Generating the runs' output image",end="",flush=True)
 for commit in commits:
@@ -242,7 +266,10 @@ table_commit_template="""
 
 table_entry_template="""
 <td bgcolor="{color}">
-    <a href="#commit_{sha1}_bench_{bench_name}">{value:.2f} ({diff:.2f} %)<a/>
+    <a href="#commit_{sha1}_bench_{bench_name}">
+        {value:.2f} ({diff:.2f} %)
+        <img src="{sparkline_img}" alt="Test's time series and density of probability" />
+    <a/>
 </td>"""
 
 commit_template="""
@@ -289,6 +316,7 @@ for commit in commits:
 
         tbl_res_benchmarks += table_entry_template.format(sha1=commit.sha1,
                                                           bench_name=result.benchmark.full_name,
+                                                          sparkline_img=result.sparkline_img,
                                                           value=value,
                                                           diff=diff,
                                                           color=color)
