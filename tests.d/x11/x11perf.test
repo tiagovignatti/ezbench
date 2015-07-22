@@ -1,0 +1,25 @@
+test_exec_time=10
+
+which x11perf >/dev/null 2>&1 || return 1
+xdpyinfo >/dev/null 2>&1 || return 1
+
+function __x11perf__ {
+    x11perf -time 10 -repeat $1 $2 | sed -e '/reps/!d; s#.*(\(.*\)/sec.*#\1#'
+}
+
+x11perf_help=$(x11perf --help 2>&1)
+for i in \
+    aa10text aa24text \
+    rgb10text rgb24text \
+    copywinwin10 copywinwin500  \
+    copywinpix10 copywinpix500 \
+    copypixwin10 copypixwin500 \
+    shmput10 shmput500 \
+    shmget10 shmget500 \
+    ;
+do
+    grep -q -w -e "-$i" <<< $x11perf_help || continue
+    test_name="$test_name x11:$i"
+    eval "x11:${i}_run() { __x11perf__ \$1 -$i; }"
+done
+unset x11perf_help
