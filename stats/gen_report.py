@@ -81,6 +81,10 @@ for commitLine in commitsLines:
         if re.search(r'#\d+$', benchFile) is not None:
             continue
 
+        # Skip on error files
+        if re.search(r'.errors$', benchFile) is not None:
+            continue
+
         # Get the bench name
         bench_name = benchFile.replace("{sha1}_bench_".format(sha1=commit.sha1), "")
 
