@@ -38,8 +38,10 @@ do
     source $test_file || continue
     if [ -z "$test_name" ]; then continue; fi
     if [ -z "$test_exec_time" ]; then continue; fi
-    availTests[$i]=$test_name
-    i=$(($i+1))
+    for t in $test_name; do
+        availTests[$i]=$t
+        i=$(($i+1))
+    done
 done
 
 # parse the options
@@ -169,7 +171,7 @@ trap finish INT # Needed for zsh
 # Generate the actual list of tests
 typeset -A testNames
 typeset -A testPrevFps
-i=0
+total_tests=0
 total_round_time=0
 testPrevFps[-1]=-1
 echo -n "Tests that will be run: "
@@ -180,20 +182,22 @@ do
 
     source $test_file || continue
 
-    # Check that the user wants this test or not
-    if [ -n "$testsList" ]; then
-        if [[ "$testsList" != *"$test_name"* ]]; then
-            continue
+    for t in $test_name; do
+        # Check that the user wants this test or not
+        if [ -n "$testsList" ]; then
+            if [[ "$testsList" != *"$t"* ]]; then
+                continue
+            fi
         fi
-    fi
 
-    testNames[$i]=$test_name 
-    testPrevFps[$i]=-1
+        testNames[$total_tests]=$t
+        testPrevFps[$total_tests]=-1
 
-    echo -n "${testNames[$i]} "
+        echo -n "${testNames[$total_tests]} "
 
-    total_round_time=$(( $total_round_time + $test_exec_time ))
-    i=$(($i+1))
+        total_round_time=$(( $total_round_time + $test_exec_time ))
+        total_tests=$(( $total_tests + 1))
+    done
 done
 echo
 
