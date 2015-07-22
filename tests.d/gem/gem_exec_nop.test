@@ -1,0 +1,16 @@
+test_name=gem_exec_nop
+test_exec_time=18
+
+# This outputs a graph of time(N), the time it takes to execute N empty batches.
+# e.g. 110 59 34 22 16 13 11 10 10 10 9 4 1.4 1.4 1.2 0.9 0.8
+#
+# Ideally we want to run this per ring,
+#	gem_exec_nop:rcs, gem_exec_nop:bcs, gem_exec_nop:vcs
+# though for the time being just one will suffice
+
+[ -e $IGT_BENCHMARKS/gem_exec_nop ] || return 1
+sudo -n true || return 1
+
+gem_exec_nop_run() {
+    sudo $IGT_BENCHMARKS/gem_exec_nop -e 1 -r $1
+}

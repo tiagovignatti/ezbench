@@ -43,3 +43,6 @@ UE4_WINDOW_SIZE_Y=80
 #
 # Citybench settings
 CITYBENCH_FOLDER=/opt/replay_hbas_citybench
+
+# intel-gpu-tools settings
+IGT_BENCHMARKS=/opt/intel-gpu-tools/benchmarks
