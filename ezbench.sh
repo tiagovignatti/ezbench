@@ -6,6 +6,11 @@
 
 #set -o xtrace
 
+shopt -s globstar || {
+    echo "ERROR: ezbench requires bash 4.0+ or zsh with globstat support."
+    exit 1
+}
+
 #Default values
 rounds=3
 avgBuildTime=30
@@ -24,7 +29,7 @@ mkdir $ezBenchDir/logs/ 2> /dev/null
 # Generate the list of available tests
 typeset -A availTests
 i=0
-for test_file in $ezBenchDir/tests.d/*.test
+for test_file in $ezBenchDir/tests.d/**/*.test
 do
     unset test_name
     unset test_exec_time
@@ -147,7 +152,7 @@ i=0
 total_round_time=0
 testPrevFps[-1]=-1
 echo -n "Tests that will be run: "
-for test_file in $ezBenchDir/tests.d/*.test
+for test_file in $ezBenchDir/tests.d/**/*.test
 do
     unset test_name
     unset test_exec_time
