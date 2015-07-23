@@ -1,0 +1,33 @@
+xdpyinfo >/dev/null 2>&1 || return 1
+
+function __dri2__ {
+    for (( c=0; c<$1; c++)); do
+        $XF86_VIDEO_INTEL/benchmarks/dri2-swap -d $2 -v $3 -w $4
+    done
+}
+
+function __dri3__ {
+    for (( c=0; c<$1; c++)); do
+        $XF86_VIDEO_INTEL/benchmarks/dri3-swap -d $2 -v $3 -w $4
+    done
+}
+
+methods=
+which $XF86_VIDEO_INTEL/benchmarks/dri2-swap >/dev/null 2>&1 && methods="$methods dri2"
+which $XF86_VIDEO_INTEL/benchmarks/dri3-swap >/dev/null 2>&1 && methods="$methods dri3"
+
+for m in $methods; do
+    for d in on off; do
+        name="x11:${m}:${d}:root"
+        eval "${name}_run() { __${m}__ \$1 $d normal root; }"
+        test_name="$test_name $name"
+        for w in fullscreen window; do
+            for v in redirected normal; do
+                name="x11:${m}:${d}:${w}:${v}"
+                eval "${name}_run() { __${m}__ \$1 $d $v $w; }"
+                test_name="$test_name $name"
+            done
+        done
+    done
+done
+test_exec_time=10
