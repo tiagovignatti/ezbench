@@ -204,9 +204,12 @@ print(" DONE")
 
 
 # Generate the large images
+plt.rcParams.update({'font.size': 9})
 print("Generating the runs' output image",end="",flush=True)
-for commit in commits:
-    for result in commit.results:
+for c in range (0, len(commits)):
+    commit = commits[c]
+    for r in range (0, len(commit.results)):
+        result = commit.results[r]
         f = plt.figure(figsize=(19.5, 2))
         gs = gridspec.GridSpec(1, 2, width_ratios=[4, 1])
         x = array(result.data)
@@ -214,7 +217,10 @@ for commit in commits:
         plt.title("Time series across all the runs")
         plt.xlabel('Run #')
         plt.ylabel('FPS')
-        ax1.plot(x)
+        ax1.plot(x, label="cur.")
+        if c > 0:
+            ax1.plot(commits[c - 1].results[r].data, label="prev.")
+        plt.legend()
 
         ax2 = plt.subplot(gs[1])
         plt.title("FPS distribution")
