@@ -1,0 +1,17 @@
+test -e "$SYNMARK_FOLDER/synmark2" || return 1
+
+function __synmark__ {
+    cd $SYNMARK_FOLDER # Set this variable in test_options.sh
+    local unbuf="stdbuf -o L"
+
+    for (( c=0; c<$1; c++ ))
+    do
+        $unbuf ./synmark2 $2 | grep FPS | cut -d ' ' -f 2
+    done
+}
+
+for i in $($SYNMARK_FOLDER/synmark2 | tail -n +8); do
+    test_name="$test_name synmark:$i"
+    eval "synmark:${i}_run() { __synmark__ \$1 $i; }"
+done
+test_exec_time=15
