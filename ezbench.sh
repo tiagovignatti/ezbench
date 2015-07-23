@@ -80,7 +80,7 @@ while getopts "h?p:n:H:r:b:m:l" opt; do
         ;;
     r)  rounds=$OPTARG
         ;;
-    b)  testsList=$OPTARG
+    b)  testsList="$testsList $OPTARG"
         ;;
     m)  makeCommand=$OPTARG
         ;;
