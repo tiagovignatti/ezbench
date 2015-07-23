@@ -11,20 +11,20 @@ BEGIN {
 		min = val
 	if (val > max)
 		max = val
-	sum += val
-	sum2 += val * val 
+
+	delta = val - mean
+	mean += delta / NR
+	v += delta * (val - mean)
 
 	# percentiles
 	array[NR] = val
 }
 
 END {
-	avg = sum / NR
-
 	if (NR > 1)
-            var= ((sum*sum) - sum2)/(NR-1)
+            v = v/(NR-1)
         else
-            var=0
+            v = 0
 
 	qsort(array, 1, NR)
 
@@ -33,7 +33,7 @@ END {
 	p95 = int(NR * 0.95)
 	p99 = int(NR * 0.99)
 
-	print avg " min/p50/90/95/99/max/std = " min " / " array[p50] " / " array[p90] " / " array[p95] " / " array[p99] " / " max " / " sqrt(var) " n=" NR
+	print mean " min/p50/90/95/99/max/std = " min " / " array[p50] " / " array[p90] " / " array[p95] " / " array[p99] " / " max " / " sqrt(v) " n=" NR
 }
 
 function qsort(A, left, right,   i, last) {
