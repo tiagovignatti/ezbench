@@ -1,4 +1,4 @@
-test_name=gem_exec_nop
+test_name=gem:exec:nop
 test_exec_time=18
 
 # This outputs a graph of time(N), the us it takes to execute N empty batches.
@@ -13,5 +13,5 @@ test_exec_time=18
 [ -e $IGT_BENCHMARKS/gem_exec_nop ] || return 1
 sudo -n true || return 1
 
-gem_exec_nop_run() { sudo $IGT_BENCHMARKS/gem_exec_nop -e 1 -r $1; }
-gem_exec_nop_process() { bc -l <<< "1000000 / ${@: -1}"; }
+gem:exec:nop_run() { sudo $IGT_BENCHMARKS/gem_exec_nop -e 1 -r $1; }
+gem:exec:nop_process() { bc -l <<< "1000000 / ${@: -1}"; }
