@@ -138,6 +138,7 @@ def getResultsBenchmarkDiffs(benchmark):
 
     # Compute a report per application
     i = 0
+    totalDiff = 0
     for commit in commits:
         for result in commit.results:
             if result.benchmark != benchmark:
@@ -151,7 +152,8 @@ def getResultsBenchmarkDiffs(benchmark):
                 diff = 0
             prevValue = value
 
-            results.append([i, diff])
+            totalDiff += diff
+            results.append([i, totalDiff])
         i = i + 1
 
     return results
