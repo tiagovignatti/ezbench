@@ -115,7 +115,7 @@ then
 fi
 
 # redirect the output to both a log file and stdout
-logsFolder="$ezBenchDir/logs/$(date +"%y-%m-%d-%T")"
+logsFolder="$ezBenchDir/logs/$(date +"%Y-%m-%d-%T")"
 mkdir $logsFolder || exit 1
 exec > >(tee $logsFolder/results)
 exec 2>&1
