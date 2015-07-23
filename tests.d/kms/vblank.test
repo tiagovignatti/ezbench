@@ -1,0 +1,12 @@
+[ -e $IGT_BENCHMARKS/kms_vblank ] || return 1
+sudo -n true || return 1
+
+for j in busy idle; do
+    for i in query event; do
+        name="kms:vblank:$i:$j"
+        test_name="$test_name $name"
+        eval "${name}_run() { sudo $IGT_BENCHMARKS/kms_vblank -w $i -b $j -r \$1; }"
+    done
+done
+
+test_exec_time=2
