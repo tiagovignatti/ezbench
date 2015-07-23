@@ -1,0 +1,69 @@
+GLB27=${GLBENCHMARK27_PATH:-${GLBENCHMARK27_FOLDER}/build_x86_64/binaries/GLBenchmark}
+GLB27_DATA=${GLBENCHMARK27_DATA:-${GLBENCHMARK27_FOLDER}/data}
+
+test -e ${GLB27} || return 1
+
+# Large versions, fullscreen with flipping (seems to be variable size)
+function __gl27fullscreen__ {
+    local W="${GLBENCHMARK27_WIDTH:-1920}"
+    local H="${GLBENCHMARK27_HEIGHT:-1080}"
+
+    read width height <<< $(xdpyinfo | sed '/dimensions/!d; s/.*dimensions:\(.*\)x\(.*\) pixels.*/\1 \2/')
+
+    for (( c=0; c<$1; c++ ))
+    do
+        ${GLB27} -data ${GLB27_DATA} -skip_load_frames \
+            -w $width -h $height -ow $W -oh $H -t $2 | \
+            sed '/fps/!d; s/.*(\(.*\) fps).*/\1/'
+    done
+}
+
+function __gl27window__ {
+    local W="${GLBENCHMARK27_WIDTH:-1920}"
+    local H="${GLBENCHMARK27_HEIGHT:-1080}"
+
+    read width height <<< $(xdpyinfo | sed '/dimensions/!d; s/.*dimensions:\(.*\)x\(.*\) pixels.*/\1 \2/')
+
+    for (( c=0; c<$1; c++ ))
+    do
+        ${GLB27} -data ${GLB27_DATA} -skip_load_frames \
+            -w $(( $width / 2 )) -h $(( $height / 2 )) -ow $W -oh $H -t $2 | \
+            sed '/fps/!d; s/.*(\(.*\) fps).*/\1/'
+    done
+}
+
+# Large versions, offscreen so no flip overhead?
+function __gl27offscreen__ {
+    local W="${GLBENCHMARK27_WIDTH:-1920}"
+    local H="${GLBENCHMARK27_HEIGHT:-1080}"
+
+    for (( c=0; c<$1; c++ ))
+    do
+        ${GLB27} -data ${GLB27_DATA} -skip_load_frames \
+            -w $W -h $H -ow $W -oh $H -t $2 | \
+            sed '/fps/!d; s/.*(\(.*\) fps).*/\1/'
+    done
+}
+
+# Small versions, to exercise CPU overheads
+function __gl27cpu__ {
+    for (( c=0; c<$1; c++ ))
+    do
+        ${GLB27} -data ${GLB27_DATA} -skip_load_frames \
+            -w 16 -h 16 -ow 16 -oh 16 -t $2 | \
+            sed '/fps/!d; s/.*(\(.*\) fps).*/\1/'
+    done
+}
+
+while read name benchmark; do
+   eval "${name}:fullscreen_run() { __gl27fullscreen__ \$1 $benchmark; }"
+   test_name="$test_name $name:fullscreen"
+   for i in window offscreen cpu; do
+       eval "${name}:${i}_run() { __gl27${i}__ \$1 ${benchmark}_Offscreen; }"
+       test_name="$test_name ${name}:${i}"
+   done
+done<<EOL
+        GLB27:Trex GLB27_TRex_C24Z16_FixedTimeStep
+        GLB27:Egypt GLB27_EgyptHD_inherited_C24Z16_FixedTime
+EOL
+test_exec_time=14

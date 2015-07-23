@@ -44,5 +44,10 @@ UE4_WINDOW_SIZE_Y=80
 # Citybench settings
 CITYBENCH_FOLDER=/opt/replay_hbas_citybench
 
+# GLBenchmark settings
+GLBENCHMARK27_FOLDER=/opt/benchmarks/glbenchmark2.7.0
+#GLBENCHMARK27_WIDTH=1920
+#GLBENCHMARK27_HEIGHT=1080
+
 # intel-gpu-tools settings
 IGT_BENCHMARKS=/opt/intel-gpu-tools/benchmarks
