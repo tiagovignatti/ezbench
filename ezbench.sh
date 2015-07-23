@@ -217,8 +217,6 @@ meh_color=$c_bright_yellow
 function compile {
     [ -z "$makeCommand" ] && return
 
-    compile_pre_hook
-
     # Call the user-defined pre-compile hook
     callIfDefined compile_pre_hook
 
