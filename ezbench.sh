@@ -235,6 +235,7 @@ startTime=`date +%s`
 callIfDefined ezbench_pre_hook
 
 # ANSI colors
+c_red='\e[31m'
 c_bright_red='\e[1;31m'
 c_bright_green='\e[1;32m'
 c_bright_yellow='\e[1;33m'
@@ -307,9 +308,15 @@ do
         postHookFuncName=${testNames[$t]}_run_post_hook
         processHookFuncName=${testNames[$t]}_process
 
+	unset ERROR
         callIfDefined $preHookFuncName
-        output=$($runFuncName $rounds $fps_logs 2>$error_logs)
+        output=$($runFuncName $rounds $fps_logs 2>$error_logs || ERROR=1)
         callIfDefined $postHookFuncName
+
+        if [ -n "$ERROR" -o -z "$output" ]; then
+            echo -e "${c_red}failed${c_reset}"
+            continue
+        fi
 
         # delete the error file if it is empty
         if [ ! -s $error_logs ] ; then
