@@ -27,23 +27,6 @@ source "$ezBenchDir/test_options.sh" # Allow test_options.sh to override all
 # initial cleanup
 mkdir $ezBenchDir/logs/ 2> /dev/null
 
-# Generate the list of available tests
-typeset -A availTests
-i=0
-for test_file in $ezBenchDir/tests.d/**/*.test
-do
-    unset test_name
-    unset test_exec_time
-
-    source $test_file || continue
-    if [ -z "$test_name" ]; then continue; fi
-    if [ -z "$test_exec_time" ]; then continue; fi
-    for t in $test_name; do
-        availTests[$i]=$t
-        i=$(($i+1))
-    done
-done
-
 # parse the options
 function show_help {
     echo "    ezbench.sh -p <path_git_repo> -n <last n commits>"
@@ -60,14 +43,33 @@ function show_help {
     echo "        -l: List the available tests"
 }
 function available_tests {
+    # Generate the list of available tests
     echo -n "Available tests: "
-    for (( t=0; t<${#availTests[@]}; t++ ));
+    for test_file in $ezBenchDir/tests.d/**/*.test
     do
-        echo -n "${availTests[$t]} "
+        unset test_name
+        unset test_exec_time
+
+        source $test_file || continue
+        [ -z "$test_name" ] && continue
+        [ -z "$test_exec_time" ] && continue
+        for t in $test_name; do
+            echo -n "$t "
+        done
     done
     echo
     
 }
+function callIfDefined() {
+    if [ "`type -t $1`" == 'function' ]; then
+        local funcName=$1
+        shift
+        $funcName $@
+    else
+        return 1
+    fi
+}
+
 no_compile=
 while getopts "h?p:n:N:H:r:b:m:l" opt; do
     case "$opt" in
@@ -110,20 +112,6 @@ for id in "$@"; do
     fi
     commitList+=" "
 done
-
-# Check that the list of wanted benchmarks is OK
-testsListOK=1
-for test in $testsList
-do
-    if [[ ! " ${availTests[@]} " =~ " ${test} " ]]; then
-        echo "The test '$test' does not exist."
-        testsListOK=0
-    fi
-done
-if [[ $testsListOK == 0 ]]; then
-    available_tests
-    exit 1
-fi
 
 # Set the average compilation time to 0 when we are not compiling
 if [ -z "$makeCommand" ]
@@ -171,6 +159,7 @@ trap finish INT # Needed for zsh
 # Generate the actual list of tests
 typeset -A testNames
 typeset -A testPrevFps
+typeset -A testFilter
 total_tests=0
 total_round_time=0
 testPrevFps[-1]=-1
@@ -185,9 +174,15 @@ do
     for t in $test_name; do
         # Check that the user wants this test or not
         if [ -n "$testsList" ]; then
-            if [[ "$testsList" != *"$t"* ]]; then
-                continue
-            fi
+            found=0
+            for filter in $testsList; do
+                if [[ $t =~ $filter ]]; then
+                    testFilter[$filter]=1
+                    found=1
+                    break
+                fi
+            done
+            [ $found -eq 0 ] && continue
         fi
 
         testNames[$total_tests]=$t
@@ -201,6 +196,18 @@ do
 done
 echo
 
+[ -z "$total_tests" ] && exit 1
+
+missing_tests=
+for t in $testsList; do
+    [ -z ${testFilter[$t]} ] && missing_tests+="$t "
+done
+if [ -n "$missing_tests" ]; then
+    echo "The tests \"${missing_tests:0:-1}\" do not exist"
+    available_tests
+    exit 1
+fi
+
 # Estimate the execution time
 if [ -z "$commitList" ]; then
     commitList=$(git rev-list --abbrev-commit --reverse -n ${lastNCommits} ${uptoCommit})
@@ -213,15 +220,6 @@ printf "Testing %d commits, estimated finish date: $finishDate (%02dh:%02dm:%02d
 startTime=`date +%s`
 
 # Execute the user-defined pre hook
-function callIfDefined() {
-    if [ "`type -t $1`" == 'function' ]; then
-        local funcName=$1
-        shift
-        $funcName $@
-    else
-        return 1
-    fi
-}
 callIfDefined ezbench_pre_hook
 
 # ANSI colors
