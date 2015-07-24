@@ -24,7 +24,10 @@ gitRepoDir=''
 ezBenchDir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
 # Default user options
-for conf in $ezBenchDir/conf.d/**/*.conf; do source $conf; done
+for conf in $ezBenchDir/conf.d/**/*.conf; do
+    [ "$conf" = "$ezBenchDir/conf.d/**/*.conf" ] && continue
+    source $conf
+done
 source "$ezBenchDir/test_options.sh" # Allow test_options.sh to override all
 
 # initial cleanup
