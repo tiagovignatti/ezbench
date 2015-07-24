@@ -29,6 +29,7 @@ class BenchResult:
         self.img_src_name = img_src_name
         self.sparkline_img = sparkline_img
         self.data = []
+        self.runs = []
 
 class Commit:
     def __init__(self, sha1, full_name, compile_log):
@@ -36,6 +37,23 @@ class Commit:
         self.full_name = full_name
         self.compile_log = compile_log
         self.results = []
+
+def readCsv(filepath):
+    data = []
+    with open(filepath, 'rt') as f:
+        if (csv.Sniffer().has_header(f.read(1024))):
+            f.seek(0)
+            next(f)
+        else:
+            f.seek(0)
+        reader = csv.reader(f)
+        try:
+            for row in reader:
+                data.append(float(row[0]))
+        except csv.Error as e:
+            sys.stderr.write('file %s, line %d: %s' % (filepath, reader.line_num, e))
+            sys.exit(3)
+    return data
 
 benchmarks = []
 commits = []
@@ -101,19 +119,12 @@ for commitLine in commitsLines:
                              report_folder + benchFile + ".spark.svg")
 
         # Read the data
-        with open(benchFile, 'rt') as f:
-            if (csv.Sniffer().has_header(f.read(1024))):
-                f.seek(0)
-                next(f)
-            else:
-                f.seek(0)
-            reader = csv.reader(f)
-            try:
-                for row in reader:
-                    result.data.append(float(row[0]))
-            except csv.Error as e:
-                sys.stderr.write('file %s, line %d: %s' % (benchFile, reader.line_num, e))
-                sys.exit(3)
+        result.data = readCsv(benchFile)
+
+        # Look for the runs
+        runsFiles = glob.glob("{benchFile}#*".format(benchFile=benchFile));
+        for runFile in runsFiles:
+            result.runs.append(readCsv(runFile))
 
         # Add the result to the commit's results
         commit.results.append(result)
@@ -210,8 +221,8 @@ for c in range (0, len(commits)):
     commit = commits[c]
     for r in range (0, len(commit.results)):
         result = commit.results[r]
-        f = plt.figure(figsize=(19.5, 2))
-        gs = gridspec.GridSpec(1, 2, width_ratios=[4, 1])
+        f = plt.figure(figsize=(19.5, 4))
+        gs = gridspec.GridSpec(2, 2, width_ratios=[4, 1])
         x = array(result.data)
         ax1 = plt.subplot(gs[0])
         plt.title("Time series across all the runs")
@@ -230,6 +241,16 @@ for c in range (0, len(commits)):
             ax2.plot(x_grid, kde_scipy(x, x_grid, bandwidth=bandwidth),
                     label='bw={0}'.format(bandwidth), linewidth=1, alpha=1)
         ax2.hist(x, 100, fc='gray', histtype='stepfilled', alpha=0.3, normed=True, label='histogram')
+
+        ax3 = plt.subplot(gs[2])
+        plt.title("Time series of the runs")
+        plt.xlabel('FPS sample')
+        plt.ylabel('FPS')
+
+        for i in range(0, len(result.runs)):
+            ax3.plot(result.runs[i], label="{0}".format(i))
+            plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+           ncol=25, mode="expand", borderaxespad=0.)
 
         plt.tight_layout()
         plt.savefig(result.img_src_name, bbox_inches='tight')
