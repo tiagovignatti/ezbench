@@ -52,7 +52,7 @@ function __gl27offscreen__ {
 function __gl27cpu__ {
     for (( c=0; c<$1; c++ ))
     do
-        ${GLB27} -data ${GLB27_DATA} -skip_load_frames \
+        INTEL_NO_HW=1 ${GLB27} -data ${GLB27_DATA} -skip_load_frames \
             -w 16 -h 16 -ow 16 -oh 16 -t $2 | \
             sed '/fps/!d; s#.*: \(.*\) msec.*#1000000 / \1#' | bc -l
     done
