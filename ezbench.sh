@@ -93,6 +93,17 @@ while getopts "h?p:n:H:r:b:m:l" opt; do
       ;;
     esac
 done
+shift $((OPTIND-1))
+
+commitList=
+for id in "$@"; do
+    if [[ $id =~ \.\. ]]; then
+        commitList+=$(git rev-list --abbrev-commit --reverse $id)
+    else
+        commitList+=$(git rev-list --abbrev-commit -n 1 `git rev-parse $id`)
+    fi
+    commitList+=" "
+done
 
 # Check that the list of wanted benchmarks is OK
 testsListOK=1
@@ -138,7 +149,6 @@ then
     exit 1
 fi
 [ -n "$stash" ] && echo "Preserving work-in-progress"
-[ "${uptoCommit}" == "HEAD" ] && do_stash=${stash}
 
 # function to call on exit
 function finish {
@@ -184,11 +194,14 @@ done
 echo
 
 # Estimate the execution time
-num_commits=$(git rev-list --abbrev-commit --reverse -n ${lastNCommits} ${uptoCommit} | wc -l)
-[ -n "${do_stash}" ] && num_commits=$(($num_commits + 1))
+if [ -z "$commitList" ]; then
+    commitList=$(git rev-list --abbrev-commit --reverse -n ${lastNCommits} ${uptoCommit})
+    [ "${uptoCommit}" == "HEAD" ] && commitList="${commitList} ${stash}"
+fi
+num_commits=$(wc -w <<< $commitList)
 secs=$(( ($total_round_time * $rounds + $avgBuildTime) * $num_commits))
 finishDate=$(date +"%y-%m-%d - %T" --date="$secs seconds")
-printf "Estimated finish date: $finishDate (%02dh:%02dm:%02ds)\n\n" $(($secs/3600)) $(($secs%3600/60)) $(($secs%60))
+printf "Testing %d commits, estimated finish date: $finishDate (%02dh:%02dm:%02ds)\n\n" ${num_commits} $(($secs/3600)) $(($secs%3600/60)) $(($secs%60))
 startTime=`date +%s`
 
 # Execute the user-defined pre hook
@@ -239,7 +252,7 @@ function compile {
 commitListLog="$logsFolder/commit_list"
 
 # Iterate through the commits
-for commit in $(git rev-list --abbrev-commit --reverse -n ${lastNCommits} ${uptoCommit}) ${do_stash}
+for commit in $commitList
 do
     # save the commit in the commit_list
 
