@@ -51,6 +51,7 @@ function show_help {
     echo "        -b benchmark1 benchmark2 ..."
     echo "        -H <git-commit-id> benchmark the commits preceeding this one"
     echo "        -m <make command> (default: 'make -j8 install', '' to skip the compilation)"
+    echo "        -N <log folder's name> (default: current date and time)"
     echo ""
     echo "    Other actions:"
     echo "        -h/?: Show this help message"
@@ -66,7 +67,7 @@ function available_tests {
     
 }
 no_compile=
-while getopts "h?p:n:H:r:b:m:l" opt; do
+while getopts "h?p:n:N:H:r:b:m:l" opt; do
     case "$opt" in
     h|\?)
         show_help 
@@ -75,6 +76,8 @@ while getopts "h?p:n:H:r:b:m:l" opt; do
     p)  gitRepoDir=$OPTARG
         ;;
     n)  lastNCommits=$OPTARG
+        ;;
+    N)  name=$OPTARG
         ;;
     H)  uptoCommit=$OPTARG
         ;;
@@ -127,9 +130,9 @@ then
 fi
 
 # redirect the output to both a log file and stdout
-logsFolder="$ezBenchDir/logs/$(date +"%Y-%m-%d-%T")"
-mkdir $logsFolder || exit 1
-exec > >(tee $logsFolder/results)
+logsFolder="$ezBenchDir/logs/${name:-$(date +"%Y-%m-%d-%T")}"
+[ -d $logsFolder ] || mkdir -p $logsFolder || exit 1
+exec > >(tee -a $logsFolder/results)
 exec 2>&1
 
 # Check the git repo, saving then displaying the HEAD commit
