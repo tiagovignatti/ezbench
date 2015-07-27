@@ -271,7 +271,11 @@ for c in range (0, len(commits)):
             plt.tight_layout()
             plt.savefig(result.img_src_name, bbox_inches='tight')
         except Exception as e:
-            print("Failed to generate {filename}: {error}".format(filename=result.img_src_name, error=str(e)))
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print("Failed to generate {filename}: {error} at {fname}:{line}".format(filename=result.img_src_name,
+                                                                                    error=str(e), fname=fname,
+                                                                                    line=exc_tb.tb_lineno))
         plt.close()
         print('.',end="",flush=True)
 print(" DONE")
