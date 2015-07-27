@@ -156,6 +156,7 @@ def getResultsBenchmarkDiffs(benchmark):
     i = 0
     origValue = -1
     for commit in commits:
+        resultFound = False
         for result in commit.results:
             if result.benchmark != benchmark:
                 continue
@@ -168,6 +169,10 @@ def getResultsBenchmarkDiffs(benchmark):
                 diff = 0
 
             results.append([i, diff])
+            resultFound = True
+
+        if not resultFound:
+            results.append([i, NaN])
         i = i + 1
 
     return results
