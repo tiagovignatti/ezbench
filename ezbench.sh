@@ -310,7 +310,7 @@ do
             color="$meh_color"
         fi
         printf "%9.2f ($color%+.2f%%$c_reset): %s\n" $result $fpsDiff "$statistics"
-        fpsALL="$fpsALL $result"
+        [ -z "$result" ] || fpsALL="$fpsALL $result"
     done
 
     # finish with the geometric mean (when we have multiple tests)
