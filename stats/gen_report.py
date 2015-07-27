@@ -270,6 +270,9 @@ html_template="""
 
     <head>
         <title>Performace report on the run named '{run_name}'</title>
+        <style>
+            body {{ font-size: 10pt}}
+        </style>
     </head>
 
     <body>
