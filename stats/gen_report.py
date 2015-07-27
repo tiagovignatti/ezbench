@@ -44,7 +44,12 @@ def readCsv(filepath):
     with open(filepath, 'rt') as f:
         reader = csv.reader(f)
         try:
-            if (csv.Sniffer().has_header(f.read(1024))):
+            hasSniffer = csv.Sniffer().has_header(f.read(1024))
+        except:
+            return []
+
+        try:
+            if hasSniffer:
                 f.seek(0)
                 next(f)
             else:
@@ -206,7 +211,9 @@ print("Generating the sparklines",end="",flush=True)
 for commit in commits:
     for result in commit.results:
         fig, ax = plt.subplots(1,1,figsize=(1.25,.3))
-        plt.ylim(0, amax(result.data))
+        r_max = amax(result.data)
+        if r_max > 0:
+            plt.ylim(0, r_max)
         plt.plot(result.data, linewidth=0.8)
 
         # remove all the axes
