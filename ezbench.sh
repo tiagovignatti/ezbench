@@ -156,6 +156,9 @@ function finish {
 trap finish EXIT
 trap finish INT # Needed for zsh
 
+# Execute the user-defined pre hook
+callIfDefined ezbench_pre_hook
+
 # Seed the results with the last round?
 commitListLog="$logsFolder/commit_list"
 last_commit=$(tail -1 $commitListLog 2>/dev/null | cut -f 1 -d ' ')
@@ -230,9 +233,6 @@ secs=$(( ($total_round_time * $rounds + $avgBuildTime) * $num_commits))
 finishDate=$(date +"%y-%m-%d - %T" --date="$secs seconds")
 printf "Testing %d commits, estimated finish date: $finishDate (%02dh:%02dm:%02ds)\n\n" ${num_commits} $(($secs/3600)) $(($secs%3600/60)) $(($secs%60))
 startTime=`date +%s`
-
-# Execute the user-defined pre hook
-callIfDefined ezbench_pre_hook
 
 # ANSI colors
 c_red='\e[31m'
