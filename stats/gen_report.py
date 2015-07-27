@@ -40,19 +40,21 @@ class Commit:
 
 def readCsv(filepath):
     data = []
+
     with open(filepath, 'rt') as f:
-        if (csv.Sniffer().has_header(f.read(1024))):
-            f.seek(0)
-            next(f)
-        else:
-            f.seek(0)
         reader = csv.reader(f)
         try:
+            if (csv.Sniffer().has_header(f.read(1024))):
+                f.seek(0)
+                next(f)
+            else:
+                f.seek(0)
             for row in reader:
-                data.append(float(row[0]))
+                if len(row) > 0:
+                    data.append(float(row[0]))
         except csv.Error as e:
-            sys.stderr.write('file %s, line %d: %s' % (filepath, reader.line_num, e))
-            sys.exit(3)
+            sys.stderr.write('file %s, line %d: %s\n' % (filepath, reader.line_num, e))
+            return []
     return data
 
 benchmarks = []
@@ -118,13 +120,17 @@ for commitLine in commitsLines:
                              report_folder + benchFile + ".svg",
                              report_folder + benchFile + ".spark.svg")
 
-        # Read the data
+        # Read the data and abort if there is no data
         result.data = readCsv(benchFile)
+        if len(result.data) == 0:
+            continue
 
         # Look for the runs
         runsFiles = glob.glob("{benchFile}#*".format(benchFile=benchFile));
         for runFile in runsFiles:
-            result.runs.append(readCsv(runFile))
+            data = readCsv(runFile)
+            if len(data) > 0:
+                result.runs.append(data)
 
         # Add the result to the commit's results
         commit.results.append(result)
