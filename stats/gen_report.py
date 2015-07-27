@@ -228,40 +228,43 @@ print("Generating the runs' output image",end="",flush=True)
 for c in range (0, len(commits)):
     commit = commits[c]
     for r in range (0, len(commit.results)):
-        result = commit.results[r]
-        f = plt.figure(figsize=(19.5, 4))
-        gs = gridspec.GridSpec(2, 2, width_ratios=[4, 1])
-        x = array(result.data)
-        ax1 = plt.subplot(gs[0])
-        plt.title("Time series across all the runs")
-        plt.xlabel('Run #')
-        plt.ylabel('FPS')
-        ax1.plot(x, label="cur.")
-        if c > 0:
-            ax1.plot(commits[c - 1].results[r].data, label="prev.")
-        plt.legend()
+        try:
+            result = commit.results[r]
+            f = plt.figure(figsize=(19.5, 4))
+            gs = gridspec.GridSpec(2, 2, width_ratios=[4, 1])
+            x = array(result.data)
+            ax1 = plt.subplot(gs[0])
+            plt.title("Time series across all the runs")
+            plt.xlabel('Run #')
+            plt.ylabel('FPS')
+            ax1.plot(x, label="cur.")
+            if c > 0:
+                ax1.plot(commits[c - 1].results[r].data, label="prev.")
+            plt.legend()
 
-        ax2 = plt.subplot(gs[1])
-        plt.title("FPS distribution")
-        plt.xlabel('FPS')
-        x_grid = linspace(amin(x) * 0.95, amax(x) * 1.05, 1000)
-        for bandwidth in [0.2]:
-            ax2.plot(x_grid, kde_scipy(x, x_grid, bandwidth=bandwidth),
-                    label='bw={0}'.format(bandwidth), linewidth=1, alpha=1)
-        ax2.hist(x, 100, fc='gray', histtype='stepfilled', alpha=0.3, normed=True, label='histogram')
+            ax2 = plt.subplot(gs[1])
+            plt.title("FPS distribution")
+            plt.xlabel('FPS')
+            x_grid = linspace(amin(x) * 0.95, amax(x) * 1.05, 1000)
+            for bandwidth in [0.2]:
+                ax2.plot(x_grid, kde_scipy(x, x_grid, bandwidth=bandwidth),
+                        label='bw={0}'.format(bandwidth), linewidth=1, alpha=1)
+            ax2.hist(x, 100, fc='gray', histtype='stepfilled', alpha=0.3, normed=True, label='histogram')
 
-        ax3 = plt.subplot(gs[2])
-        plt.title("Time series of the runs")
-        plt.xlabel('FPS sample')
-        plt.ylabel('FPS')
+            ax3 = plt.subplot(gs[2])
+            plt.title("Time series of the runs")
+            plt.xlabel('FPS sample')
+            plt.ylabel('FPS')
 
-        for i in range(0, len(result.runs)):
-            ax3.plot(result.runs[i], label="{0}".format(i))
-            plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
-           ncol=25, mode="expand", borderaxespad=0.)
+            for i in range(0, len(result.runs)):
+                ax3.plot(result.runs[i], label="{0}".format(i))
+                plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+            ncol=25, mode="expand", borderaxespad=0.)
 
-        plt.tight_layout()
-        plt.savefig(result.img_src_name, bbox_inches='tight')
+            plt.tight_layout()
+            plt.savefig(result.img_src_name, bbox_inches='tight')
+        except Exception as e:
+            print("Failed to generate {filename}: {error}".format(filename=result.img_src_name, error=str(e)))
         plt.close()
         print('.',end="",flush=True)
 print(" DONE")
