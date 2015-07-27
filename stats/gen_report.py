@@ -144,27 +144,24 @@ if not os.path.isdir(report_folder):
         print ("Error while creating the report folder")
 
 def getResultsBenchmarkDiffs(benchmark):
-    prevValue = -1
     results = []
 
     # Compute a report per application
     i = 0
-    totalDiff = 0
+    origValue = -1
     for commit in commits:
         for result in commit.results:
             if result.benchmark != benchmark:
                 continue
 
             value = array(result.data).mean()
-
-            if prevValue >= 0:
-                diff = (value * 100.0 / prevValue) - 100.0
+            if origValue > -1:
+                diff = (value * 100.0 / origValue) - 100.0
             else:
+                origValue = value
                 diff = 0
-            prevValue = value
 
-            totalDiff += diff
-            results.append([i, totalDiff])
+            results.append([i, diff])
         i = i + 1
 
     return results
