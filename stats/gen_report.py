@@ -181,7 +181,7 @@ def getResultsBenchmarkDiffs(benchmark):
 print("Generating the trend graph")
 f = plt.figure(figsize=(17,3))
 plt.xlabel('Commit #')
-plt.ylabel('Perf. diff. with the prev. commit (%)')
+plt.ylabel('Perf. diff. with the first commit (%)')
 plt.grid(True)
 for i in range(len(benchmarks)):
     data = getResultsBenchmarkDiffs(benchmarks[i])
