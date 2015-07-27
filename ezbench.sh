@@ -156,6 +156,10 @@ function finish {
 trap finish EXIT
 trap finish INT # Needed for zsh
 
+# Seed the results with the last round?
+commitListLog="$logsFolder/commit_list"
+last_commit=$(tail -1 $commitListLog 2>/dev/null | cut -f 1 -d ' ')
+
 # Generate the actual list of tests
 typeset -A testNames
 typeset -A testPrevFps
@@ -186,7 +190,14 @@ do
         fi
 
         testNames[$total_tests]=$t
-        testPrevFps[$total_tests]=-1
+
+        last_result="$logsFolder/${last_commit}_result_${t}"
+	if [ -e "$logsFolder/${last_commit}_result_${t}" ]; then
+            testPrevFps[$total_tests]=$(cat $last_result)
+	else
+            testPrevFps[$total_tests]=-1
+	fi
+        unset last_result
 
         echo -n "${testNames[$total_tests]} "
 
@@ -195,6 +206,7 @@ do
     done
 done
 echo
+unset last_commit
 
 [ -z "$total_tests" ] && exit 1
 
@@ -255,8 +267,6 @@ function compile {
 
 }
 
-commitListLog="$logsFolder/commit_list"
-
 # Iterate through the commits
 for commit in $commitList
 do
@@ -315,6 +325,7 @@ do
             result=$(echo "$statistics" | cut -d ' ' -f 1)
             statistics=$(echo "$statistics" | cut -d ' ' -f 2-)
         }
+        echo $result > $logsFolder/${commit}_result_${testNames[$t]}
         if (( $(echo "${testPrevFps[$t]} == -1" | bc -l) ))
         then
             testPrevFps[$t]=$result
