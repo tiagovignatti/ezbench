@@ -324,6 +324,8 @@ table_entry_template="""
     <a/>
 </td>"""
 
+table_entry_no_results_template="""<td bgcolor="#FFFF00"><center>NO DATA</center>"""
+
 commit_template="""
     <h3 id="commit_{sha1}">{commit}</h3>
     Here is the <a href="{compile_log}">compilation logs</a> and list of benchmarks found for commit {sha1}:
@@ -343,35 +345,44 @@ tbl_entries_txt = ""
 for commit in commits:
     benchs_txt = ""
     tbl_res_benchmarks = ""
-    for result in commit.results:
-        value = array(result.data).mean()
+    for benchmark in benchmarks:
+        result = None
+        for r in commit.results:
+            if r.benchmark == benchmark:
+                result = r
+                break
 
-        if result.benchmark.prevValue > 0:
-            diff = (value * 100.0 / result.benchmark.prevValue) - 100.0
+        if result != None:
+            value = array(result.data).mean()
+
+            if result.benchmark.prevValue > 0:
+                diff = (value * 100.0 / result.benchmark.prevValue) - 100.0
+            else:
+                diff = 0
+            result.benchmark.prevValue = value
+
+            if diff < -1.5:
+                color = "#FF0000"
+            elif diff > 1.5:
+                color = "#00FF00"
+            else:
+                color = "#FFFFFF"
+
+            # Generate the html
+            benchs_txt += bench_template.format(sha1=commit.sha1,
+                                                bench_name=result.benchmark.full_name,
+                                                img_src=result.img_src_name,
+                                                raw_data_file=result.data_raw_file)
+
+
+            tbl_res_benchmarks += table_entry_template.format(sha1=commit.sha1,
+                                                            bench_name=result.benchmark.full_name,
+                                                            sparkline_img=result.sparkline_img,
+                                                            value=value,
+                                                            diff=diff,
+                                                            color=color)
         else:
-            diff = 0
-        result.benchmark.prevValue = value
-
-        if diff < -1.5:
-            color = "#FF0000"
-        elif diff > 1.5:
-            color = "#00FF00"
-        else:
-            color = "#FFFFFF"
-
-        # Generate the html
-        benchs_txt += bench_template.format(sha1=commit.sha1,
-                                            bench_name=result.benchmark.full_name,
-                                            img_src=result.img_src_name,
-                                            raw_data_file=result.data_raw_file)
-
-
-        tbl_res_benchmarks += table_entry_template.format(sha1=commit.sha1,
-                                                          bench_name=result.benchmark.full_name,
-                                                          sparkline_img=result.sparkline_img,
-                                                          value=value,
-                                                          diff=diff,
-                                                          color=color)
+            tbl_res_benchmarks += table_entry_no_results_template
 
     # generate the html
     tbl_entries_txt += table_commit_template.format(sha1=commit.sha1, geom_mean=0,
