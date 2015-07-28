@@ -37,6 +37,26 @@ class Commit:
         self.full_name = full_name
         self.compile_log = compile_log
         self.results = []
+        self.geom_mean_cache = -1
+
+    def geom_mean(self):
+        if self.geom_mean_cache >= 0:
+            return self.geom_mean_cache
+
+        # compute the variance
+        s = 1
+        n = 0
+        for result in self.results:
+            if len(result.data) > 0:
+                s *= array(result.data).mean()
+                n = n + 1
+        if n > 0:
+            value = s ** (1 / n)
+        else:
+            value = 0
+
+        geom_mean_cache = value
+        return value
 
 def readCsv(filepath):
     data = []
@@ -182,12 +202,37 @@ def getResultsBenchmarkDiffs(benchmark):
 
     return results
 
+def getResultsGeomDiffs():
+    results = []
+
+    # Compute a report per application
+    i = 0
+    origValue = -1
+    for commit in commits:
+        value = commit.geom_mean()
+        if origValue > -1:
+            diff = (value * 100.0 / origValue) - 100.0
+        else:
+            origValue = value
+            diff = 0
+
+        results.append([i, diff])
+        i = i + 1
+
+    return results
+
 # Generate the trend graph
 print("Generating the trend graph")
 f = plt.figure(figsize=(17,3))
 plt.xlabel('Commit #')
 plt.ylabel('Perf. diff. with the first commit (%)')
 plt.grid(True)
+
+data = getResultsGeomDiffs()
+x_val = [x[0] for x in data]
+y_val = [x[1] for x in data]
+plt.plot(x_val, y_val, label="Geometric mean")
+
 for i in range(len(benchmarks)):
     data = getResultsBenchmarkDiffs(benchmarks[i])
 
@@ -198,7 +243,7 @@ for i in range(len(benchmarks)):
 
 #plt.xticks(range(len(x)), x_val, rotation='vertical')
 plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
-           ncol=3, mode="expand", borderaxespad=0.)
+           ncol=4, mode="expand", borderaxespad=0.)
 plt.savefig(report_folder + 'overview.svg', bbox_inches='tight')
 plt.close()
 
@@ -207,7 +252,7 @@ def kde_scipy(x, x_grid, bandwidth=0.2, **kwargs):
     return kde.evaluate(x_grid)
 
 # Generate the spark lines
-print("Generating the sparklines",end="",flush=True)
+"""print("Generating the sparklines",end="",flush=True)
 for commit in commits:
     for result in commit.results:
         fig, ax = plt.subplots(1,1,figsize=(1.25,.3))
@@ -278,7 +323,7 @@ for c in range (0, len(commits)):
                                                                                     line=exc_tb.tb_lineno))
         plt.close()
         print('.',end="",flush=True)
-print(" DONE")
+print(" DONE")"""
 
 # Generate the report
 html_template="""
@@ -322,7 +367,7 @@ html_template="""
 table_commit_template="""
             <tr>
                 <td><a href="#commit_{sha1}">{sha1}</a></td>
-                <td>{geom_mean}</td>
+                <td bgcolor="{geom_color}">{geom_mean:.2f} ({geom_diff:+.2f} %)</td>
                 {tbl_res_benchmarks}
             </tr>
 """
@@ -330,7 +375,7 @@ table_commit_template="""
 table_entry_template="""
 <td bgcolor="{color}">
     <a href="#commit_{sha1}_bench_{bench_name}">
-        {value:.2f} ({diff:.2f} %)
+        {value:.2f} ({diff:+.2f} %)
         <img src="{sparkline_img}" alt="Test's time series and density of probability" />
     <a/>
 </td>"""
@@ -349,10 +394,27 @@ bench_template="""
 
     <img src="{img_src}" alt="Test's time series and density of probability" />"""
 
+def computeDiffAndColor(prev, new):
+    if prev > 0:
+        diff = (new * 100.0 / prev) - 100.0
+    else:
+        diff = 0
+
+    if diff < -1.5:
+        color = "#FF0000"
+    elif diff > 1.5:
+        color = "#00FF00"
+    else:
+        color = "#FFFFFF"
+
+    return diff, color
+
+
 # For all commits
 print("Generating the HTML")
 commits_txt = ""
 tbl_entries_txt = ""
+geom_prev = -1
 for commit in commits:
     benchs_txt = ""
     tbl_res_benchmarks = ""
@@ -365,19 +427,8 @@ for commit in commits:
 
         if result != None:
             value = array(result.data).mean()
-
-            if result.benchmark.prevValue > 0:
-                diff = (value * 100.0 / result.benchmark.prevValue) - 100.0
-            else:
-                diff = 0
+            diff, color = computeDiffAndColor(result.benchmark.prevValue, value)
             result.benchmark.prevValue = value
-
-            if diff < -1.5:
-                color = "#FF0000"
-            elif diff > 1.5:
-                color = "#00FF00"
-            else:
-                color = "#FFFFFF"
 
             # Generate the html
             benchs_txt += bench_template.format(sha1=commit.sha1,
@@ -396,7 +447,10 @@ for commit in commits:
             tbl_res_benchmarks += table_entry_no_results_template
 
     # generate the html
-    tbl_entries_txt += table_commit_template.format(sha1=commit.sha1, geom_mean=0,
+    diff, color = computeDiffAndColor(geom_prev, commit.geom_mean())
+    geom_prev = commit.geom_mean()
+    tbl_entries_txt += table_commit_template.format(sha1=commit.sha1, geom_mean=commit.geom_mean(),
+                                                    geom_diff=diff, geom_color=color,
                                                    tbl_res_benchmarks=tbl_res_benchmarks)
     commits_txt += commit_template.format(commit=commit.full_name,
                                           sha1=commit.sha1,
