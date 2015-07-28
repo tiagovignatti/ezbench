@@ -12,7 +12,7 @@ shopt -s globstar || {
 }
 
 # Printf complains about floating point numbers having , as a delimiter otherwise
-LC_NUMERIC="en_US.UTF-8"
+LC_NUMERIC="C"
 
 #Default values
 rounds=3
