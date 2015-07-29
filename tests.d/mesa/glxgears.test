@@ -1,4 +1,4 @@
-test_name=glxgears
+test_name="glxgears glxgears16"
 test_exec_time=21
 
 which glxgears >/dev/null 2>&1 || return 1
@@ -12,5 +12,22 @@ glxgears_run() {
         vblank_mode=0 $unbuf taskset 1 timeout 21 \
         glxgears 2> /dev/null | eval $extract_fps > $2#$c
         awk '{sum=sum+$1} END {print sum/NR}' $2#$c
+    done
+}
+
+glxgears16_run() {
+    local unbuf="stdbuf -oL"
+    local extract_fps="$unbuf cut -d ' '  -f7"
+
+    for (( c=0; c<$1; c++ )); do
+        for (( n=0; n<15; n++ )); do
+            vblank_mode=0 timeout 25 glxgears >&/dev/null 2>/dev/null &
+        done
+
+        vblank_mode=0 $unbuf timeout 21 \
+        glxgears 2> /dev/null | eval $extract_fps > $2#$c
+        awk '{sum=sum+$1} END {print sum/NR}' $2#$c
+
+        sleep 5
     done
 }
