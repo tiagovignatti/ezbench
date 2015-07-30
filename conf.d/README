@@ -5,5 +5,7 @@ Use this directory for providing callback functions such as
 	ezbench_post_hook,
 	compile_pre_hook,
 	compile_post_hook,
+	benchmark_run_pre_hook,
+	benchmark_run_post_hook,
 	<benchmark name>_run_pre_hook,
 	<benchmark name>_run_post_hook.

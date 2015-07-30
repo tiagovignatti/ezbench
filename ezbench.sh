@@ -316,7 +316,9 @@ do
 
 	unset ERROR
         callIfDefined $preHookFuncName
+        callIfDefined benchmark_run_pre_hook
         output=$($runFuncName $rounds $fps_logs 2>$error_logs || ERROR=1)
+        callIfDefined benchmark_run_post_hook
         callIfDefined $postHookFuncName
 
         if [ -n "$ERROR" -o -z "$output" ]; then
