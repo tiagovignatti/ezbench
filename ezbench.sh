@@ -301,6 +301,8 @@ do
     fpsALL=""
     for (( t=0; t<${#testNames[@]}; t++ ));
     do
+        benchName=${testNames[$t]}
+
         # Generate the logs file names
         fps_logs=$logsFolder/${commit}_bench_${testNames[$t]}
         error_logs=${fps_logs}.errors
