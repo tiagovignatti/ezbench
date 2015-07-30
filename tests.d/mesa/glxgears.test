@@ -9,7 +9,7 @@ glxgears_run() {
 
     for (( c=0; c<$1; c++ ))
     do
-        vblank_mode=0 $unbuf timeout 21 \
+        vblank_mode=0 $unbuf taskset 1 timeout 21 \
         glxgears 2> /dev/null | eval $extract_fps > $2#$c
         awk '{sum=sum+$1} END {print sum/NR}' $2#$c
     done
