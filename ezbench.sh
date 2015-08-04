@@ -364,7 +364,7 @@ do
 
     # finish with the geometric mean (when we have multiple tests)
     if [ $t -gt 1 ]; then
-        fpsALL=$(echo $fpsALL | awk 'BEGIN {r = 1} { r *= $1; n += 1 } END { print r ** (1 / n) }')
+	fpsALL=$(awk '{r = 1; for(i=1; i<=NF; i++) { r *= $i } print exp(log(r) / NF) }' <<< $fpsALL)
         if (( $(echo "${testPrevFps[-1]} == -1" | bc -l) ))
         then
                 testPrevFps[-1]=$fpsALL
