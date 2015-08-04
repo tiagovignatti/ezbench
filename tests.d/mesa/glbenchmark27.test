@@ -3,6 +3,9 @@ GLB27_DATA=${GLBENCHMARK27_DATA:-${GLBENCHMARK27_FOLDER}/data}
 
 test -e ${GLB27} || return 1
 
+# Output:
+#    GLBenchmark 2.5 Egypt HD ETC1 - C24Z16 Onscreen Fixed timestep: 9340 msec (121 fps)
+
 # Large versions, fullscreen with flipping (seems to be variable size)
 function __gl27fullscreen__ {
     local W="${GLBENCHMARK27_WIDTH:-1920}"
@@ -14,7 +17,7 @@ function __gl27fullscreen__ {
     do
         ${GLB27} -data ${GLB27_DATA} -skip_load_frames \
             -w $width -h $height -ow $W -oh $H -t $2 | \
-            sed '/fps/!d; s/.*(\(.*\) fps).*/\1/'
+            sed '/fps/!d; s#.*: \(.*\) msec.*#1000000 / \1#' | bc -l
     done
 }
 
@@ -28,7 +31,7 @@ function __gl27window__ {
     do
         ${GLB27} -data ${GLB27_DATA} -skip_load_frames \
             -w $(( $width / 2 )) -h $(( $height / 2 )) -ow $W -oh $H -t $2 | \
-            sed '/fps/!d; s/.*(\(.*\) fps).*/\1/'
+            sed '/fps/!d; s#.*: \(.*\) msec.*#1000000 / \1#' | bc -l
     done
 }
 
@@ -41,7 +44,7 @@ function __gl27offscreen__ {
     do
         ${GLB27} -data ${GLB27_DATA} -skip_load_frames \
             -w $W -h $H -ow $W -oh $H -t $2 | \
-            sed '/fps/!d; s/.*(\(.*\) fps).*/\1/'
+            sed '/fps/!d; s#.*: \(.*\) msec.*#1000000 / \1#' | bc -l
     done
 }
 
@@ -51,7 +54,7 @@ function __gl27cpu__ {
     do
         ${GLB27} -data ${GLB27_DATA} -skip_load_frames \
             -w 16 -h 16 -ow 16 -oh 16 -t $2 | \
-            sed '/fps/!d; s/.*(\(.*\) fps).*/\1/'
+            sed '/fps/!d; s#.*: \(.*\) msec.*#1000000 / \1#' | bc -l
     done
 }
 
