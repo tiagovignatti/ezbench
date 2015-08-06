@@ -80,6 +80,12 @@ def readCsv(filepath):
         except csv.Error as e:
             sys.stderr.write('file %s, line %d: %s\n' % (filepath, reader.line_num, e))
             return []
+
+    # Convert to frametime if needed
+    if args.frametime:
+        for i in range(0, len(data)):
+            data[i] = 1000.0 / data[i]
+
     return data
 
 benchmarks = []
@@ -87,6 +93,8 @@ commits = []
 
 # parse the options
 parser = argparse.ArgumentParser()
+parser.add_argument("--frametime", help="Use frame times instead of FPS",
+                    action="store_true")
 parser.add_argument("log_folder")
 args = parser.parse_args()
 
@@ -188,7 +196,10 @@ def getResultsBenchmarkDiffs(benchmark):
 
             value = array(result.data).mean()
             if origValue > -1:
-                diff = (value * 100.0 / origValue) - 100.0
+                if args.frametime:
+                    diff = (origValue * 100.0 / value) - 100.0
+                else:
+                    diff = (value * 100.0 / origValue) - 100.0
             else:
                 origValue = value
                 diff = 0
@@ -211,7 +222,10 @@ def getResultsGeomDiffs():
     for commit in commits:
         value = commit.geom_mean()
         if origValue > -1:
-            diff = (value * 100.0 / origValue) - 100.0
+            if args.frametime:
+                diff = (origValue * 100.0 / value) - 100.0
+            else:
+                diff = (value * 100.0 / origValue) - 100.0
         else:
             origValue = value
             diff = 0
@@ -288,15 +302,22 @@ for c in range (0, len(commits)):
             ax1 = plt.subplot(gs[0])
             plt.title("Time series across all the runs")
             plt.xlabel('Run #')
-            plt.ylabel('FPS')
+            if args.frametime:
+                plt.ylabel('Frametime (ms)')
+            else:
+                plt.ylabel('FPS')
             ax1.plot(x, label="cur.")
             if c > 0:
                 ax1.plot(commits[c - 1].results[r].data, label="prev.")
             plt.legend()
 
             ax2 = plt.subplot(gs[1])
-            plt.title("FPS distribution")
-            plt.xlabel('FPS')
+            if args.frametime:
+                plt.title("Frametime distribution (ms)")
+                plt.ylabel('Frametime (ms)')
+            else:
+                plt.title("FPS distribution")
+                plt.ylabel('FPS')
             x_grid = linspace(amin(x) * 0.95, amax(x) * 1.05, 1000)
             for bandwidth in [0.2]:
                 ax2.plot(x_grid, kde_scipy(x, x_grid, bandwidth=bandwidth),
@@ -305,8 +326,12 @@ for c in range (0, len(commits)):
 
             ax3 = plt.subplot(gs[2])
             plt.title("Time series of the runs")
-            plt.xlabel('FPS sample')
-            plt.ylabel('FPS')
+            if args.frametime:
+                plt.xlabel('Frametime sample')
+                plt.ylabel('Frametime (ms)')
+            else:
+                plt.xlabel('FPS sample')
+                plt.ylabel('FPS')
 
             for i in range(0, len(result.runs)):
                 ax3.plot(result.runs[i], label="{0}".format(i))
@@ -396,11 +421,14 @@ bench_template="""
 
 def computeDiffAndColor(prev, new):
     if prev > 0:
-        diff = (new * 100.0 / prev) - 100.0
+        if args.frametime:
+            diff = (prev * 100.0 / new) - 100.0
+        else:
+            diff = (new * 100.0 / prev) - 100.0
     else:
         diff = 0
 
-    if diff < -1.5:
+    if diff < -1.5 or diff == float('inf'):
         color = "#FF0000"
     elif diff > 1.5:
         color = "#00FF00"
