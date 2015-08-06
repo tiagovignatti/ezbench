@@ -252,7 +252,7 @@ def kde_scipy(x, x_grid, bandwidth=0.2, **kwargs):
     return kde.evaluate(x_grid)
 
 # Generate the spark lines
-"""print("Generating the sparklines",end="",flush=True)
+print("Generating the sparklines",end="",flush=True)
 for commit in commits:
     for result in commit.results:
         fig, ax = plt.subplots(1,1,figsize=(1.25,.3))
@@ -323,7 +323,7 @@ for c in range (0, len(commits)):
                                                                                     line=exc_tb.tb_lineno))
         plt.close()
         print('.',end="",flush=True)
-print(" DONE")"""
+print(" DONE")
 
 # Generate the report
 html_template="""
