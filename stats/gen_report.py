@@ -335,8 +335,8 @@ for c in range (0, len(commits)):
 
             for i in range(0, len(result.runs)):
                 ax3.plot(result.runs[i], label="{0}".format(i))
-                plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
-            ncol=25, mode="expand", borderaxespad=0.)
+                if len(result.runs) <= 40:
+                    plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=20, mode="expand", borderaxespad=0.)
 
             plt.tight_layout()
             plt.savefig(result.img_src_name, bbox_inches='tight')
