@@ -358,7 +358,7 @@ html_template="""
 <html xmlns="http://www.w3.org/1999/xhtml">
 
     <head>
-        <title>Performace report on the run named '{run_name}'</title>
+        <title>Performance report on the run named '{run_name}'</title>
         <style>
             body {{ font-size: 10pt}}
         </style>
