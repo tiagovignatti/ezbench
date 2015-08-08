@@ -43,6 +43,7 @@ function show_help {
     echo "        -H <git-commit-id> benchmark the commits preceeding this one"
     echo "        -m <make command> (default: 'make -j8 install', '' to skip the compilation)"
     echo "        -N <log folder's name> (default: current date and time)"
+    echo "        -T <path> source the test definitions from this folder"
     echo ""
     echo "    Other actions:"
     echo "        -h/?: Show this help message"
@@ -51,16 +52,17 @@ function show_help {
 function available_tests {
     # Generate the list of available tests
     echo -n "Available tests: "
-    for test_file in $ezBenchDir/tests.d/**/*.test
-    do
-        unset test_name
-        unset test_exec_time
+    for test_dir in ${testsDir:-$ezBenchDir/tests.d}; do
+        for test_file in $test_dir/**/*.test; do
+            unset test_name
+            unset test_exec_time
 
-        source $test_file || continue
-        [ -z "$test_name" ] && continue
-        [ -z "$test_exec_time" ] && continue
-        for t in $test_name; do
-            echo -n "$t "
+            source $test_file || continue
+            [ -z "$test_name" ] && continue
+            [ -z "$test_exec_time" ] && continue
+            for t in $test_name; do
+                echo -n "$t "
+            done
         done
     done
     echo
@@ -77,7 +79,7 @@ function callIfDefined() {
 }
 
 no_compile=
-while getopts "h?p:n:N:H:r:b:m:l" opt; do
+while getopts "h?p:n:N:H:r:b:m:T:l" opt; do
     case "$opt" in
     h|\?)
         show_help 
@@ -96,6 +98,8 @@ while getopts "h?p:n:N:H:r:b:m:l" opt; do
     b)  testsList="$testsList $OPTARG"
         ;;
     m)  makeCommand=$OPTARG
+        ;;
+    T)  testsDir="$testsDir $OPTARG"
         ;;
     l)
         available_tests
@@ -177,41 +181,42 @@ total_tests=0
 total_round_time=0
 testPrevFps[-1]=-1
 echo -n "Tests that will be run: "
-for test_file in $ezBenchDir/tests.d/**/*.test
-do
-    unset test_name
-    unset test_exec_time
+for test_dir in ${testsDir:-$ezBenchDir/tests.d}; do
+    for test_file in $test_dir/**/*.test; do
+        unset test_name
+        unset test_exec_time
 
-    source $test_file || continue
+        source $test_file || continue
 
-    for t in $test_name; do
-        # Check that the user wants this test or not
-        if [ -n "$testsList" ]; then
-            found=0
-            for filter in $testsList; do
-                if [[ $t =~ $filter ]]; then
-                    testFilter[$filter]=1
-                    found=1
-                    break
-                fi
-            done
-            [ $found -eq 0 ] && continue
-        fi
+        for t in $test_name; do
+            # Check that the user wants this test or not
+            if [ -n "$testsList" ]; then
+                found=0
+                for filter in $testsList; do
+                    if [[ $t =~ $filter ]]; then
+                        testFilter[$filter]=1
+                        found=1
+                        break
+                    fi
+                done
+                [ $found -eq 0 ] && continue
+            fi
 
-        testNames[$total_tests]=$t
+            testNames[$total_tests]=$t
 
-        last_result="$logsFolder/${last_commit}_result_${t}"
-	if [ -e "$logsFolder/${last_commit}_result_${t}" ]; then
-            testPrevFps[$total_tests]=$(cat $last_result)
-	else
-            testPrevFps[$total_tests]=-1
-	fi
-        unset last_result
+            last_result="$logsFolder/${last_commit}_result_${t}"
+            if [ -e "$logsFolder/${last_commit}_result_${t}" ]; then
+                testPrevFps[$total_tests]=$(cat $last_result)
+            else
+                testPrevFps[$total_tests]=-1
+            fi
+            unset last_result
 
-        echo -n "${testNames[$total_tests]} "
+            echo -n "${testNames[$total_tests]} "
 
-        total_round_time=$(( $total_round_time + $test_exec_time ))
-        total_tests=$(( $total_tests + 1))
+            total_round_time=$(( $total_round_time + $test_exec_time ))
+            total_tests=$(( $total_tests + 1))
+        done
     done
 done
 echo
