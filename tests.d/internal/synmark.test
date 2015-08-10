@@ -10,8 +10,21 @@ function __synmark__ {
     done
 }
 
+function __cpu__ {
+    cd /tmp # just in case synmark likes emitting stray output files
+    local unbuf="stdbuf -o L"
+
+    for (( c=0; c<$1; c++ ))
+    do
+        INTEL_NO_HW=1 $unbuf $SYNMARK_FOLDER/synmark2 $2 | grep FPS | cut -d ' ' -f 2
+    done
+}
+
 for i in $($SYNMARK_FOLDER/synmark2 | tail -n +8); do
     test_name="$test_name synmark:$i"
     eval "synmark:${i}_run() { __synmark__ \$1 $i; }"
+
+    test_name="$test_name synmark:$i:cpu"
+    eval "synmark:${i}:cpu_run() { __cpu__ \$1 $i; }"
 done
 test_exec_time=15
