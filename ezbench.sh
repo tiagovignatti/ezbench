@@ -175,6 +175,7 @@ last_commit=$(tail -1 $commitListLog 2>/dev/null | cut -f 1 -d ' ')
 
 # Generate the actual list of tests
 typeset -A testNames
+typeset -A testInvert
 typeset -A testPrevFps
 typeset -A testFilter
 total_tests=0
@@ -184,6 +185,7 @@ echo -n "Tests that will be run: "
 for test_dir in ${testsDir:-$ezBenchDir/tests.d}; do
     for test_file in $test_dir/**/*.test; do
         unset test_name
+        unset test_invert
         unset test_exec_time
 
         source $test_file || continue
@@ -203,6 +205,7 @@ for test_dir in ${testsDir:-$ezBenchDir/tests.d}; do
             fi
 
             testNames[$total_tests]=$t
+	    testInvert[$total_tests]=$test_invert
 
             last_result="$logsFolder/${last_commit}_result_${t}"
             if [ -e "$logsFolder/${last_commit}_result_${t}" ]; then
@@ -354,7 +357,11 @@ do
         then
             testPrevFps[$t]=$result
         fi
-        fpsDiff=$(echo "scale=3;($result * 100.0 / ${testPrevFps[$t]}) - 100" | bc 2>/dev/null)
+	if [ -z "${testInvert[$t]}" ]; then
+	    fpsDiff=$(echo "scale=3;($result * 100.0 / ${testPrevFps[$t]}) - 100" | bc 2>/dev/null)
+	else
+	    fpsDiff=$(echo "scale=3;(100.0 * ${testPrevFps[$t]} / $result) - 100" | bc 2>/dev/null)
+	fi
         [ $? -eq 0 ] && testPrevFps[$t]=$result
         if (( $(bc -l <<< "$fpsDiff < -1.5" 2>/dev/null || echo 0) )); then
             color=$bad_color
