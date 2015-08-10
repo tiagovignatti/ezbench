@@ -1,4 +1,4 @@
-test_name="glxgears glxgears16"
+test_name="glxgears glxgears16 glxgears:cpu"
 test_exec_time=21
 
 which glxgears >/dev/null 2>&1 || return 1
@@ -13,6 +13,10 @@ glxgears_run() {
         glxgears 2> /dev/null | eval $extract_fps > $2#$c
         awk '{sum=sum+$1} END {print sum/NR}' $2#$c
     done
+}
+
+glxgears:cpu_run() {
+    INTEL_NO_HW=1 glxgears_run $1 $2
 }
 
 glxgears16_run() {
