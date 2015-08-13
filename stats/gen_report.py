@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+from matplotlib.patches import Rectangle
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
@@ -308,7 +309,12 @@ for c in range (0, len(commits)):
                 plt.ylabel('Frametime (ms)')
             else:
                 plt.ylabel('FPS')
+
+            YAvg = mean(x)
+            boxYMin = YAvg * 0.99
+            boxYMax = YAvg * 1.01
             ax1.plot(x, label="cur.")
+            ax1.add_patch(Rectangle((0, boxYMin), len(x), boxYMax - boxYMin, alpha=.2, facecolor="green", label="2% box"))
             if c > 0:
                 ax1.plot(commits[c - 1].results[r].data, label="prev.")
             plt.legend()
