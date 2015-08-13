@@ -32,10 +32,11 @@ class BenchResult:
         self.runs = []
 
 class Commit:
-    def __init__(self, sha1, full_name, compile_log):
+    def __init__(self, sha1, full_name, compile_log, patch):
         self.sha1 = sha1
         self.full_name = full_name
         self.compile_log = compile_log
+        self.patch = patch
         self.results = []
         self.geom_mean_cache = -1
 
@@ -124,7 +125,8 @@ for commitLine in commitsLines:
     full_name = commitLine.strip(' \t\n\r')
     sha1 = commitLine.split()[0]
     compile_log = sha1 + "_compile_log"
-    commit = Commit(sha1, full_name, compile_log)
+    patch = sha1 + ".patch"
+    commit = Commit(sha1, full_name, compile_log, patch)
 
     # find all the benchmarks
     benchFiles = glob.glob("{sha1}_bench_*".format(sha1=commit.sha1));
@@ -409,7 +411,7 @@ table_entry_no_results_template="""<td bgcolor="#FFFF00"><center>NO DATA</center
 
 commit_template="""
     <h3 id="commit_{sha1}">{commit}</h3>
-    <p>Here is the <a href="{compile_log}">compilation logs</a> and list of benchmarks found for commit {sha1}:</p>
+    <p><a href="{patch}">Patch</a> <a href="{compile_log}">Compilation logs</a></p>
     <table border="1" style="">
         <tr>
             <th>Commit SHA1</th>
@@ -502,7 +504,8 @@ for commit in commits:
                                           benchs=benchs_txt,
                                           compile_log=commit.compile_log,
                                           tbl_hdr_benchmarks=tbl_hdr_benchmarks,
-                                          commit_results=commit_results)
+                                          commit_results=commit_results,
+                                          patch=commit.patch)
 
 # Generate the final html file
 html = html_template.format(run_name=args.log_folder,
