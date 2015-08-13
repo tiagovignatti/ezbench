@@ -1,0 +1,17 @@
+xdpyinfo >/dev/null 2>&1 || return 1
+
+# fish: 99.999 fps
+
+function __xlib__ {
+    for (( c=0; c<$1; c++ )); do
+        $CAIRO_DEMOS/$2-demo --benchmark --xlib | sed -e '/fps/!d; s/.*: \(.*\) fps.*/\1/'
+    done
+}
+
+for i in $CAIRO_DEMOS/*-demo; do
+    demo=$(basename $i -demo)
+    name="x11:cairo:demo:$demo"
+    test_name="$test_name $name"
+    eval "${name}_run() { __xlib__ \$1 $demo; }"
+done
+test_exec_time=20

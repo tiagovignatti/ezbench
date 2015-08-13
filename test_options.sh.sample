@@ -56,5 +56,8 @@ GLBENCHMARK27_FOLDER=/opt/benchmarks/glbenchmark2.7.0
 IGT_BENCHMARKS=/opt/intel-gpu-tools/benchmarks
 IGT_TRACES=/opt/intel-gpu-tools/traces
 
+# cairo-demos settings
+CAIRO_DEMOS=/opt/benchmarks/cairo-demos
+
 # xf86-video-intel setting
 XF86_VIDEO_INTEL=/opt/benchmarks/xf86-video-intel
