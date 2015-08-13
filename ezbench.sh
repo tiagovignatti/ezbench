@@ -289,10 +289,12 @@ do
         git stash apply $stash > /dev/null
         echo -e "${c_bright_yellow}WIP${c_reset}"
         echo "$commit" >> $commitListLog
+        git diff > $logsFolder/${commit}.patch
     else
         git reset --hard $commit > /dev/null
         git show --format="%Cblue%h%Creset %Cgreen%s%Creset" -s
         git show --format="%h %s" -s >> $commitListLog
+        git format-patch HEAD~ --stdout > $logsFolder/${commit}.patch
     fi
 
     compile
