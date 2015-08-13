@@ -383,6 +383,7 @@ html_template="""
 
         <table border="1" style="">
             <tr>
+                <th>Commit #</th>
                 <th>Commit SHA1</th>
                 <th>Geometric mean</th>
                 {tbl_hdr_benchmarks}
@@ -399,6 +400,7 @@ html_template="""
 
 table_commit_template="""
             <tr>
+                <td>{commitNum}</td>
                 <td><a href="#commit_{sha1}">{sha1}</a></td>
                 <td bgcolor="{geom_color}">{geom_mean:.2f} ({geom_diff:+.2f} %)</td>
                 {tbl_res_benchmarks}
@@ -420,6 +422,7 @@ commit_template="""
     <p><a href="{patch}">Patch</a> <a href="{compile_log}">Compilation logs</a></p>
     <table border="1" style="">
         <tr>
+            <th>Commit #</th>
             <th>Commit SHA1</th>
             <th>Geometric mean</th>
             {tbl_hdr_benchmarks}
@@ -466,6 +469,7 @@ for benchmark in benchmarks:
 commits_txt = ""
 tbl_entries_txt = ""
 geom_prev = -1
+i = 0
 for commit in commits:
     benchs_txt = ""
     tbl_res_benchmarks = ""
@@ -501,7 +505,8 @@ for commit in commits:
     # generate the html
     diff, color = computeDiffAndColor(geom_prev, commit.geom_mean())
     geom_prev = commit.geom_mean()
-    commit_results = table_commit_template.format(sha1=commit.sha1, geom_mean=commit.geom_mean(),
+    commit_results = table_commit_template.format(commitNum=i, sha1=commit.sha1,
+                                                  geom_mean=commit.geom_mean(),
                                                   geom_diff=diff, geom_color=color,
                                                   tbl_res_benchmarks=tbl_res_benchmarks)
     tbl_entries_txt += commit_results
@@ -512,6 +517,7 @@ for commit in commits:
                                           tbl_hdr_benchmarks=tbl_hdr_benchmarks,
                                           commit_results=commit_results,
                                           patch=commit.patch)
+    i += 1
 
 # Generate the final html file
 html = html_template.format(run_name=args.log_folder,
