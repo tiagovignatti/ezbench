@@ -409,11 +409,19 @@ table_entry_no_results_template="""<td bgcolor="#FFFF00"><center>NO DATA</center
 
 commit_template="""
     <h3 id="commit_{sha1}">{commit}</h3>
-    Here is the <a href="{compile_log}">compilation logs</a> and list of benchmarks found for commit {sha1}:
+    <p>Here is the <a href="{compile_log}">compilation logs</a> and list of benchmarks found for commit {sha1}:</p>
+    <table border="1" style="">
+        <tr>
+            <th>Commit SHA1</th>
+            <th>Geometric mean</th>
+            {tbl_hdr_benchmarks}
+        </tr>
+        {commit_results}
+    </table>
     {benchs}"""
 
 bench_template="""
-    <h4 id="commit_{sha1}_bench_{bench_name}">{bench_name}</h4>
+    <h4 id="commit_{sha1}_bench_{bench_name}">{bench_name} (commit <a href="#commit_{sha1}">{commit}</a>)</h4>
 
     <p><a href="{raw_data_file}">Original data</a></p>
 
@@ -438,8 +446,15 @@ def computeDiffAndColor(prev, new):
     return diff, color
 
 
-# For all commits
+# Create the html file
 print("Generating the HTML")
+
+# generate the table's header
+tbl_hdr_benchmarks = ""
+for benchmark in benchmarks:
+    tbl_hdr_benchmarks += "<th>{benchmark}</th>\n".format(benchmark=benchmark.full_name)
+
+# generate the reports for each commits
 commits_txt = ""
 tbl_entries_txt = ""
 geom_prev = -1
@@ -460,6 +475,7 @@ for commit in commits:
 
             # Generate the html
             benchs_txt += bench_template.format(sha1=commit.sha1,
+                                                commit=commit.full_name,
                                                 bench_name=result.benchmark.full_name,
                                                 img_src=result.img_src_name,
                                                 raw_data_file=result.data_raw_file)
@@ -477,18 +493,16 @@ for commit in commits:
     # generate the html
     diff, color = computeDiffAndColor(geom_prev, commit.geom_mean())
     geom_prev = commit.geom_mean()
-    tbl_entries_txt += table_commit_template.format(sha1=commit.sha1, geom_mean=commit.geom_mean(),
-                                                    geom_diff=diff, geom_color=color,
-                                                   tbl_res_benchmarks=tbl_res_benchmarks)
+    commit_results = table_commit_template.format(sha1=commit.sha1, geom_mean=commit.geom_mean(),
+                                                  geom_diff=diff, geom_color=color,
+                                                  tbl_res_benchmarks=tbl_res_benchmarks)
+    tbl_entries_txt += commit_results
     commits_txt += commit_template.format(commit=commit.full_name,
                                           sha1=commit.sha1,
                                           benchs=benchs_txt,
-                                          compile_log=commit.compile_log)
-
-# generate the table's header
-tbl_hdr_benchmarks = ""
-for benchmark in benchmarks:
-    tbl_hdr_benchmarks += "<th>{benchmark}</th>\n".format(benchmark=benchmark.full_name)
+                                          compile_log=commit.compile_log,
+                                          tbl_hdr_benchmarks=tbl_hdr_benchmarks,
+                                          commit_results=commit_results)
 
 # Generate the final html file
 html = html_template.format(run_name=args.log_folder,
