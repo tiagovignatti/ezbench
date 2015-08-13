@@ -367,7 +367,7 @@ html_template="""
     </head>
 
     <body>
-        <h1>Performace report on the run named '{run_name}'</h1>
+        <h1>Performance report on the run named '{run_name}'</h1>
 
         <h2>Trends</h2>
 
