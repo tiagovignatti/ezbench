@@ -35,12 +35,13 @@ mkdir $ezBenchDir/logs/ 2> /dev/null
 
 # parse the options
 function show_help {
-    echo "    ezbench.sh -p <path_git_repo> -n <last n commits>"
+    echo "    ezbench.sh -p <path_git_repo> [list of SHA1]"
     echo ""
     echo "    Optional arguments:"
     echo "        -r <benchmarking rounds> (default: 3)"
     echo "        -b benchmark1 benchmark2 ..."
     echo "        -H <git-commit-id> benchmark the commits preceeding this one"
+    echo "        -n <last n commits>"
     echo "        -m <make command> (default: 'make -j8 install', '' to skip the compilation)"
     echo "        -N <log folder's name> (default: current date and time)"
     echo "        -T <path> source the test definitions from this folder"
@@ -113,16 +114,6 @@ while getopts "h?p:n:N:H:r:b:m:T:l" opt; do
 done
 shift $((OPTIND-1))
 
-commitList=
-for id in "$@"; do
-    if [[ $id =~ \.\. ]]; then
-        commitList+=$(git rev-list --abbrev-commit --reverse $id)
-    else
-        commitList+=$(git rev-list --abbrev-commit -n 1 `git rev-parse $id`)
-    fi
-    commitList+=" "
-done
-
 # Set the average compilation time to 0 when we are not compiling
 if [ -z "$makeCommand" ]
 then
@@ -153,6 +144,16 @@ then
     exit 1
 fi
 [ -n "$stash" ] && echo "Preserving work-in-progress"
+
+commitList=
+for id in "$@"; do
+    if [[ $id =~ \.\. ]]; then
+        commitList+=$(git rev-list --abbrev-commit --reverse $id)
+    else
+        commitList+=$(git rev-list --abbrev-commit -n 1 `git rev-parse $id`)
+    fi
+    commitList+=" "
+done
 
 # function to call on exit
 function finish {
