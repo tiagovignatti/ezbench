@@ -68,7 +68,8 @@ def readCsv(filepath):
         try:
             hasSniffer = csv.Sniffer().has_header(f.read(1024))
         except:
-            return []
+            hasSniffer = False
+            pass
 
         try:
             if hasSniffer:
