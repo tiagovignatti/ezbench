@@ -1,0 +1,34 @@
+# WARNING: Requires libframetime: https://github.com/clbr/libframetime
+
+test -e "$UNIGINE_VALLEY_FOLDER/bin/valley_x64" || return 1
+test -e "$LIBFRAMETIME64_SO" || return 1
+
+unigine:valley_run() {
+    cd "$UNIGINE_VALLEY_FOLDER" # Set this variable in test_options.sh
+
+    for (( c=0; c<$1; c++ )); do
+        rm -f /tmp/frametime.log
+
+        LIBFRAMETIME_FILE=/tmp/frametime.log LD_PRELOAD=$LIBFRAMETIME64_SO \
+        LD_LIBRARY_PATH=bin:bin/x64:$LD_LIBRARY_PATH \
+        vblank_mode=0 taskset 1 \
+        ./bin/valley_x64 \
+            -video_app opengl \
+            -data_path ../ \
+            -sound_app null \
+            -engine_config ../data/valley_1.0.cfg \
+            -system_script valley/unigine.cpp \
+            -extern_define PHORONIX,RELEASE \
+            -video_mode -1 \
+            -video_fullscreen 1 >/dev/null
+	
+        # read back the result, skip the first frames since they are the loading frames
+        cat /tmp/frametime.log | awk '{if (++n > 100) {print 1000000/$2}}' > $2#$c
+        awk '{sum=sum+$1} END {print sum/NR}' $2#$c
+    done
+}
+
+unigine:valley:cpu_run() { INTEL_NO_HW=1 unigine:valley_run $@; }
+
+test_name="unigine:valley unigine:valley:cpu"
+test_exec_time=190
