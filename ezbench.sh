@@ -39,7 +39,8 @@ function show_help {
     echo ""
     echo "    Optional arguments:"
     echo "        -r <benchmarking rounds> (default: 3)"
-    echo "        -b benchmark1 benchmark2 ..."
+    echo "        -b <benchmark regexp> include these benchmarks to run"
+    echo "        -B <benchmark regexp> exclude these benchamrks from running"
     echo "        -H <git-commit-id> benchmark the commits preceeding this one"
     echo "        -n <last n commits>"
     echo "        -m <make command> (default: 'make -j8 install', '' to skip the compilation)"
@@ -80,7 +81,7 @@ function callIfDefined() {
 }
 
 no_compile=
-while getopts "h?p:n:N:H:r:b:m:T:l" opt; do
+while getopts "h?p:n:N:H:r:b:B:m:T:l" opt; do
     case "$opt" in
     h|\?)
         show_help 
@@ -97,6 +98,8 @@ while getopts "h?p:n:N:H:r:b:m:T:l" opt; do
     r)  rounds=$OPTARG
         ;;
     b)  testsList="$testsList $OPTARG"
+        ;;
+    B)  excludeList="$excludeList $OPTARG"
         ;;
     m)  makeCommand=$OPTARG
         ;;
@@ -193,6 +196,7 @@ for test_dir in ${testsDir:-$ezBenchDir/tests.d}; do
 
         for t in $test_name; do
             # Check that the user wants this test or not
+            found=1
             if [ -n "$testsList" ]; then
                 found=0
                 for filter in $testsList; do
@@ -202,8 +206,17 @@ for test_dir in ${testsDir:-$ezBenchDir/tests.d}; do
                         break
                     fi
                 done
-                [ $found -eq 0 ] && continue
             fi
+            if [ -n "$excludeList" ]; then
+                for filter in $excludeList; do
+                    if [[ $t =~ $filter ]]; then
+                        testFilter[$filter]=-1
+                        found=0
+                        break
+                    fi
+                done
+            fi
+            [ $found -eq 0 ] && continue
 
             testNames[$total_tests]=$t
 	    testInvert[$total_tests]=$test_invert
