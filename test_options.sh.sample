@@ -51,6 +51,9 @@ UNIGINE_VALLEY_FOLDER=/opt/benchmarks/Unigine_Valley-1.0
 # GpuTest settings
 GPUTEST_FOLDER=/opt/benchmarks/GpuTest_Linux_x64_0.7.0
 
+# Lightsmark settings
+LIGHTSMARK_FOLDER=/opt/benchmarks/Lightsmark2008.2.0
+
 # Citybench settings
 CITYBENCH_FOLDER=/opt/replay_hbas_citybench
 

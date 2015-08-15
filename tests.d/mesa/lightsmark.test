@@ -1,0 +1,27 @@
+[ -e $LIGHTSMARK_FOLDER/bin/pc-linux64 ] || return 1
+
+# This is Lightsmark 2008 [Linux 64bit] log. Check it if benchmark doesn't work properly.
+# Penumbra quality: 8/8 on Mesa DRI Intel(R) HD Graphics (Cherryview) .
+# Loading Lightsmark2008.cfg...
+#   Loading objects/I_Robot_female_HD.3DS...
+#   Loading scenes/wop_padattic/wop_padatticBB.ani...
+#   Detection quality: auto->high.
+#   Loading scene scenes/wop_padattic/wop_padatticBB.bsp...
+# Finished, average fps = 24.34.
+
+lightsmark_run() {
+    local extract_fps="sed '/Finished/!d; s/.* fps = \(.*\).$/\1/'"
+
+    cd $LIGHTSMARK_FOLDER/bin/pc-linux64
+
+    for (( c=0; c<$1; c++ )); do
+        vblank_mode=0 LD_LIBRARY_PATH=. ./backend silent 1920x1080 | eval $extract_fps
+    done
+}
+
+lightsmark:cpu_run() {
+    INTEL_NO_HW=1 lightsmark_run $1
+}
+
+test_name="lightsmark lightsmark:cpu"
+test_exec_time=120
