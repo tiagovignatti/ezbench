@@ -184,7 +184,6 @@ typeset -A testPrevFps
 typeset -A testFilter
 total_tests=0
 total_round_time=0
-testPrevFps[-1]=-1
 echo -n "Tests that will be run: "
 for test_dir in ${testsDir:-$ezBenchDir/tests.d}; do
     for test_file in $test_dir/**/*.test; do
@@ -224,8 +223,6 @@ for test_dir in ${testsDir:-$ezBenchDir/tests.d}; do
             last_result="$logsFolder/${last_commit}_result_${t}"
             if [ -e "$logsFolder/${last_commit}_result_${t}" ]; then
                 testPrevFps[$total_tests]=$(cat $last_result)
-            else
-                testPrevFps[$total_tests]=-1
             fi
             unset last_result
 
@@ -367,10 +364,9 @@ do
             statistics=$(echo "$statistics" | cut -d ' ' -f 2-)
         }
         echo $result > $logsFolder/${commit}_result_${testNames[$t]}
-        if (( $(echo "${testPrevFps[$t]} == -1" | bc -l) ))
-        then
-            testPrevFps[$t]=$result
-        fi
+	if [ -z "${testPrevFps[$t]}" ]; then
+		testPrevFps[$t]=$result
+	fi
 	if [ -z "${testInvert[$t]}" ]; then
 	    fpsDiff=$(echo "scale=3;($result * 100.0 / ${testPrevFps[$t]}) - 100" | bc 2>/dev/null)
 	else
@@ -391,10 +387,9 @@ do
     # finish with the geometric mean (when we have multiple tests)
     if [ $t -gt 1 ]; then
 	fpsALL=$(awk '{r = 1; for(i=1; i<=NF; i++) { r *= $i } print exp(log(r) / NF) }' <<< $fpsALL)
-        if (( $(echo "${testPrevFps[-1]} == -1" | bc -l) ))
-        then
-                testPrevFps[-1]=$fpsALL
-        fi
+	if [ -z "${testPrevFps[-1]}" ]; then
+		testPrevFps[-1]=$fpsALL
+	fi
         fpsDiff=$(echo "scale=3;($fpsALL * 100.0 / ${testPrevFps[-1]}) - 100" | bc 2>/dev/null)
         [ $? -eq 0 ] && testPrevFps[-1]=$fpsALL
         if (( $(bc -l <<< "$fpsDiff < -1.5" 2>/dev/null || echo 0) )); then
