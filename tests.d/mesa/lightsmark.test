@@ -15,7 +15,7 @@ lightsmark_run() {
     cd $LIGHTSMARK_FOLDER/bin/pc-linux64
 
     for (( c=0; c<$1; c++ )); do
-        vblank_mode=0 LD_LIBRARY_PATH=. ./backend silent 1920x1080 | eval $extract_fps
+        vblank_mode=0 LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH ./backend silent 1920x1080 | eval $extract_fps
     done
 }
 
