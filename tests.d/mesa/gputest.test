@@ -13,7 +13,7 @@ __gputest__() {
         echo ./GpuTest /test=$3 $benchmark $4 >> /tmp/gputest
 
         LIBFRAMETIME_FILE=/tmp/frametime.log LD_PRELOAD=$LIBFRAMETIME64_SO \
-        ./GpuTest /test=$3 $benchmark $4 > /dev/null
+        ./GpuTest /test=$3 $benchmark $4 > /dev/null || return 1
         
         # read back the result, skip the first frames since they are the loading frames
         cat /tmp/frametime.log | awk '{if (++n > 10) {print 1000000/$2}}' > $2#$c
