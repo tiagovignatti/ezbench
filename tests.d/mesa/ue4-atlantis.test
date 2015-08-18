@@ -1,5 +1,5 @@
 test_name="ue4:atlantis:window ue4:atlantis:fullscreen"
-test_exec_time=60
+test_exec_time=120
 
 # WARNING: Requires libframetime: https://github.com/clbr/libframetime
 
@@ -17,7 +17,7 @@ ue4:atlantis:fullscreen_run() {
         rm -f /tmp/frametime.log
 
         LIBFRAMETIME_FILE=/tmp/frametime.log LD_PRELOAD=$LIBFRAMETIME64_SO \
-        vblank_mode=0 $frametime timeout 60 \
+        vblank_mode=0 $frametime timeout 120 \
         ./Atlantis-Linux-Shipping -NOSOUND -BENCHMARK $resolution > /dev/null
 
         # read back the result, skip the first frames since they are the loading frames
@@ -36,7 +36,7 @@ ue4:atlantis:window_run() {
         rm -f /tmp/frametime.log
 
         LIBFRAMETIME_FILE=/tmp/frametime.log LD_PRELOAD=$LIBFRAMETIME64_SO \
-        vblank_mode=0 $frametime taskset 1 timeout 60 \
+        vblank_mode=0 $frametime taskset 1 timeout 120 \
         ./Atlantis-Linux-Shipping -NOSOUND -BENCHMARK $resolution > /dev/null
 
         # read back the result, skip the first frames since they are the loading frames
