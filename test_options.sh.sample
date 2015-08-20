@@ -61,6 +61,9 @@ GLBENCHMARK27_FOLDER=/opt/benchmarks/glbenchmark2.7.0
 #GLBENCHMARK27_WIDTH=1920
 #GLBENCHMARK27_HEIGHT=1080
 
+# LuxMark settings
+LUXMARK_FOLDER=/opt/benchmarks/luxmark-v3.0
+
 # intel-gpu-tools settings
 IGT_BENCHMARKS=/opt/intel-gpu-tools/benchmarks
 IGT_TRACES=/opt/intel-gpu-tools/traces
