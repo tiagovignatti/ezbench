@@ -1,0 +1,42 @@
+# WARNING: Requires libframetime: https://github.com/clbr/libframetime
+test -e "$LIBFRAMETIME64_SO" || return 1
+test -d "$UE4_FOLDER" || return 1
+
+__ue4__() {
+    eval benchmark="$3"
+    test -d "$benchmark" || return 1
+    benchmark=$(find "$benchmark" -type f -executable ! -name CrashReportClient)
+
+    for (( c=0; c<$1; c++ ))
+    do
+        rm -f /tmp/frametime.log
+
+        LIBFRAMETIME_FILE=/tmp/frametime.log LD_PRELOAD=$LIBFRAMETIME64_SO \
+        vblank_mode=0 $frametime taskset 1 timeout 60 \
+        "$benchmark" -NOSOUND -BENCHMARK $4 > /dev/null
+
+        # read back the result, skip the first frames since they are the loading frames
+        cat /tmp/frametime.log | awk '{if (++n > 10) {print 1000000/$2}}' > $2#$c
+        awk '{sum=sum+$1} END {print sum/NR}' $2#$c
+    done
+}
+
+__ue4:fullscreen__() {
+    read width height <<< $(xdpyinfo | sed '/dimensions/!d; s/.*dimensions:\(.*\)x\(.*\) pixels.*/\1 \2/')
+    __ue4__ "$1" "$2" "$3" "-ResX=$width -ResY=$height"
+}
+
+__ue4:window__() {
+    __ue4__ "$1" "$2" "$3" "-ResX=$UE4_WINDOW_SIZE_X -ResY=$UE4_WINDOW_SIZE_Y"
+}
+
+eval $(IFS= find "$UE4_FOLDER" -mindepth 1 -maxdepth 1 -type d | \
+while read benchmark; do
+    name=$(cat "$benchmark"/name 2>/dev/null || basename "$benchmark" | cut -f1 -d\  )
+    echo "ue4:${name}:fullscreen_run() { __ue4:fullscreen__ \$1 \$2 \"\\\"$benchmark\\\"\"; };"
+    echo "test_name=\"\$test_name ue4:${name}:fullscreen\";"
+    echo "ue4:${name}:window_run() { __ue4:window__ \$1 \$2 \"\\\"$benchmark\\\"\"; };"
+    echo "test_name=\"\$test_name ue4:${name}:window\";"
+done; )
+
+test_exec_time=120
