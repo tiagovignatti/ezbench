@@ -1,0 +1,27 @@
+# https://github.com/cavazos-lab/PolyBench-ACC
+
+test -d ${POLYBENCH_ACC_FOLDER}/OpenCL || return 1
+
+# Typical output (adi):
+#    number of platforms is 1
+#    platform name is Intel Gen OCL Driver
+#    platform version is OpenCL 1.2 beignet 1.2 (git-7b151ad)
+#    device id is 1354742880
+#    device name is Intel(R) HD Graphics Haswell GT2 Desktop
+#    GPU Time in seconds:
+#    0.153892
+
+__polybench__() {
+    cd $(dirname $2)
+    for (( c=0; c<$1; c++ )); do
+        ./$(basename $2) | tail -n 1 || return 1
+    done
+}
+
+for exe in $(find ${POLYBENCH_ACC_FOLDER}/OpenCL -name '*.exe'); do
+   name="polybench:$(basename $exe .exe)"
+   test_name="$test_name $name"
+   eval "${name}_run() { __polybench__ \$1 $exe; }"
+done
+test_exec_time=20
+test_invert=1 # output is duration in seconds

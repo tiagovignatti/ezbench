@@ -64,6 +64,10 @@ GLBENCHMARK27_FOLDER=/opt/benchmarks/glbenchmark2.7.0
 # LuxMark settings
 LUXMARK_FOLDER=/opt/benchmarks/luxmark-v3.0
 
+# PolyBench-ACC settings
+# https://github.com/cavazos-lab/PolyBench-ACC
+POLYBENCH_ACC_FOLDER=/opt/benchmarks/PolyBench-ACC
+
 # intel-gpu-tools settings
 IGT_BENCHMARKS=/opt/intel-gpu-tools/benchmarks
 IGT_TRACES=/opt/intel-gpu-tools/traces
