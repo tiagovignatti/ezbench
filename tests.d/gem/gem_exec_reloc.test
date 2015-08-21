@@ -13,4 +13,6 @@ for i in old lut; do
             done
 	done
     done
+    test_name="$test_name gem:exec:reloc:$i:none:constant:8192"
+    eval "gem:exec:reloc:${i}:noneconstant8192_run() { sudo $IGT_BENCHMARKS/gem_exec_reloc -s 4096 -m $i -e  none -o constant -l \$1 -b 8192 -r 0 ; } "
 done
