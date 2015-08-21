@@ -1,0 +1,32 @@
+# https://github.com/cavazos-lab/FinanceBench
+
+test -d ${FINANCEBENCH_FOLDER} || return 1
+
+# Typical output (Black-Scholes):
+# Number of options: 5000000
+#
+# number of platforms is 1
+# platform name is Intel Gen OCL Driver
+# platform version is OpenCL 1.2 beignet 1.2 (git-7b151ad)
+# number of devices is 1
+# device name is Intel(R) HD Graphics Haswell GT2 Desktop
+#
+# Run on GPU
+# Summation of all output prices on GPU: 30030504.000000
+# Output price for option 2500000 on GPU: 0.040781
+# Processing time on GPU: 47.405998
+
+__finance__() {
+    cd $(dirname $2)
+    for (( c=0; c<$1; c++ )); do
+        ./$(basename $2) | sed '/Processing time/!d; s/.*://' || return 1
+    done
+}
+
+for exe in $(find ${FINANCEBENCH_FOLDER} -name '*.exe'); do
+   name=$(sed "s#${FINANCEBENCH_FOLDER}/\([^/]*\).*#\1#" <<< $exe)
+   test_name="$test_name finance:$name"
+   eval "finance:${name}_run() { __finance__ \$1 $exe; }"
+done
+test_exec_time=2
+test_invert=1 # output is duration in milliseconds
