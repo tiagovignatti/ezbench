@@ -14,6 +14,8 @@ for i in \
     copywinwin10 copywinwin500  \
     copywinpix10 copywinpix500 \
     copypixwin10 copypixwin500 \
+    putimage10 putimage500 \
+    getimage10 getimage500 \
     shmput10 shmput500 \
     shmget10 shmget500 \
     ;
