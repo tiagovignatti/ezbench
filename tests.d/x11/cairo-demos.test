@@ -3,8 +3,9 @@ xdpyinfo >/dev/null 2>&1 || return 1
 # fish: 99.999 fps
 
 function __xlib__ {
+    cd $CAIRO_DEMOS
     for (( c=0; c<$1; c++ )); do
-        $CAIRO_DEMOS/$2-demo --benchmark --xlib | sed -e '/fps/!d; s/.*: \(.*\) fps.*/\1/'
+        ./$2-demo --benchmark --xlib | sed -e '/fps/!d; s/.*: \(.*\) fps.*/\1/'
     done
 }
 
