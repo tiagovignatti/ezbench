@@ -92,9 +92,30 @@ def readCsv(filepath):
 
     return data
 
+def readCommitLabels():
+    labels = dict()
+    try:
+        f = open( "commit_labels", "r")
+        try:
+            labelLines = f.readlines()
+        finally:
+            f.close()
+    except IOError:
+        return labels
+
+    for labelLine in labelLines:
+        fields = labelLine.split(" ")
+        sha1 = fields[0]
+        label = fields[1]
+        labels[sha1] = label
+
+    return labels
+
+
 benchmarks = []
 commits = []
 commitsLabels = []
+labels = dict()
 
 # parse the options
 parser = argparse.ArgumentParser()
@@ -116,6 +137,9 @@ except IOError:
     sys.stderr.write("The log folder '{0}' does not contain a commit_list file\n".format(args.log_folder))
     sys.exit(1)
 
+# Read all the commits' labels
+labels = readCommitLabels()
+
 # Check that there are commits
 if (len(commitsLines) == 0):
     sys.stderr.write("The commit_list file is empty\n")
@@ -130,7 +154,8 @@ for commitLine in commitsLines:
     sha1 = commitLine.split()[0]
     compile_log = sha1 + "_compile_log"
     patch = sha1 + ".patch"
-    commit = Commit(sha1, full_name, compile_log, patch, sha1)
+    label = labels.get(sha1, sha1)
+    commit = Commit(sha1, full_name, compile_log, patch, label)
 
     # find all the benchmarks
     benchFiles = glob.glob("{sha1}_bench_*".format(sha1=commit.sha1));
@@ -245,7 +270,7 @@ def getResultsGeomDiffs():
 # Generate the trend graph
 print("Generating the trend graph")
 f = plt.figure(figsize=(17,3))
-plt.xlabel('Commit #')
+plt.xlabel('Commits')
 plt.ylabel('Perf. diff. with the first commit (%)')
 plt.grid(True)
 
