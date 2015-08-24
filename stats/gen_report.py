@@ -4,118 +4,23 @@ from matplotlib.patches import Rectangle
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
-from numpy import *
-import subprocess
 import argparse
-import glob
-import csv
 import sys
 import os
-import re
+
+# Import ezbench from the utils/ folder
+sys.path.append(os.path.abspath(sys.path[0]+'/../utils/'))
+from ezbench import *
 
 # constants
 html_name="index.html"
 report_folder="ezbench_report/"
 
-class Benchmark:
-    def __init__(self, full_name):
-        self.full_name = full_name
-        self.prevValue = -1
+def genFileNameReportImg(report_folder, data_raw_file):
+    return report_folder + data_raw_file + ".svg"
 
-class BenchResult:
-    def __init__(self, commit, benchmark, data_raw_file, img_src_name, sparkline_img):
-        self.commit = commit
-        self.benchmark = benchmark
-        self.data_raw_file = data_raw_file
-        self.img_src_name = img_src_name
-        self.sparkline_img = sparkline_img
-        self.data = []
-        self.runs = []
-
-class Commit:
-    def __init__(self, sha1, full_name, compile_log, patch, label):
-        self.sha1 = sha1
-        self.full_name = full_name
-        self.compile_log = compile_log
-        self.patch = patch
-        self.results = []
-        self.geom_mean_cache = -1
-        self.label = label
-
-    def geom_mean(self):
-        if self.geom_mean_cache >= 0:
-            return self.geom_mean_cache
-
-        # compute the variance
-        s = 1
-        n = 0
-        for result in self.results:
-            if len(result.data) > 0:
-                s *= array(result.data).mean()
-                n = n + 1
-        if n > 0:
-            value = s ** (1 / n)
-        else:
-            value = 0
-
-        geom_mean_cache = value
-        return value
-
-def readCsv(filepath):
-    data = []
-
-    with open(filepath, 'rt') as f:
-        reader = csv.reader(f)
-        try:
-            hasSniffer = csv.Sniffer().has_header(f.read(1024))
-        except:
-            hasSniffer = False
-            pass
-
-        try:
-            if hasSniffer:
-                f.seek(0)
-                next(f)
-            else:
-                f.seek(0)
-            for row in reader:
-                if len(row) > 0:
-                    data.append(float(row[0]))
-        except csv.Error as e:
-            sys.stderr.write('file %s, line %d: %s\n' % (filepath, reader.line_num, e))
-            return []
-
-    # Convert to frametime if needed
-    if args.frametime:
-        for i in range(0, len(data)):
-            data[i] = 1000.0 / data[i]
-
-    return data
-
-def readCommitLabels():
-    labels = dict()
-    try:
-        f = open( "commit_labels", "r")
-        try:
-            labelLines = f.readlines()
-        finally:
-            f.close()
-    except IOError:
-        return labels
-
-    for labelLine in labelLines:
-        fields = labelLine.split(" ")
-        sha1 = fields[0]
-        label = fields[1]
-        labels[sha1] = label
-
-    return labels
-
-
-benchmarks = []
-commits = []
-commitsLabels = []
-labels = dict()
+def genFileNameSparkline(report_folder, data_raw_file):
+    return report_folder + data_raw_file + ".spark.svg"
 
 # parse the options
 parser = argparse.ArgumentParser()
@@ -124,148 +29,21 @@ parser.add_argument("--frametime", help="Use frame times instead of FPS",
 parser.add_argument("log_folder")
 args = parser.parse_args()
 
-# Look for the commit_list file
-os.chdir(args.log_folder)
+# Parse the report
+commits, benchmarks = readPerformanceReport(args.log_folder, args.frametime)
 
-try:
-    f = open( "commit_list", "r")
-    try:
-        commitsLines = f.readlines()
-    finally:
-        f.close()
-except IOError:
-    sys.stderr.write("The log folder '{0}' does not contain a commit_list file\n".format(args.log_folder))
-    sys.exit(1)
-
-# Read all the commits' labels
-labels = readCommitLabels()
-
-# Check that there are commits
-if (len(commitsLines) == 0):
-    sys.stderr.write("The commit_list file is empty\n")
-    sys.exit(2)
-
-# Gather all the information from the commits and generate the images
-print ("Reading the results for {0} commits".format(len(commitsLines)))
-commits_txt = ""
-table_entries_txt = ""
-for commitLine in commitsLines:
-    full_name = commitLine.strip(' \t\n\r')
-    sha1 = commitLine.split()[0]
-    compile_log = sha1 + "_compile_log"
-    patch = sha1 + ".patch"
-    label = labels.get(sha1, sha1)
-    commit = Commit(sha1, full_name, compile_log, patch, label)
-
-    # find all the benchmarks
-    benchFiles = glob.glob("{sha1}_bench_*".format(sha1=commit.sha1));
-    benchs_txt = ""
-    for benchFile in benchFiles:
-        # Skip when the file is a run file (finishes by #XX)
-        if re.search(r'#\d+$', benchFile) is not None:
-            continue
-
-        # Skip on error files
-        if re.search(r'.errors$', benchFile) is not None:
-            continue
-
-        # Get the bench name
-        bench_name = benchFile.replace("{sha1}_bench_".format(sha1=commit.sha1), "")
-
-        # Find the right Benchmark or create one if none are found
-        try:
-            benchmark = next(b for b in benchmarks if b.full_name == bench_name)
-        except StopIteration:
-            benchmark = Benchmark(bench_name)
-            benchmarks.append(benchmark)
-
-        # Create the result object
-        result = BenchResult(commit, benchmark, benchFile,
-                             report_folder + benchFile + ".svg",
-                             report_folder + benchFile + ".spark.svg")
-
-        # Read the data and abort if there is no data
-        result.data = readCsv(benchFile)
-        if len(result.data) == 0:
-            continue
-
-        # Look for the runs
-        runsFiles = glob.glob("{benchFile}#*".format(benchFile=benchFile));
-        for runFile in runsFiles:
-            data = readCsv(runFile)
-            if len(data) > 0:
-                result.runs.append(data)
-
-        # Add the result to the commit's results
-        commit.results.append(result)
-
-    # Add the commit to the list of commits
-    commit.results = sorted(commit.results, key=lambda res: res.benchmark.full_name)
-    commits.append(commit)
+# Generate the labels for the commits
+commitsLabels = []
+for commit in commits:
     commitsLabels.append(commit.label)
 
-# Sort the list of benchmarks
-benchmarks = sorted(benchmarks, key=lambda bench: bench.full_name)
-
 # Create a folder for the results
+os.chdir(args.log_folder)
 if not os.path.isdir(report_folder):
     try:
         os.mkdir(report_folder)
     except OSError:
         print ("Error while creating the report folder")
-
-def getResultsBenchmarkDiffs(benchmark):
-    results = []
-
-    # Compute a report per application
-    i = 0
-    origValue = -1
-    for commit in commits:
-        resultFound = False
-        for result in commit.results:
-            if result.benchmark != benchmark:
-                continue
-
-            value = array(result.data).mean()
-            if origValue > -1:
-                if args.frametime:
-                    diff = (origValue * 100.0 / value) - 100.0
-                else:
-                    diff = (value * 100.0 / origValue) - 100.0
-            else:
-                origValue = value
-                diff = 0
-
-            results.append([i, diff])
-            resultFound = True
-
-        if not resultFound:
-            results.append([i, NaN])
-        i = i + 1
-
-    return results
-
-def getResultsGeomDiffs():
-    results = []
-
-    # Compute a report per application
-    i = 0
-    origValue = -1
-    for commit in commits:
-        value = commit.geom_mean()
-        if origValue > -1:
-            if args.frametime:
-                diff = (origValue * 100.0 / value) - 100.0
-            else:
-                diff = (value * 100.0 / origValue) - 100.0
-        else:
-            origValue = value
-            diff = 0
-
-        results.append([i, diff])
-        i = i + 1
-
-    return results
 
 # Generate the trend graph
 print("Generating the trend graph")
@@ -274,20 +52,19 @@ plt.xlabel('Commits')
 plt.ylabel('Perf. diff. with the first commit (%)')
 plt.grid(True)
 
-data = getResultsGeomDiffs()
+data = getResultsGeomDiffs(commits)
 x_val = [x[0] for x in data]
 y_val = [x[1] for x in data]
 plt.plot(x_val, y_val, label="Geometric mean")
 
 for i in range(len(benchmarks)):
-    data = getResultsBenchmarkDiffs(benchmarks[i])
+    data = getResultsBenchmarkDiffs(commits, benchmarks[i])
 
     x_val = [x[0] for x in data]
     y_val = [x[1] for x in data]
 
     plt.plot(x_val, y_val, label=benchmarks[i].full_name)
 
-#plt.xticks(range(len(x)), x_val, rotation='vertical')
 plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
            ncol=4, mode="expand", borderaxespad=0.)
 plt.xticks(range(len(commitsLabels)), commitsLabels, size='small', rotation=70)
@@ -315,7 +92,8 @@ for commit in commits:
         ax.set_xticks([])
         ax.set_yticks([])
 
-        plt.savefig(result.sparkline_img, bbox_inches='tight', transparent=True)
+        plt.savefig(genFileNameSparkline(report_folder, result.data_raw_file),
+                    bbox_inches='tight', transparent=True)
         plt.close()
         print('.',end="",flush=True)
 print(" DONE")
@@ -327,8 +105,9 @@ print("Generating the runs' output image",end="",flush=True)
 for c in range (0, len(commits)):
     commit = commits[c]
     for r in range (0, len(commit.results)):
+        result = commit.results[r]
+        img_src_name = genFileNameReportImg(report_folder, result.data_raw_file)
         try:
-            result = commit.results[r]
             f = plt.figure(figsize=(19.5, 4))
             gs = gridspec.GridSpec(2, 2, width_ratios=[4, 1])
             x = array(result.data)
@@ -377,11 +156,11 @@ for c in range (0, len(commits)):
                     plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=20, mode="expand", borderaxespad=0.)
 
             plt.tight_layout()
-            plt.savefig(result.img_src_name, bbox_inches='tight')
+            plt.savefig(img_src_name, bbox_inches='tight')
         except Exception as e:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            print("Failed to generate {filename}: {error} at {fname}:{line}".format(filename=result.img_src_name,
+            print("Failed to generate {filename}: {error} at {fname}:{line}".format(filename=img_src_name,
                                                                                     error=str(e), fname=fname,
                                                                                     line=exc_tb.tb_lineno))
         plt.close()
@@ -515,17 +294,19 @@ for commit in commits:
             diff, color = computeDiffAndColor(result.benchmark.prevValue, value)
             result.benchmark.prevValue = value
 
+            img_src_name = genFileNameReportImg(report_folder, result.data_raw_file)
+            sparkline_img = genFileNameSparkline(report_folder, result.data_raw_file)
+
             # Generate the html
             benchs_txt += bench_template.format(sha1=commit.sha1,
                                                 commit=commit.full_name,
                                                 bench_name=result.benchmark.full_name,
-                                                img_src=result.img_src_name,
+                                                img_src=img_src_name,
                                                 raw_data_file=result.data_raw_file)
-
 
             tbl_res_benchmarks += table_entry_template.format(sha1=commit.sha1,
                                                             bench_name=result.benchmark.full_name,
-                                                            sparkline_img=result.sparkline_img,
+                                                            sparkline_img=sparkline_img,
                                                             value=value,
                                                             diff=diff,
                                                             color=color)
