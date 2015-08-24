@@ -313,7 +313,7 @@ do
         git reset --hard $commit > /dev/null
         git show --format="%Cblue%h%Creset %Cgreen%s%Creset" -s
         git show --format="%h %s" -s >> $commitListLog
-        git format-patch HEAD~ --stdout > $logsFolder/${commit}.patch
+        git format-patch HEAD~ --format=fuller --stdout > $logsFolder/${commit}.patch
     fi
 
     compile
