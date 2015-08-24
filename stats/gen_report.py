@@ -33,13 +33,14 @@ class BenchResult:
         self.runs = []
 
 class Commit:
-    def __init__(self, sha1, full_name, compile_log, patch):
+    def __init__(self, sha1, full_name, compile_log, patch, label):
         self.sha1 = sha1
         self.full_name = full_name
         self.compile_log = compile_log
         self.patch = patch
         self.results = []
         self.geom_mean_cache = -1
+        self.label = label
 
     def geom_mean(self):
         if self.geom_mean_cache >= 0:
@@ -93,6 +94,7 @@ def readCsv(filepath):
 
 benchmarks = []
 commits = []
+commitsLabels = []
 
 # parse the options
 parser = argparse.ArgumentParser()
@@ -128,7 +130,7 @@ for commitLine in commitsLines:
     sha1 = commitLine.split()[0]
     compile_log = sha1 + "_compile_log"
     patch = sha1 + ".patch"
-    commit = Commit(sha1, full_name, compile_log, patch)
+    commit = Commit(sha1, full_name, compile_log, patch, sha1)
 
     # find all the benchmarks
     benchFiles = glob.glob("{sha1}_bench_*".format(sha1=commit.sha1));
@@ -175,6 +177,7 @@ for commitLine in commitsLines:
     # Add the commit to the list of commits
     commit.results = sorted(commit.results, key=lambda res: res.benchmark.full_name)
     commits.append(commit)
+    commitsLabels.append(commit.label)
 
 # Sort the list of benchmarks
 benchmarks = sorted(benchmarks, key=lambda bench: bench.full_name)
@@ -262,6 +265,7 @@ for i in range(len(benchmarks)):
 #plt.xticks(range(len(x)), x_val, rotation='vertical')
 plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
            ncol=4, mode="expand", borderaxespad=0.)
+plt.xticks(range(len(commitsLabels)), commitsLabels, size='small', rotation=70)
 plt.savefig(report_folder + 'overview.svg', bbox_inches='tight')
 plt.close()
 
