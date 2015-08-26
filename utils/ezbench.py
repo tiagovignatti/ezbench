@@ -98,7 +98,7 @@ def readCommitLabels():
 
     return labels
 
-def readPerformanceReport(log_folder, wantFrametime = False):
+def readPerformanceReport(log_folder, wantFrametime = False, silentMode = False):
     benchmarks = []
     commits = []
     labels = dict()
@@ -127,7 +127,8 @@ def readPerformanceReport(log_folder, wantFrametime = False):
         sys.exit(2)
 
     # Gather all the information from the commits and generate the images
-    print ("Reading the results for {0} commits".format(len(commitsLines)))
+    if not silentMode:
+        print ("Reading the results for {0} commits".format(len(commitsLines)))
     commits_txt = ""
     table_entries_txt = ""
     for commitLine in commitsLines:
@@ -189,6 +190,15 @@ def readPerformanceReport(log_folder, wantFrametime = False):
     os.chdir(cwd)
 
     return (commits, benchmarks)
+
+def getPerformanceResultsCommitBenchmark(commit, benchmark, wantFrametime = False):
+    for result in commit.results:
+        if result.benchmark != benchmark:
+            continue
+
+        return array(result.data)
+
+    return []
 
 def getResultsBenchmarkDiffs(commits, benchmark, wantFrametime = False):
     results = []
