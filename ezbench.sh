@@ -1,9 +1,11 @@
 #!/bin/bash
 
-# Thanks to stack overflow for writing most of this script! It has been tested
-# with bash and zsh only!
-# Author: Martin Peres <martin.peres@free.fr>
+# The script is known to work with recent versions of bash.
+# Authors:
+# - Martin Peres <martin.peres@intel.com>
+# - Chris Wilson <chris@chris-wilson.co.uk>
 
+# Uncomment the following to track all the executed commands
 #set -o xtrace
 
 shopt -s globstar || {
