@@ -113,13 +113,15 @@ print()
 os.chdir(args.repo_path)
 check_output(['git', 'bisect', 'start'], stderr=subprocess.STDOUT)
 check_output(['git', 'bisect', 'good', args.BEFORE_COMMIT], stderr=subprocess.STDOUT)
-check_output(['git', 'bisect', 'bad', args.AFTER_COMMIT], stderr=subprocess.STDOUT)
+output = check_output(['git', 'bisect', 'bad', args.AFTER_COMMIT], stderr=subprocess.STDOUT).decode()
+print(output, end="")
 
 while True:
     perf = check_commit_perf(ezbench_cmd, "HEAD", logs_dir)
     res = checkPerformance(before_perf, after_perf, threshold, perf)
     print("Performance index = {perf} (diffThreshold = {diff}). Marking as {res}\n".format(perf=perf,
-                                                                                           diff=perf - threshold,                                                                           res=res.upper()))
+                                                                                           diff=perf - threshold,
+                                                                                           res=res.upper()))
     output = check_output(['git', 'bisect', res]).decode()
 
     print(output, end="")
