@@ -4,6 +4,7 @@ from matplotlib.patches import Rectangle
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
+from mako.template import Template
 import argparse
 import sys
 import os
@@ -175,77 +176,96 @@ html_template="""
 <html xmlns="http://www.w3.org/1999/xhtml">
 
     <head>
-        <title>Performance report on the run named '{run_name}'</title>
+        <title>Performance report on the run named '${run_name}'</title>
         <style>
             body {{ font-size: 10pt}}
         </style>
     </head>
 
+    <%def name="makeTableheader(benchmarks)">
+        <tr>
+            <th>Commit</th>
+            <th>Geometric mean</th>
+            % for benchmark in benchmarks:
+                <th>${benchmark.full_name}</th>
+            % endfor
+        </tr>
+    </%def>
+
+    <%def name="makeCommitRow(commit, benchmarks)">
+        <tr>
+            <td><a href="#commit_${commit.sha1}">${commit.label}</a></td>
+            <td bgcolor="${commit.geom_color}">${commit.geom} (${commit.geom_diff} %)</td>
+            % for benchmark in benchmarks:
+            <%
+                    result = None
+                    for res in commit.results:
+                        if res.benchmark == benchmark:
+                            result = res
+                            sparkline_img = report_folder + result.data_raw_file + ".spark.svg"
+                            break
+            %>
+                % if result.value != None:
+                    <td bgcolor="${result.color}">
+                        <a href="#commit_${commit.sha1}_bench_${benchmark.full_name}">
+                            ${result.value} (${result.diff} %)
+                            <img src="${sparkline_img}" alt="Test's time series and density of probability" />
+                        <a/>
+                    </td>
+                % else:
+                    <td bgcolor="#FFFF00"><center>NO DATA</center></td>
+                % endif
+            % endfor
+        </tr>
+    </%def>
+
     <body>
-        <h1>Performance report on the run named '{run_name}'</h1>
+        <h1>Performance report on the run named '${run_name}'</h1>
 
         <h2>Trends</h2>
 
-        <center><img src="{report_folder}/overview.svg" alt="Trends"/></center>
+        <center><img src="${report_folder}/overview.svg" alt="Trends"/></center>
 
         <h2>Stats</h2>
 
         <table border="1" style="">
-            <tr>
-                <th>Commit #</th>
-                <th>Commit SHA1</th>
-                <th>Geometric mean</th>
-                {tbl_hdr_benchmarks}
-            </tr>
-            {tbl_entries}
+            ${makeTableheader(benchmarks)}
+            % for commit in commits:
+                ${makeCommitRow(commit, benchmarks)}
+            % endfor
         </table>
 
         <h2>Commits</h2>
-            {commits}
+        % for commit in commits:
+            <h3 id="commit_${commit.sha1}">${commit.label} - ${commit.full_name}</h3>
+            <p><a href="${commit.patch}">Patch</a> <a href="${commit.compile_log}">Compilation logs</a></p>
+            <table border="1" style="">
+                ${makeTableheader(benchmarks)}
+                ${makeCommitRow(commit, benchmarks)}
+            </table>
+
+            % for benchmark in benchmarks:
+            <%
+                    result = None
+                    for res in commit.results:
+                        if res.benchmark == benchmark:
+                            result = res
+                            sparkline_img = report_folder + result.data_raw_file + ".spark.svg"
+                            break
+            %>
+                % if result.value != None:
+                    <h4 id="commit_${commit.sha1}_bench_${benchmark.full_name}}">${benchmark.full_name} (commit <a href="#commit_${commit.sha1}">${commit.full_name}</a>)</h4>
+
+                    <p><a href="${result.data_raw_file}">Original data</a></p>
+
+                    <img src="${result.img_src_name}" alt="Test's time series and density of probability" />
+                % endif
+            % endfor
+        % endfor
     </body>
 
 </html>
 """
-
-table_commit_template="""
-            <tr>
-                <td>{commitNum}</td>
-                <td><a href="#commit_{sha1}">{sha1}</a></td>
-                <td bgcolor="{geom_color}">{geom_mean:.2f} ({geom_diff:+.2f} %)</td>
-                {tbl_res_benchmarks}
-            </tr>
-"""
-
-table_entry_template="""
-<td bgcolor="{color}">
-    <a href="#commit_{sha1}_bench_{bench_name}">
-        {value:.2f} ({diff:+.2f} %)
-        <img src="{sparkline_img}" alt="Test's time series and density of probability" />
-    <a/>
-</td>"""
-
-table_entry_no_results_template="""<td bgcolor="#FFFF00"><center>NO DATA</center>"""
-
-commit_template="""
-    <h3 id="commit_{sha1}">{commit}</h3>
-    <p><a href="{patch}">Patch</a> <a href="{compile_log}">Compilation logs</a></p>
-    <table border="1" style="">
-        <tr>
-            <th>Commit #</th>
-            <th>Commit SHA1</th>
-            <th>Geometric mean</th>
-            {tbl_hdr_benchmarks}
-        </tr>
-        {commit_results}
-    </table>
-    {benchs}"""
-
-bench_template="""
-    <h4 id="commit_{sha1}_bench_{bench_name}">{bench_name} (commit <a href="#commit_{sha1}">{commit}</a>)</h4>
-
-    <p><a href="{raw_data_file}">Original data</a></p>
-
-    <img src="{img_src}" alt="Test's time series and density of probability" />"""
 
 def computeDiffAndColor(prev, new):
     if prev > 0:
@@ -255,6 +275,8 @@ def computeDiffAndColor(prev, new):
             diff = (new * 100.0 / prev) - 100.0
     else:
         diff = 0
+
+    diff = float("{0:.2f}".format(diff))
 
     if diff < -1.5 or diff == float('inf'):
         color = "#FF0000"
@@ -269,16 +291,7 @@ def computeDiffAndColor(prev, new):
 # Create the html file
 print("Generating the HTML")
 
-# generate the table's header
-tbl_hdr_benchmarks = ""
-for benchmark in report.benchmarks:
-    tbl_hdr_benchmarks += "<th>{benchmark}</th>\n".format(benchmark=benchmark.full_name)
-
-# generate the reports for each commits
-commits_txt = ""
-tbl_entries_txt = ""
 geom_prev = -1
-i = 0
 for commit in report.commits:
     benchs_txt = ""
     tbl_res_benchmarks = ""
@@ -290,52 +303,22 @@ for commit in report.commits:
                 break
 
         if result != None:
-            value = array(result.data).mean()
-            diff, color = computeDiffAndColor(result.benchmark.prevValue, value)
-            result.benchmark.prevValue = value
+            result.value = float("{0:.2f}".format(array(result.data).mean()))
+            result.diff, result.color = computeDiffAndColor(result.benchmark.prevValue,
+                                                            result.value)
+            result.benchmark.prevValue = result.value
 
-            img_src_name = genFileNameReportImg(report_folder, result.data_raw_file)
-            sparkline_img = genFileNameSparkline(report_folder, result.data_raw_file)
+            result.img_src_name = genFileNameReportImg(report_folder, result.data_raw_file)
+            result.sparkline_img = genFileNameSparkline(report_folder, result.data_raw_file)
 
-            # Generate the html
-            benchs_txt += bench_template.format(sha1=commit.sha1,
-                                                commit=commit.full_name,
-                                                bench_name=result.benchmark.full_name,
-                                                img_src=img_src_name,
-                                                raw_data_file=result.data_raw_file)
+    commit.geom = float("{0:.2f}".format(commit.geom_mean()))
+    commit.geom_diff, commit.geom_color = computeDiffAndColor(geom_prev, commit.geom)
+    geom_prev = commit.geom
 
-            tbl_res_benchmarks += table_entry_template.format(sha1=commit.sha1,
-                                                            bench_name=result.benchmark.full_name,
-                                                            sparkline_img=sparkline_img,
-                                                            value=value,
-                                                            diff=diff,
-                                                            color=color)
-        else:
-            tbl_res_benchmarks += table_entry_no_results_template
-
-    # generate the html
-    diff, color = computeDiffAndColor(geom_prev, commit.geom_mean())
-    geom_prev = commit.geom_mean()
-    commit_results = table_commit_template.format(commitNum=i, sha1=commit.sha1,
-                                                  geom_mean=commit.geom_mean(),
-                                                  geom_diff=diff, geom_color=color,
-                                                  tbl_res_benchmarks=tbl_res_benchmarks)
-    tbl_entries_txt += commit_results
-    commits_txt += commit_template.format(commit=commit.full_name,
-                                          sha1=commit.sha1,
-                                          benchs=benchs_txt,
-                                          compile_log=commit.compile_log,
-                                          tbl_hdr_benchmarks=tbl_hdr_benchmarks,
-                                          commit_results=commit_results,
-                                          patch=commit.patch)
-    i += 1
-
-# Generate the final html file
-html = html_template.format(run_name=args.log_folder,
-                            commits=commits_txt,
-                            tbl_entries=tbl_entries_txt,
-                            tbl_hdr_benchmarks=tbl_hdr_benchmarks,
-                            report_folder=report_folder);
+html = Template(html_template).render(run_name=args.log_folder,
+                                      report_folder=report_folder,
+                                      benchmarks=report.benchmarks,
+                                      commits=report.commits)
 
 with open(html_name, 'w') as f:
     f.write(html)
