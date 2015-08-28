@@ -226,6 +226,15 @@ html_template="""
 
         <center><img src="${report_folder}/overview.svg" alt="Trends"/></center>
 
+        % if len(notes) > 0:
+        <h2>Notes</h2>
+            <ul>
+            % for note in notes:
+                <li>${note}</li>
+            % endfor
+            </ul>
+        % endif
+
         <h2>Stats</h2>
 
         <table border="1" style="">
@@ -318,7 +327,8 @@ for commit in report.commits:
 html = Template(html_template).render(run_name=args.log_folder,
                                       report_folder=report_folder,
                                       benchmarks=report.benchmarks,
-                                      commits=report.commits)
+                                      commits=report.commits,
+                                      notes=report.notes)
 
 with open(html_name, 'w') as f:
     f.write(html)
