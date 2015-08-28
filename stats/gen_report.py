@@ -30,11 +30,11 @@ parser.add_argument("log_folder")
 args = parser.parse_args()
 
 # Parse the report
-commits, benchmarks = readPerformanceReport(args.log_folder, args.frametime)
+report = genPerformanceReport(args.log_folder, args.frametime)
 
 # Generate the labels for the commits
 commitsLabels = []
-for commit in commits:
+for commit in report.commits:
     commitsLabels.append(commit.label)
 
 # Create a folder for the results
@@ -52,18 +52,18 @@ plt.xlabel('Commits')
 plt.ylabel('Perf. diff. with the first commit (%)')
 plt.grid(True)
 
-data = getResultsGeomDiffs(commits)
+data = getResultsGeomDiffs(report.commits)
 x_val = [x[0] for x in data]
 y_val = [x[1] for x in data]
 plt.plot(x_val, y_val, label="Geometric mean")
 
-for i in range(len(benchmarks)):
-    data = getResultsBenchmarkDiffs(commits, benchmarks[i])
+for i in range(len(report.benchmarks)):
+    data = getResultsBenchmarkDiffs(report.commits, report.benchmarks[i])
 
     x_val = [x[0] for x in data]
     y_val = [x[1] for x in data]
 
-    plt.plot(x_val, y_val, label=benchmarks[i].full_name)
+    plt.plot(x_val, y_val, label=report.benchmarks[i].full_name)
 
 plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
            ncol=4, mode="expand", borderaxespad=0.)
@@ -77,7 +77,7 @@ def kde_scipy(x, x_grid, bandwidth=0.2, **kwargs):
 
 # Generate the spark lines
 print("Generating the sparklines",end="",flush=True)
-for commit in commits:
+for commit in report.commits:
     for result in commit.results:
         fig, ax = plt.subplots(1,1,figsize=(1.25,.3))
         r_max = amax(result.data)
@@ -102,8 +102,8 @@ print(" DONE")
 # Generate the large images
 plt.rcParams.update({'font.size': 9})
 print("Generating the runs' output image",end="",flush=True)
-for c in range (0, len(commits)):
-    commit = commits[c]
+for c in range (0, len(report.commits)):
+    commit = report.commits[c]
     for r in range (0, len(commit.results)):
         result = commit.results[r]
         img_src_name = genFileNameReportImg(report_folder, result.data_raw_file)
@@ -122,10 +122,10 @@ for c in range (0, len(commits)):
             YAvg = mean(x)
             boxYMin = YAvg * 0.99
             boxYMax = YAvg * 1.01
-            ax1.plot(x, label="cur.")
+            ax1.plot(x, label="cureport.")
             ax1.add_patch(Rectangle((0, boxYMin), len(x), boxYMax - boxYMin, alpha=.2, facecolor="green", label="2% box"))
             if c > 0:
-                ax1.plot(commits[c - 1].results[r].data, label="prev.")
+                ax1.plot(report.commits[c - 1].results[r].data, label="prev.")
             plt.legend()
 
             ax2 = plt.subplot(gs[1])
@@ -271,7 +271,7 @@ print("Generating the HTML")
 
 # generate the table's header
 tbl_hdr_benchmarks = ""
-for benchmark in benchmarks:
+for benchmark in report.benchmarks:
     tbl_hdr_benchmarks += "<th>{benchmark}</th>\n".format(benchmark=benchmark.full_name)
 
 # generate the reports for each commits
@@ -279,14 +279,14 @@ commits_txt = ""
 tbl_entries_txt = ""
 geom_prev = -1
 i = 0
-for commit in commits:
+for commit in report.commits:
     benchs_txt = ""
     tbl_res_benchmarks = ""
-    for benchmark in benchmarks:
+    for benchmark in report.benchmarks:
         result = None
-        for r in commit.results:
-            if r.benchmark == benchmark:
-                result = r
+        for res in commit.results:
+            if res.benchmark == benchmark:
+                result = res
                 break
 
         if result != None:

@@ -48,6 +48,12 @@ class Commit:
         geom_mean_cache = value
         return value
 
+class Report:
+    def __init__(self, benchmarks, commits, notes):
+        self.benchmarks = benchmarks
+        self.commits = commits
+        self.notes = notes
+
 def readCsv(filepath, wantFrametime = False):
     data = []
 
@@ -98,7 +104,14 @@ def readCommitLabels():
 
     return labels
 
-def readPerformanceReport(log_folder, wantFrametime = False, silentMode = False):
+def readNotes():
+    try:
+        with open("notes", 'rt') as f:
+            return f.readlines()
+    except:
+        return []
+
+def genPerformanceReport(log_folder, wantFrametime = False, silentMode = False):
     benchmarks = []
     commits = []
     labels = dict()
@@ -189,7 +202,7 @@ def readPerformanceReport(log_folder, wantFrametime = False, silentMode = False)
     # Go back to the original folder
     os.chdir(cwd)
 
-    return (commits, benchmarks)
+    return Report(benchmarks, commits, readNotes())
 
 def getPerformanceResultsCommitBenchmark(commit, benchmark, wantFrametime = False):
     for result in commit.results:

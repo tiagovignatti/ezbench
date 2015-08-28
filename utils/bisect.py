@@ -24,13 +24,13 @@ def check_commit_perf(ezbench_base_cmd, commit, logs_dir):
         call(cmd, stdout=f, stderr=f)
 
     # parse the logs, read the perf of the last entry!
-    commits, benchmarks = readPerformanceReport(logs_dir, True, True)
+    r = genPerformanceReport(logs_dir, True, True)
 
-    if len(benchmarks) != 1:
+    if len(r.benchmarks) != 1:
         print ("Warning: Expected only one benchmark result for commit {}!".format(commit))
 
     # read the perf report of the last entry!
-    return getPerformanceResultsCommitBenchmark(commits[-1], benchmarks[0], True).mean()
+    return getPerformanceResultsCommitBenchmark(r.commits[-1], r.benchmarks[0], True).mean()
 
 def checkPerformance(beforePerf, afterPerf, threshold, perf):
     if beforePerf > afterPerf:
