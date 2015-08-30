@@ -406,7 +406,7 @@ do
 
     # finish with the geometric mean (when we have multiple tests)
     if [ $t -gt 1 ]; then
-	fpsALL=$(awk '{r = 1; for(i=1; i<=NF; i++) { r *= $i } print exp(log(r) / NF) }' <<< $fpsALL)
+	    fpsALL=$(awk '{r=0; for(i=1; i<=NF; i++) { r += log($i) } print exp(r / NF) }' <<< $fpsALL)
 	if [ -z "${testPrevFps[-1]}" ]; then
 		testPrevFps[-1]=$fpsALL
 	fi
