@@ -46,32 +46,6 @@ if not os.path.isdir(report_folder):
     except OSError:
         print ("Error while creating the report folder")
 
-# Generate the trend graph
-print("Generating the trend graph")
-f = plt.figure(figsize=(17,3))
-plt.xlabel('Commits')
-plt.ylabel('Perf. diff. with the first commit (%)')
-plt.grid(True)
-
-data = getResultsGeomDiffs(report.commits, args.frametime)
-x_val = [x[0] for x in data]
-y_val = [x[1] for x in data]
-plt.plot(x_val, y_val, label="Geometric mean")
-
-for i in range(len(report.benchmarks)):
-    data = getResultsBenchmarkDiffs(report.commits, report.benchmarks[i], args.frametime)
-
-    x_val = [x[0] for x in data]
-    y_val = [x[1] for x in data]
-
-    plt.plot(x_val, y_val, label=report.benchmarks[i].full_name)
-
-plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
-           ncol=4, mode="expand", borderaxespad=0.)
-plt.xticks(range(len(commitsLabels)), commitsLabels, size='small', rotation=70)
-plt.savefig(report_folder + 'overview.svg', bbox_inches='tight')
-plt.close()
-
 def kde_scipy(x, x_grid, bandwidth=0.2, **kwargs):
     kde = gaussian_kde(x, bw_method=bandwidth, **kwargs)
     return kde.evaluate(x_grid)
@@ -180,6 +154,53 @@ html_template="""
         <style>
             body {{ font-size: 10pt}}
         </style>
+        <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+        <script type="text/javascript">
+            google.load('visualization', '1', {packages: ['corechart']});
+            google.setOnLoadCallback(drawChart);
+
+            function drawChart() {
+                var dataTable = new google.visualization.DataTable();
+                dataTable.addColumn('string', 'Commit');
+                % for benchmark in benchmarks:
+                    dataTable.addColumn('number', '${benchmark.full_name}');
+                    dataTable.addColumn({ type: "string", role: "tooltip", p: { html: true }});
+                % endfor
+                dataTable.addRows([
+                % for commit in commits:
+                    ['${commit.label}',
+                    % for benchmark in benchmarks:
+                    <%
+                            result = None
+                            for res in commit.results:
+                                if res.benchmark == benchmark:
+                                    result = res
+                                    sparkline_img = report_folder + result.data_raw_file + ".spark.svg"
+                                    break
+                    %>
+                         ${result.diff_absolute}, "<h2>${commit.label} - ${benchmark.full_name}</h2><p>Commit SHA1: <a href='#commit_${commit.sha1}'>${commit.sha1}</a></p><p>Value: ${result.diff_absolute} % (Diff with prev.: ${result.diff} %)</p><p>Raw data point: ${result.value} ${result.unit_str}</p><p><a href='#commit_${commit.sha1}_bench_${benchmark.full_name}'><img src='${sparkline_img}' alt='Sparkline of the performance' /></a></p>",
+                    % endfor
+                    ],
+                % endfor
+                ]);
+
+                var options = {
+                    chart: {
+                        title: 'Performance trend across multiple commits'
+                    },
+                    legend: { position: 'top' },
+                    focusTarget: 'datum',
+                    tooltip: {trigger: 'selection', isHtml: true},
+                    crosshair: { trigger: 'both' },
+                    hAxis: {title: 'Commits'},
+                    vAxis: {title: 'Perf. diff. with the first commit (%)'}
+                };
+
+                var chart = new google.visualization.LineChart(document.getElementById('trends_chart'));
+
+                chart.draw(dataTable, options);
+            }
+        </script>
     </head>
 
     <%def name="makeTableheader(benchmarks)">
@@ -224,7 +245,7 @@ html_template="""
 
         <h2>Trends</h2>
 
-        <center><img src="${report_folder}/overview.svg" alt="Trends"/></center>
+        <center><div id="trends_chart" style="width: 100%; height: 500px;"></div></center>
 
         % if len(notes) > 0:
         <h2>Notes</h2>
@@ -313,8 +334,12 @@ for commit in report.commits:
 
         if result != None:
             result.value = float("{0:.2f}".format(array(result.data).mean()))
+            if not hasattr(result.benchmark, "first_value"):
+                result.benchmark.first_value = result.value
             result.diff, result.color = computeDiffAndColor(result.benchmark.prevValue,
                                                             result.value)
+            result.diff_absolute, useless_color = computeDiffAndColor(result.benchmark.first_value,
+                                                                                   result.value)
             result.benchmark.prevValue = result.value
 
             result.img_src_name = genFileNameReportImg(report_folder, result.data_raw_file)
