@@ -263,7 +263,7 @@ html_template="""
                             break
             %>
                 % if result.value != None:
-                    <h4 id="commit_${commit.sha1}_bench_${benchmark.full_name}}">${benchmark.full_name} (commit <a href="#commit_${commit.sha1}">${commit.full_name}</a>)</h4>
+                    <h4 id="commit_${commit.sha1}_bench_${benchmark.full_name}">${benchmark.full_name} (commit <a href="#commit_${commit.sha1}">${commit.full_name}</a>)</h4>
 
                     <p><a href="${result.data_raw_file}">Original data</a></p>
 
