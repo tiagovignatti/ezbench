@@ -99,7 +99,7 @@ def readCommitLabels():
     for labelLine in labelLines:
         fields = labelLine.split(" ")
         sha1 = fields[0]
-        label = fields[1]
+        label = fields[1].split("\n")[0]
         labels[sha1] = label
 
     return labels
