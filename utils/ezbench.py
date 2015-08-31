@@ -12,12 +12,13 @@ class Benchmark:
         self.prevValue = -1
 
 class BenchResult:
-    def __init__(self, commit, benchmark, data_raw_file):
+    def __init__(self, commit, benchmark, data_raw_file, unit_str):
         self.commit = commit
         self.benchmark = benchmark
         self.data_raw_file = data_raw_file
         self.data = []
         self.runs = []
+        self.unit_str = unit_str
 
 class Commit:
     def __init__(self, sha1, full_name, compile_log, patch, label):
@@ -174,8 +175,13 @@ def genPerformanceReport(log_folder, wantFrametime = False, silentMode = False):
                 benchmark = Benchmark(bench_name)
                 benchmarks.append(benchmark)
 
+            if wantFrametime:
+                unit = "ms"
+            else:
+                unit = "FPS"
+
             # Create the result object
-            result = BenchResult(commit, benchmark, benchFile)
+            result = BenchResult(commit, benchmark, benchFile, unit)
 
             # Read the data and abort if there is no data
             result.data = readCsv(benchFile, wantFrametime)

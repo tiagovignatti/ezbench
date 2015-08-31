@@ -187,7 +187,7 @@ html_template="""
             <th>Commit</th>
             <th>Geometric mean</th>
             % for benchmark in benchmarks:
-                <th>${benchmark.full_name}</th>
+                <th>${benchmark.full_name} (${result.unit_str})</th>
             % endfor
         </tr>
     </%def>
