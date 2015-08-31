@@ -53,13 +53,13 @@ plt.xlabel('Commits')
 plt.ylabel('Perf. diff. with the first commit (%)')
 plt.grid(True)
 
-data = getResultsGeomDiffs(report.commits)
+data = getResultsGeomDiffs(report.commits, args.frametime)
 x_val = [x[0] for x in data]
 y_val = [x[1] for x in data]
 plt.plot(x_val, y_val, label="Geometric mean")
 
 for i in range(len(report.benchmarks)):
-    data = getResultsBenchmarkDiffs(report.commits, report.benchmarks[i])
+    data = getResultsBenchmarkDiffs(report.commits, report.benchmarks[i], args.frametime)
 
     x_val = [x[0] for x in data]
     y_val = [x[1] for x in data]
