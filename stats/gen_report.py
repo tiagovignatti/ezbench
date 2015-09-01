@@ -202,7 +202,7 @@ html_template="""
                                     sparkline_img = report_folder + result.data_raw_file + ".spark.svg"
                                     break
                     %>
-                         ${result.diff_absolute}, "<h2>${commit.label} - ${benchmark.full_name}</h2><p>Commit SHA1: <a href='#commit_${commit.sha1}'>${commit.sha1}</a></p><p>Value: ${result.diff_absolute} % (Diff with prev.: ${result.diff} %)</p><p>Raw data point: ${result.value} ${result.unit_str}</p><p><a href='#commit_${commit.sha1}_bench_${benchmark.full_name}'><img src='${sparkline_img}' alt='Sparkline of the performance' /></a></p>",
+                         ${result.diff_absolute}, "<h2>${commit.label} - ${benchmark.full_name}</h2><p>Commit SHA1: <a href='#commit_${commit.sha1}'>${commit.sha1}</a></p><p>Value: ${result.diff_absolute} % (Diff with prev.: ${result.diff} %)</p><p>Raw data point: ${result.value} ${result.unit_str}</p><p><a href='#commit_${commit.sha1}_bench_${benchmark.full_name}'><img src='${sparkline_img}' alt='Sparkline of the performance' /><br/>View more data</a></p>",
                     % endfor
                     ],
                 % endfor
