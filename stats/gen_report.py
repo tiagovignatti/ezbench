@@ -157,9 +157,33 @@ html_template="""
         <script type="text/javascript" src="https://www.google.com/jsapi"></script>
         <script type="text/javascript">
             google.load('visualization', '1', {packages: ['corechart']});
-            google.setOnLoadCallback(drawChart);
+            google.setOnLoadCallback(drawTrend);
 
-            function drawChart() {
+            function showColumn(dataTable, chart, activColumns, series, col, show) {
+                var seriesIndex = Math.floor(col / 2)
+                if (!show) {
+                    activColumns[col] = {
+                        label: dataTable.getColumnLabel(col),
+                        type: dataTable.getColumnType(col),
+                        calc: function () {
+                            return null;
+                        }
+                    };
+                    series[seriesIndex].color = '#CCCCCC';
+                }
+                else {
+                    activColumns[col] = col;
+                    series[seriesIndex].color = null;
+                }
+            }
+
+            function showAllColumns(dataTable, chart, activColumns, series, show) {
+                for (var i = 1; i < dataTable.getNumberOfColumns(); i+=2) {
+                    showColumn(dataTable, chart, activColumns, series, i, show)
+                }
+            }
+
+            function drawTrend() {
                 var dataTable = new google.visualization.DataTable();
                 dataTable.addColumn('string', 'Commit');
                 % for benchmark in benchmarks:
@@ -184,21 +208,78 @@ html_template="""
                 % endfor
                 ]);
 
+                var activColumns = [];
+                var series = {};
+                for (var i = 0; i < dataTable.getNumberOfColumns(); i++) {
+                    activColumns.push(i);
+                    if (i > 0) {
+                        series[i - 1] = {};
+                    }
+                }
+
                 var options = {
                     chart: {
                         title: 'Performance trend across multiple commits'
                     },
-                    legend: { position: 'top' },
+                    legend: { position: 'top', textStyle: {fontSize: 12}, maxLines: 3},
                     focusTarget: 'datum',
                     tooltip: {trigger: 'selection', isHtml: true},
                     crosshair: { trigger: 'both' },
                     hAxis: {title: 'Commits'},
-                    vAxis: {title: 'Perf. diff. with the first commit (%)'}
+                    vAxis: {title: 'Perf. diff. with the first commit (%)'},
+                    series: series,
+                    chartArea: {left:"5%", width:"95%"}
                 };
 
                 var chart = new google.visualization.LineChart(document.getElementById('trends_chart'));
-
                 chart.draw(dataTable, options);
+
+                google.visualization.events.addListener(chart, 'select', function () {
+                    var sel = chart.getSelection();
+                    //alert(sel + "sel.length = " + sel.length)
+                    // See https://developers.google.com/chart/interactive/docs/reference#visgetselection
+                    if (sel.length > 0 && typeof sel[0].row === 'object') {
+                        var col = sel[0].column;
+
+                        var allActive = true;
+                        for (var i = 1; i < dataTable.getNumberOfColumns(); i+=2) {
+                            if (activColumns[i] != i) {
+                                allActive = false;
+                            }
+                        }
+                        if (activColumns[col] == col) {
+                            // The clicked columns is active
+                            if (allActive) {
+                                showAllColumns(dataTable, chart, activColumns, series, false);
+                                showColumn(dataTable, chart, activColumns, series, col, true);
+                            } else {
+                                showColumn(dataTable, chart, activColumns, series, col, false);
+                            }
+                        }
+                        else {
+                            // The clicked columns is inactive, show it
+                            showColumn(dataTable, chart, activColumns, series, col, true);
+                        }
+
+                        var allHidden = true;
+                        for (var i = 1; i < dataTable.getNumberOfColumns(); i+=2) {
+                            if (activColumns[i] == i) {
+                                allHidden = false;
+                            }
+                        }
+                        if (allHidden)
+                            showAllColumns(dataTable, chart, activColumns, series, true);
+
+                        // Redraw the chart with the masked columns
+                        var view = new google.visualization.DataView(dataTable);
+                        view.setColumns(activColumns);
+                        chart.draw(view, options);
+                    }
+
+                    if (sel.length == 0) {
+                        chart.setSelection(null);
+                    }
+                });
             }
         </script>
     </head>
