@@ -27,7 +27,8 @@ def check_commit_perf(ezbench_base_cmd, commit, logs_dir):
     r = genPerformanceReport(logs_dir, True, True)
 
     if len(r.benchmarks) != 1:
-        print ("Warning: Expected only one benchmark result for commit {}!".format(commit))
+        print ("Error: Expected one benchmark result for commit {} but got !".format(commit, len(r.benchmarks)))
+        os.exit(1)
 
     # read the perf report of the last entry!
     return getPerformanceResultsCommitBenchmark(r.commits[-1], r.benchmarks[0], True).mean()
@@ -77,7 +78,7 @@ if os.path.exists(logs_dir):
 ezbench_cmd = []
 ezbench_cmd.append(ezbench_dir + "ezbench.sh")
 ezbench_cmd.append("-p"); ezbench_cmd.append(args.repo_path)
-ezbench_cmd.append("-b"); ezbench_cmd.append(args.benchmark)
+ezbench_cmd.append("-b"); ezbench_cmd.append(args.benchmark + '$')
 ezbench_cmd.append("-r"); ezbench_cmd.append(str(args.rounds))
 ezbench_cmd.append("-m"); ezbench_cmd.append(args.make_cmd)
 ezbench_cmd.append("-N"); ezbench_cmd.append(reportName)
