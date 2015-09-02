@@ -205,10 +205,13 @@ def genPerformanceReport(log_folder, wantFrametime = False, silentMode = False):
     # Sort the list of benchmarks
     benchmarks = sorted(benchmarks, key=lambda bench: bench.full_name)
 
+    # Read the notes before going back to the original folder
+    notes = readNotes()
+
     # Go back to the original folder
     os.chdir(cwd)
 
-    return Report(benchmarks, commits, readNotes())
+    return Report(benchmarks, commits, notes)
 
 def getPerformanceResultsCommitBenchmark(commit, benchmark, wantFrametime = False):
     for result in commit.results:
