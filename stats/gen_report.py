@@ -229,7 +229,7 @@ html_template="""
                     focusTarget: 'datum',
                     tooltip: {trigger: 'selection', isHtml: true},
                     crosshair: { trigger: 'both' },
-                    hAxis: {title: 'Commits'},
+                    hAxis: {title: 'Commits', slantedText: true, slantedTextAngle: 45},
                     vAxis: {title: 'Perf. diff. with the first commit (%)'},
                     series: series,
                     chartArea: {left:"5%", width:"95%"}
@@ -240,7 +240,6 @@ html_template="""
 
                 google.visualization.events.addListener(chart, 'select', function () {
                     var sel = chart.getSelection();
-                    //alert(sel + "sel.length = " + sel.length)
                     // See https://developers.google.com/chart/interactive/docs/reference#visgetselection
                     if (sel.length > 0 && typeof sel[0].row === 'object') {
                         var col = sel[0].column;
