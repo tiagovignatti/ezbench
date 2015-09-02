@@ -195,14 +195,18 @@ html_template="""
                     ['${commit.label}',
                     % for benchmark in benchmarks:
                     <%
-                            result = None
-                            for res in commit.results:
-                                if res.benchmark == benchmark:
-                                    result = res
-                                    sparkline_img = report_folder + result.data_raw_file + ".spark.svg"
-                                    break
+                        result = None
+                        for res in commit.results:
+                            if res.benchmark == benchmark:
+                                result = res
+                                sparkline_img = report_folder + result.data_raw_file + ".spark.svg"
+                                break
                     %>
-                         ${result.diff_absolute}, "<h2>${commit.label} - ${benchmark.full_name}</h2><p>Commit SHA1: <a href='#commit_${commit.sha1}'>${commit.sha1}</a></p><p>Value: ${result.diff_absolute} % (Diff with prev.: ${result.diff} %)</p><p>Raw data point: ${result.value} ${result.unit_str}</p><p><a href='#commit_${commit.sha1}_bench_${benchmark.full_name}'><img src='${sparkline_img}' alt='Sparkline of the performance' /><br/>View more data</a></p>",
+                    % if result != None:
+                        ${result.diff_absolute}, "<h2>${commit.label} - ${benchmark.full_name}</h2><p>Commit SHA1: <a href='#commit_${commit.sha1}'>${commit.sha1}</a></p><p>Value: ${result.diff_absolute} % (Diff with prev.: ${result.diff} %)</p><p>Raw data point: ${result.value} ${result.unit_str}</p><p><a href='#commit_${commit.sha1}_bench_${benchmark.full_name}'><img src='${sparkline_img}' alt='Sparkline of the performance' /><br/>View more data</a></p>",
+                    % else:
+                        null, "<h2>${commit.label} - ${benchmark.full_name}</h2><p>Commit SHA1: <a href='#commit_${commit.sha1}'>${commit.sha1}</a></p><p>NO DATA</p>",
+                    % endif
                     % endfor
                     ],
                 % endfor
@@ -307,7 +311,7 @@ html_template="""
                             sparkline_img = report_folder + result.data_raw_file + ".spark.svg"
                             break
             %>
-                % if result.value != None:
+                % if result != None and result.value != None:
                     <td bgcolor="${result.color}">
                         <a href="#commit_${commit.sha1}_bench_${benchmark.full_name}">
                             ${result.value} (${result.diff} %)
@@ -364,7 +368,7 @@ html_template="""
                             sparkline_img = report_folder + result.data_raw_file + ".spark.svg"
                             break
             %>
-                % if result.value != None:
+                % if result != None and result.value != None:
                     <h4 id="commit_${commit.sha1}_bench_${benchmark.full_name}">${benchmark.full_name} (commit <a href="#commit_${commit.sha1}">${commit.full_name}</a>)</h4>
 
                     <p><a href="${result.data_raw_file}">Original data</a></p>
