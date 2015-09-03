@@ -30,8 +30,8 @@ report = genPerformanceReport(args.log_folder, False)
 os.chdir(args.path)
 
 for commit in report.commits:
-    gitCommandLine = ["/usr/bin/git", "show", "--format=%cI", "--date=local", "-s", commit.sha1]
-    date = subprocess.check_output(gitCommandLine).decode().split('T')[0]
+    gitCommandLine = ["/usr/bin/git", "show", "--format=%ci", "--date=local", "-s", commit.sha1]
+    date = subprocess.check_output(gitCommandLine).decode().split(' ')[0]
     val = "{commit_sha1} {label}\n".format(commit_sha1=commit.sha1, label=date)
     f.write(val)
     print(val, end="")
