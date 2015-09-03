@@ -1,0 +1,88 @@
+GLB30=${GLBENCHMARK30_FOLDER}/build/linux/gfxbench_Release/mainapp/mainapp
+
+test -e ${GLB30} || return 1
+
+# Output:
+#    [INFO ]: {
+# "results":
+# [
+#  {
+#   "elapsed_time": 616,
+#   "error_string": "",
+#   "gfx_result":
+#   {
+#    "egl_config_id": -1,
+#    "fps": 52.1,
+#    "frame_count": 31,
+#    "frametimes": [ 15, 3, 26, 21, 20, 21, 20, 21, 20, 20, 21, 38, 3, 20, 21, 22, 20, 20, 20, 20, 21, 20,
+#                    20, 20, 20, 21, 20, 21, 20, 20, 21 ],
+#    "graphics_version": "3.0 Mesa 10.3.2",
+#    "renderer": "Mesa DRI Intel(R) HD Graphics 5500 (Broadwell GT2) ",
+#    "surface_height": 1080,
+#    "surface_width": 1920
+#   },
+#   "load_time": 4427,
+#   "measured_time": 616,
+#   "result_id": -1,
+#   "score": 2917.64697265625,
+#   "status": "OK",
+#   "test_id": "gl_trex",
+#   "unit": "frames",
+#   "version": 1
+#  }
+# ]
+#}
+
+function __gl30run__ {
+    set -o xtrace
+    local W="${GLBENCHMARK30_WIDTH:-1920}"
+    local H="${GLBENCHMARK30_HEIGHT:-1080}"
+
+    cd ${GLBENCHMARK30_FOLDER}/build/linux/gfxbench_Release/mainapp/
+
+    # set GL versions when needed
+    case "$2" in
+    gl_4*)
+        export MESA_GL_VERSION_OVERRIDE=4.3
+        export MESA_GLSL_VERSION_OVERRIDE=430
+        ;;
+    gl_manhattan31*)
+        export MESA_GL_VERSION_OVERRIDE=4.3
+        export MESA_GLSL_VERSION_OVERRIDE=430
+        ;;
+    gl_manhattan*)
+        export MESA_GL_VERSION_OVERRIDE=4.1
+        export MESA_GLSL_VERSION_OVERRIDE=400
+        ;;
+    esac
+
+    for (( c=0; c<$1; c++ ))
+    do
+	LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${GLBENCHMARK30_FOLDER}/build/linux/poco_Release/lib/ \
+        vblank_mode=0 \
+	./mainapp -data ${GLB30_DATA} -w $W -h $H -ow $W -oh $H -t $2 -fullscreen $3 |\
+	grep score | cut -d : -f 2- | cut -d " " -f 2 | cut -d ',' -f 1
+    done
+
+    unset MESA_GL_VERSION_OVERRIDE
+    unset MESA_GLSL_VERSION_OVERRIDE
+}
+
+while read name benchmark; do
+   eval "${name}:fullscreen_run() { __gl30run__ \$1 $benchmark 1; }"
+   test_name="$test_name $name:fullscreen"
+
+   eval "${name}:window_run() { __gl30run__ \$1 $benchmark 0; }"
+   test_name="$test_name $name:window"
+
+   eval "${name}:offscreen_run() { __gl30run__ \$1 ${benchmark}_off 0; }"
+   test_name="$test_name $name:offscreen"
+
+   eval "${name}:cpu_run() { INTEL_NO_HW=1 __gl30run__ \$1 ${benchmark} 0; }"
+   test_name="$test_name $name:cpu"
+done<<EOL
+        GLB30:Trex gl_trex
+	GLB30:Manhattan gl_manhattan
+	GLB30:Manhattan31 gl_manhattan31
+EOL
+test_exec_time=70
