@@ -220,7 +220,7 @@ def getPerformanceResultsCommitBenchmark(commit, benchmark, wantFrametime = Fals
 
         return array(result.data)
 
-    return []
+    return array([])
 
 def getResultsBenchmarkDiffs(commits, benchmark, wantFrametime = False):
     results = []
