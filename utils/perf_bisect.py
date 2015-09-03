@@ -80,7 +80,8 @@ ezbench_cmd.append(ezbench_dir + "ezbench.sh")
 ezbench_cmd.append("-p"); ezbench_cmd.append(args.repo_path)
 ezbench_cmd.append("-b"); ezbench_cmd.append(args.benchmark + '$')
 ezbench_cmd.append("-r"); ezbench_cmd.append(str(args.rounds))
-ezbench_cmd.append("-m"); ezbench_cmd.append(args.make_cmd)
+if args.make_cmd is not None:
+    ezbench_cmd.append("-m"); ezbench_cmd.append(args.make_cmd)
 ezbench_cmd.append("-N"); ezbench_cmd.append(reportName)
 
 print("Checking the performance of:")
