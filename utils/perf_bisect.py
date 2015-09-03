@@ -20,15 +20,18 @@ def check_commit_perf(ezbench_base_cmd, commit, logs_dir):
     cmd.append(commit)
 
     # Call ezbench
-    with open(os.devnull, "w") as f:
-        call(cmd, stdout=f, stderr=f)
+    try:
+        check_output(cmd, stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as e:
+        print("\n\nERROR: The following command '{}' failed with the error code {}. Here is its output:\n\n'{}'".format(" ".join(cmd), e.returncode, e.output.decode()))
+        sys.exit(1)
 
     # parse the logs, read the perf of the last entry!
     r = genPerformanceReport(logs_dir, True, True)
 
     if len(r.benchmarks) != 1:
         print ("Error: Expected one benchmark result for commit {} but got !".format(commit, len(r.benchmarks)))
-        os.exit(1)
+        sys.exit(1)
 
     # read the perf report of the last entry!
     return getPerformanceResultsCommitBenchmark(r.commits[-1], r.benchmarks[0], True).mean()
