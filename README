@@ -1,0 +1,115 @@
+= EzBench =
+
+This repo contains a collection of tools to benchmark graphics-related
+patch-series.
+
+== Ezbench.sh ==
+
+This tool is responsible for collecting the data and generating logs that will
+be used by another tool to generate a visual report.
+
+By default, the logs will be outputed in logs/<date of the run>/ and are stored
+mostly as csv files. The main report is found under the name results and needs
+to read with "less -r" to get the colours out! The list of commits tested is
+found under the name commit_list. A comprehensive documentation of the file
+structure will be written really soon.
+
+You may specify whatever name you want by adding -N <name> to the command line.
+This is very useful when testing kernel-related stuff as we need to reboot on
+a new kernel to test a new commit. Support for this is not perfect yet as some
+duplicates in commit_list may happen.
+
+=== Dependencies ===
+
+ - A recent-enough version of bash
+ - make
+ - awk
+ - all the other typical binutils binaries
+
+=== Configuration ===
+
+The tests configuration file is named test_options.sh. A sample file called
+test_options.sh.sample comes with the repo and is a good basis for your first
+configuration file.
+
+You will need to adjust this file to give the location of the base directory of
+all the benchmark folders.
+
+Another important note about ezbench.sh is that it is highly modular and
+hook-based. Have a look at conf.d/README for the documentation about the
+different hooks. The hooks can be defined in test_options.sh or in whatever file
+whose extension would be .conf and located in the conf.d directory.
+
+=== Examples ===
+
+==== Testing every patchset of a series ====
+
+The following command will test all the GLB27:Egypt cases but the ones
+containing the word cpu in them. It will run all the benchmarks 5 times on
+the 10 commits before HEAD~~.
+
+    ./ezbench.sh -p ~/repos/mesa -B cpu -b GLB27:Egypt -r 5 -n 10 -H HEAD~~
+
+The following command run the synmark:Gl21Batch2 benchmark (note the $ at the
+end that indicates that we do not want the :cpu variant). It will run all the
+benchmarks 3 times on 3 commits (in this order), HEAD~5 HEAD~2 HEAD~10.
+
+    ./ezbench.sh -p ~/repos/mesa -b synmark:Gl21Batch2$ -r 3 HEAD~5 HEAD~2 HEAD~10
+
+==== Retrospectives ====
+
+Here is an example of how to generate a retrospective. The interesting part is
+the call to utils/get_commit_list.py which generates a list of commits
+
+    ./ezbench.sh -p ~/repos/mesa -B cpu -b GLB27:Egypt:offscreen \
+                 -b GLB27:Trex:offscreen -b GLB30:Manhattan:offscreen \
+                 -b GLB30:Trex:offscreen -b unigine:heaven -b unigine:valley \
+                 -r 3 -m "./recompile-release.sh" `utils/get_commit_list.py \
+                          -p ~/repos/mesa -s 2014-12-01 -i "1 week"`
+
+
+== stats/gen_report.py ==
+
+The goal of this tool is to read the reports from ezbench and make them
+presentable to engineers and managers.
+
+Commits can be renamed by having a file named 'commit_labels' in the logs
+folder. The format is to have one label per line. The short SHA1 first, a space
+and then the label. Here is an example:
+    bb19f2c 2014-12-01
+
+If you want to generate date labels for commits, you can use the tool
+utils/gen_date_labels.py to generates the 'commit_labels' file. Example:
+    utils/gen_date_labels.py -p ~/repos/mesa logs/seekreet_stuff/
+
+It is also possible to add notes to the HTML report by adding a file called
+'notes' in the report folder. Every line of the note file will be added in
+an unordered list. It is possible to use HTML inside the file.
+
+=== Dependencies ===
+
+ - python3
+ - matplotlib
+ - scipy
+ - mako
+ - an internet connection to read the report
+
+=== Example ===
+
+This command will create an HTML report named
+logs/public_benchmarks_trend_broadwell/index.html. Nothing more, nothing less.
+
+    ./stats/gen_report.py logs/public_benchmarks_trend_broadwell/
+
+
+== utils/perf_bisect.py ==
+
+The perf_bisect.py tool allows bisecting performance issues. It is quite trivial
+to use, so just check out the example.
+
+=== Examples ===
+
+The following command will bisect a performance difference between commit
+HEAD~100 and HEAD. The -p, -b, -r and -m arguments are the same as ezbench.sh.
+
+    utils/perf_bisect.py -p ~/repos/mesa -b glxgears:window -r 1 HEAD~100 HEAD
