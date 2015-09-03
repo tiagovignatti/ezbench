@@ -46,6 +46,9 @@ def checkPerformance(beforePerf, afterPerf, threshold, perf):
             res = "good"
     return res
 
+def isEndOfBisect(git_output):
+    return "first bad commit" in git_output.split('\n')[0]
+
 # parse the options
 parser = argparse.ArgumentParser()
 parser.add_argument("-p", dest='repo_path', help="Git repository's path",
@@ -118,18 +121,16 @@ check_output(['git', 'bisect', 'good', args.BEFORE_COMMIT], stderr=subprocess.ST
 output = check_output(['git', 'bisect', 'bad', args.AFTER_COMMIT], stderr=subprocess.STDOUT).decode()
 print(output, end="")
 
-while True:
+while not isEndOfBisect(output):
     perf = check_commit_perf(ezbench_cmd, "HEAD", logs_dir)
     res = checkPerformance(before_perf, after_perf, threshold, perf)
     print("Performance index = {perf} (diffThreshold = {diff}). Marking as {res}\n".format(perf=perf,
                                                                                            diff=perf - threshold,
                                                                                            res=res.upper()))
     output = check_output(['git', 'bisect', res]).decode()
-
     print(output, end="")
-    if "first bad commit" in output:
-        firstBad = output.split(" ")[0]
-        print ("Change introduced by commit {}".format(firstBad))
-        break
+
+firstBad = output.split(" ")[0]
+print ("Change introduced by commit {}".format(firstBad))
 
 check_output(['git', 'bisect', 'reset'], stderr=subprocess.STDOUT)
