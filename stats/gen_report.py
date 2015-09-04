@@ -27,6 +27,8 @@ def genFileNameSparkline(report_folder, data_raw_file):
 parser = argparse.ArgumentParser()
 parser.add_argument("--frametime", help="Use frame times instead of FPS",
                     action="store_true")
+parser.add_argument("--fast", help="Fast mode, do not regenerate images if they exist",
+                    action="store_true")
 parser.add_argument("log_folder")
 args = parser.parse_args()
 
@@ -54,6 +56,10 @@ def kde_scipy(x, x_grid, bandwidth=0.2, **kwargs):
 print("Generating the sparklines",end="",flush=True)
 for commit in report.commits:
     for result in commit.results:
+        sparkFile = genFileNameSparkline(report_folder, result.data_raw_file)
+        if args.fast and os.path.isfile(sparkFile):
+            continue
+
         fig, ax = plt.subplots(1,1,figsize=(1.25,.3))
         r_max = amax(result.data)
         if r_max > 0:
@@ -67,8 +73,7 @@ for commit in report.commits:
         ax.set_xticks([])
         ax.set_yticks([])
 
-        plt.savefig(genFileNameSparkline(report_folder, result.data_raw_file),
-                    bbox_inches='tight', transparent=True)
+        plt.savefig(sparkFile, bbox_inches='tight', transparent=True)
         plt.close()
         print('.',end="",flush=True)
 print(" DONE")
@@ -82,6 +87,9 @@ for c in range (0, len(report.commits)):
     for r in range (0, len(commit.results)):
         result = commit.results[r]
         img_src_name = genFileNameReportImg(report_folder, result.data_raw_file)
+        if args.fast and os.path.isfile(img_src_name):
+            continue
+
         try:
             f = plt.figure(figsize=(19.5, 4))
             gs = gridspec.GridSpec(2, 2, width_ratios=[4, 1])
