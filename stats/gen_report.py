@@ -29,6 +29,7 @@ parser.add_argument("--frametime", help="Use frame times instead of FPS",
                     action="store_true")
 parser.add_argument("--fast", help="Fast mode, do not regenerate images if they exist",
                     action="store_true")
+parser.add_argument("--title", help="Set the title for the report")
 parser.add_argument("log_folder")
 args = parser.parse_args()
 
@@ -158,7 +159,7 @@ html_template="""
 <html xmlns="http://www.w3.org/1999/xhtml">
 
     <head>
-        <title>Performance report on the run named '${run_name}'</title>
+        <title>${title}</title>
         <style>
             body {{ font-size: 10pt}}
         </style>
@@ -333,7 +334,7 @@ html_template="""
     </%def>
 
     <body>
-        <h1>Performance report on the run named '${run_name}'</h1>
+        <h1>${title}</h1>
 
         <h2>Trends</h2>
 
@@ -413,6 +414,11 @@ def computeDiffAndColor(prev, new):
 # Create the html file
 print("Generating the HTML")
 
+if args.title is not None:
+    title = args.title
+else:
+    title = "Performance report on the run named '${run_name}'".format(run_name=args.log_folder)
+
 geom_prev = -1
 for commit in report.commits:
     benchs_txt = ""
@@ -441,7 +447,7 @@ for commit in report.commits:
     commit.geom_diff, commit.geom_color = computeDiffAndColor(geom_prev, commit.geom)
     geom_prev = commit.geom
 
-html = Template(html_template).render(run_name=args.log_folder,
+html = Template(html_template).render(title=title,
                                       report_folder=report_folder,
                                       benchmarks=report.benchmarks,
                                       commits=report.commits,
