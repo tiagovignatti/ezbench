@@ -417,7 +417,7 @@ print("Generating the HTML")
 if args.title is not None:
     title = args.title
 else:
-    title = "Performance report on the run named '${run_name}'".format(run_name=args.log_folder)
+    title = "Performance report on the run named '{run_name}'".format(run_name=args.log_folder)
 
 geom_prev = -1
 for commit in report.commits:
