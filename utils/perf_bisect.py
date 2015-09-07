@@ -15,16 +15,10 @@ sys.path.append(ezbench_dir + 'utils/')
 from ezbench import *
 
 # function that tests the performance of one commit
-def check_commit_perf(ezbench_base_cmd, commit, logs_dir):
-    cmd = list(ezbench_base_cmd)
-    cmd.append(commit)
-
-    # Call ezbench
-    try:
-        check_output(cmd, stderr=subprocess.STDOUT)
-    except subprocess.CalledProcessError as e:
-        print("\n\nERROR: The following command '{}' failed with the error code {}. Here is its output:\n\n'{}'".format(" ".join(cmd), e.returncode, e.output.decode()))
-        sys.exit(1)
+def check_commit_perf(ezbench, commit, benchmark, logs_dir):
+    # Run ezbench
+    if ezbench.run_commits([commit], [benchmark + '$']) == False:
+        return 0.0
 
     # parse the logs, read the perf of the last entry!
     r = genPerformanceReport(logs_dir, True, True)
@@ -80,25 +74,20 @@ if os.path.exists(logs_dir):
     shutil.rmtree(logs_dir, ignore_errors=True)
     print()
 
-# Create the command line for ezbench
-ezbench_cmd = []
-ezbench_cmd.append(ezbench_dir + "ezbench.sh")
-ezbench_cmd.append("-p"); ezbench_cmd.append(args.repo_path)
-ezbench_cmd.append("-b"); ezbench_cmd.append(args.benchmark + '$')
-ezbench_cmd.append("-r"); ezbench_cmd.append(str(args.rounds))
-if args.make_cmd is not None:
-    ezbench_cmd.append("-m"); ezbench_cmd.append(args.make_cmd)
-ezbench_cmd.append("-N"); ezbench_cmd.append(reportName)
+ezbench = Ezbench(ezbench_path=ezbench_dir + "ezbench.sh",
+                  repo_path=args.repo_path,
+                  make_command = args.make_cmd,
+                  log_folder=reportName)
 
 print("Checking the performance of:")
 
 # First, try the before and after commits
 print("\tBEFORE_COMMIT: ", end="",flush=True)
-before_perf = check_commit_perf(ezbench_cmd, args.BEFORE_COMMIT, logs_dir)
+before_perf = check_commit_perf(ezbench, args.BEFORE_COMMIT, args.benchmark, logs_dir)
 print("Performance index {before_perf}".format(before_perf=before_perf))
 
 print("\tAFTER_COMMIT:  ", end="",flush=True)
-after_perf = check_commit_perf(ezbench_cmd, args.AFTER_COMMIT, logs_dir)
+after_perf = check_commit_perf(ezbench, args.AFTER_COMMIT, args.benchmark, logs_dir)
 print("Performance index {after_perf}".format(after_perf=after_perf))
 print()
 
@@ -125,7 +114,7 @@ output = check_output(['git', 'bisect', 'bad', args.AFTER_COMMIT], stderr=subpro
 print(output, end="")
 
 while not isEndOfBisect(output):
-    perf = check_commit_perf(ezbench_cmd, "HEAD", logs_dir)
+    perf = check_commit_perf(ezbench, "HEAD", args.benchmark, logs_dir)
     res = checkPerformance(before_perf, after_perf, threshold, perf)
     print("Performance index = {perf} (diffThreshold = {diff}). Marking as {res}\n".format(perf=perf,
                                                                                            diff=perf - threshold,
