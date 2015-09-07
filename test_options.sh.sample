@@ -84,3 +84,6 @@ CAIRO_DEMOS=/opt/benchmarks/cairo-demos
 
 # xf86-video-intel setting
 XF86_VIDEO_INTEL=/opt/benchmarks/xf86-video-intel
+
+# Xonotic
+XONOTIC_FOLDER=/usr/bin
