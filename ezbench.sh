@@ -314,7 +314,10 @@ do
     else
         git reset --hard $commit > /dev/null
         git show --format="%Cblue%h%Creset %Cgreen%s%Creset" -s
-        git show --format="%h %s" -s >> $commitListLog
+        if [ -z "`grep ^$commit $commitListLog 2> /dev/null`" ]
+        then
+            git show --format="%h %s" -s >> $commitListLog
+        fi
         git format-patch HEAD~ --format=fuller --stdout > $logsFolder/${commit}.patch
     fi
 
