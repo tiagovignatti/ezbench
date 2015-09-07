@@ -1,11 +1,70 @@
 from array import array
 from numpy import *
+import subprocess
 import glob
 import csv
 import sys
 import os
 import re
 
+# Ezbench runs
+class Ezbench:
+    def __init__(self, ezbench_path, repo_path, make_command = None,
+                 log_folder = None, tests_folder = None):
+        self.ezbench_path = ezbench_path
+        self.repo_path = repo_path
+        self.make_command = make_command
+        self.log_folder = log_folder
+        self.tests_folder = tests_folder
+
+    def __ezbench_cmd_base(self, benchmarks, benchmark_excludes = [], rounds = None):
+        ezbench_cmd = []
+        ezbench_cmd.append(self.ezbench_path)
+        ezbench_cmd.append("-p"); ezbench_cmd.append(self.repo_path)
+
+        for benchmark in benchmarks:
+            ezbench_cmd.append("-b"); ezbench_cmd.append(benchmark)
+
+        for benchmark_excl in benchmark_excludes:
+            ezbench_cmd.append("-B"); ezbench_cmd.append(benchmark_excl)
+
+        if rounds is not None:
+            ezbench_cmd.append("-r"); ezbench_cmd.append(str(rounds))
+
+        if self.make_command is not None:
+            ezbench_cmd.append("-m"); ezbench_cmd.append(self.make_command)
+        if self.log_folder is not None:
+            ezbench_cmd.append("-N"); ezbench_cmd.append(self.log_folder)
+        if self.tests_folder is not None:
+            ezbench_cmd.append("-T"); ezbench_cmd.append(self.tests_folder)
+
+        return ezbench_cmd
+
+    def __run_ezbench(self, cmd):
+        try:
+            subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as e:
+            print("\n\nERROR: The following command '{}' failed with the error code {}. Here is its output:\n\n'{}'".format(" ".join(cmd), e.returncode, e.output.decode()))
+            return False
+        return True
+
+    def run_commits(self, commits, benchmarks, benchmark_excludes = [], rounds = None):
+        ezbench_cmd = self.__ezbench_cmd_base(benchmarks, benchmark_excludes, rounds)
+
+        for commit in commits:
+            ezbench_cmd.append(commit)
+
+        return self.__run_ezbench(ezbench_cmd)
+
+    def run_commit_range(self, head, commit_count, benchmarks, benchmark_excludes = [], rounds = None):
+        ezbench_cmd = self.__ezbench_cmd_base(benchmarks, benchmark_excludes, rounds)
+
+        ezbench_cmd.append("-H"); ezbench_cmd.append(head)
+        ezbench_cmd.append("-n"); ezbench_cmd.append(commit_count)
+
+        return self.__run_ezbench(ezbench_cmd)
+
+# Report parsing
 class Benchmark:
     def __init__(self, full_name):
         self.full_name = full_name
