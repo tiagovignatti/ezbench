@@ -3,18 +3,19 @@
 test -e "$GPUTEST_FOLDER/GpuTest" || return 1
 test -e "$LIBFRAMETIME64_SO" || return 1
 
+# 5 arguments: $rounds $fps_logs_file $runID $benchmark $benchmark_opts
 __gputest__() {
     cd "$GPUTEST_FOLDER" # Set this variable in test_options.sh
     local benchmark="/benchmark /no_scorebox"
 
-    for (( c=0; c<$1; c++ )); do
+    for (( c=$3; c<$1+$3; c++ )); do
         rm -f /tmp/frametime.log
 
-        echo ./GpuTest /test=$3 $benchmark $4 >> /tmp/gputest
+        echo ./GpuTest /test=$3 $benchmark $5 >> /tmp/gputest
 
         LIBFRAMETIME_FILE=/tmp/frametime.log LD_PRELOAD=$LIBFRAMETIME64_SO \
-        ./GpuTest /test=$3 $benchmark $4 > /dev/null || return 1
-        
+        ./GpuTest /test=$4 $benchmark $5 > /dev/null || return 1
+
         # read back the result, skip the first frames since they are the loading frames
         cat /tmp/frametime.log | awk '{if (++n > 10) {print 1000000/$2}}' > $2#$c
         awk '{sum=sum+$1} END {print sum/NR}' $2#$c
@@ -28,14 +29,15 @@ GL2_1="fur pixmark_julia_fp32 pixmark_piano pixmark_volplosion plot3d triangle"
 GL3_3="gi"
 GL4_0="tess_x8 tess_x16 tess_x32 tess_x64 pixmark_julia_fp64"
 
+# 3 arguments: $rounds $fps_logs_file $runID
 for t in $GL2_1 $GL3_3 $GL4_0; do
     name="gputest:$t:fullscreen"
     test_name="$test_name $name"
-    eval "${name}_run() { __gputest__ \$1 \$2 $t \"$fullscreen\"; }"
+    eval "${name}_run() { __gputest__ \$1 \$2 \$3 $t \"$fullscreen\"; }"
 
     name="gputest:$t:window"
     test_name="$test_name $name"
-    eval "${name}_run() { __gputest__ \$1 \$2 $t \"$window\"; }"
+    eval "${name}_run() { __gputest__ \$1 \$2 \$3 $t \"$window\"; }"
 done
 
 test_exec_time=60

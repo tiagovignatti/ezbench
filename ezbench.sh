@@ -333,19 +333,34 @@ do
         fps_logs=$logsFolder/${commit}_bench_${testNames[$t]}
         error_logs=${fps_logs}.errors
 
-        # Run the benchmark
-        echo "FPS of '${testNames[$t]}' using commit ${commit}" > $fps_logs
+        # add the csv header and find the first run id available
+        if [ -f "$fps_logs" ]; then
+            # The logs file exist, look for the number of runs
+            run=0
+            while [ -f "${fps_logs}#${run}" ]
+            do
+                run=$((run+1))
+            done
+        else
+            # The file did not exist, create it
+            echo "FPS of '${testNames[$t]}' using commit ${commit}" > $fps_logs
+            run=0
+        fi
+
+        # display the run name
         printf "%28s: " ${testNames[$t]}
 
+        # compute the different hook names
         runFuncName=${testNames[$t]}_run
         preHookFuncName=${testNames[$t]}_run_pre_hook
         postHookFuncName=${testNames[$t]}_run_post_hook
         processHookFuncName=${testNames[$t]}_process
 
-	unset ERROR
+        # Run the benchmark
+        unset ERROR
         callIfDefined $preHookFuncName
         callIfDefined benchmark_run_pre_hook
-        output=$($runFuncName $rounds $fps_logs 2>$error_logs || ERROR=1)
+        output=$($runFuncName $rounds $fps_logs $run 2>$error_logs || ERROR=1)
         callIfDefined benchmark_run_post_hook
         callIfDefined $postHookFuncName
 
