@@ -10,11 +10,11 @@ import re
 # Ezbench runs
 class Ezbench:
     def __init__(self, ezbench_path, repo_path, make_command = None,
-                 log_folder = None, tests_folder = None):
+                 report_name = None, tests_folder = None):
         self.ezbench_path = ezbench_path
         self.repo_path = repo_path
         self.make_command = make_command
-        self.log_folder = log_folder
+        self.report_name = report_name
         self.tests_folder = tests_folder
 
     def __ezbench_cmd_base(self, benchmarks, benchmark_excludes = [], rounds = None):
@@ -33,8 +33,8 @@ class Ezbench:
 
         if self.make_command is not None:
             ezbench_cmd.append("-m"); ezbench_cmd.append(self.make_command)
-        if self.log_folder is not None:
-            ezbench_cmd.append("-N"); ezbench_cmd.append(self.log_folder)
+        if self.report_name is not None:
+            ezbench_cmd.append("-N"); ezbench_cmd.append(self.report_name)
         if self.tests_folder is not None:
             ezbench_cmd.append("-T"); ezbench_cmd.append(self.tests_folder)
 

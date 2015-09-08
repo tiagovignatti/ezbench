@@ -77,7 +77,7 @@ if os.path.exists(logs_dir):
 ezbench = Ezbench(ezbench_path=ezbench_dir + "ezbench.sh",
                   repo_path=args.repo_path,
                   make_command = args.make_cmd,
-                  log_folder=reportName)
+                  report_name=reportName)
 
 print("Checking the performance of:")
 
