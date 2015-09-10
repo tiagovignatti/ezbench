@@ -343,7 +343,7 @@ do
             done
         else
             # The file did not exist, create it
-            echo "FPS of '${testNames[$t]}' using commit ${commit}" > $fps_logs
+            echo "# FPS of '${testNames[$t]}' using commit ${commit}" > $fps_logs
             run=0
         fi
 
