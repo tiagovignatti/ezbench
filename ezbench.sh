@@ -18,7 +18,6 @@ LC_NUMERIC="C"
 
 #Default values
 rounds=3
-avgBuildTime=30
 makeCommand="make -j8 install"
 lastNCommits=
 uptoCommit="HEAD"
@@ -118,12 +117,6 @@ while getopts "h?p:n:N:H:r:b:B:m:T:l" opt; do
     esac
 done
 shift $((OPTIND-1))
-
-# Set the average compilation time to 0 when we are not compiling
-if [ -z "$makeCommand" ]
-then
-    avgBuildTime=0
-fi
 
 # redirect the output to both a log file and stdout
 logsFolder="$ezBenchDir/logs/${name:-$(date +"%Y-%m-%d-%T")}"
@@ -250,6 +243,14 @@ if [ -n "$missing_tests" ]; then
     exit 1
 fi
 
+# Set the average compilation time to 0 when we are not compiling
+if [ -z "$makeCommand" ]
+then
+    avgBuildTime=0
+else
+    avgBuildTime=$(git config --get ezbench.average-build-time 2>/dev/null || echo 30)
+fi
+
 # Estimate the execution time
 if [ -z "$commitList" ]; then
     commitList=$(git rev-list --abbrev-commit --reverse -n ${lastNCommits} ${uptoCommit})
@@ -281,7 +282,9 @@ function compile {
 
     # Compile the commit and check for failure. If it failed, go to the next commit.
     compile_logs=$logsFolder/${commit}_compile_log
+    compile_start=$(date +%s)
     eval $makeCommand > $compile_logs 2>&1
+    compile_end=$(date +%s)
     if [ $? -ne 0 ]
     then
         echo "    ERROR: Compilation failed, log saved in $compile_logs"
@@ -289,6 +292,10 @@ function compile {
         git reset --hard HEAD~ > /dev/null 2> /dev/null
         continue
     fi
+
+    # Update our build time estimator
+    avgBuildTime=$(bc <<< "0.75*$avgBuildTime + 0.25*($compile_end - $compile_start)")
+    git config --replace-all ezbench.average-build-time $(printf "%.0f" $avgBuildTime)
 
     # Call the user-defined post-compile hook
     callIfDefined compile_post_hook
