@@ -41,42 +41,12 @@ shopt -s globstar || {
 # Printf complains about floating point numbers having , as a delimiter otherwise
 LC_NUMERIC="C"
 
-#Default values
-rounds=3
-makeCommand="make -j8 install"
-lastNCommits=
-uptoCommit="HEAD"
-gitRepoDir=''
 ezBenchDir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-
-# Default user options
-for conf in $ezBenchDir/conf.d/**/*.conf; do
-    [ "$conf" = "$ezBenchDir/conf.d/**/*.conf" ] && continue
-    source $conf
-done
-source "$ezBenchDir/test_options.sh" # Allow test_options.sh to override all
 
 # initial cleanup
 mkdir $ezBenchDir/logs/ 2> /dev/null
 
 # parse the options
-function show_help {
-    echo "    ezbench.sh -p <path_git_repo> [list of SHA1]"
-    echo ""
-    echo "    Optional arguments:"
-    echo "        -r <benchmarking rounds> (default: 3)"
-    echo "        -b <benchmark regexp> include these benchmarks to run"
-    echo "        -B <benchmark regexp> exclude these benchamrks from running"
-    echo "        -H <git-commit-id> benchmark the commits preceeding this one"
-    echo "        -n <last n commits>"
-    echo "        -m <make command> (default: 'make -j8 install', '' to skip the compilation)"
-    echo "        -N <log folder's name> (default: current date and time)"
-    echo "        -T <path> source the test definitions from this folder"
-    echo ""
-    echo "    Other actions:"
-    echo "        -h/?: Show this help message"
-    echo "        -l: List the available tests"
-}
 function available_tests {
     # Generate the list of available tests
     echo -n "Available tests: "
@@ -94,7 +64,6 @@ function available_tests {
         done
     done
     echo
-    
 }
 function callIfDefined() {
     if [ "`type -t $1`" == 'function' ]; then
@@ -106,8 +75,58 @@ function callIfDefined() {
     fi
 }
 
-no_compile=
-while getopts "h?p:n:N:H:r:b:B:m:T:l" opt; do
+function show_help {
+    echo "    ezbench.sh [list of SHA1]"
+    echo ""
+    echo "    Optional arguments:"
+    echo "        -P <profile name>"
+    echo "        -p <path_git_repo>"
+    echo "        -r <benchmarking rounds> (default: 3)"
+    echo "        -b <benchmark regexp> include these benchmarks to run"
+    echo "        -B <benchmark regexp> exclude these benchamrks from running"
+    echo "        -H <git-commit-id> benchmark the commits preceeding this one"
+    echo "        -n <last n commits>"
+    echo "        -m <make and deploy command> (default: 'make -j8 install', '' to skip the compilation)"
+    echo "        -N <log folder's name> (default: current date and time)"
+    echo "        -T <path> source the test definitions from this folder"
+    echo ""
+    echo "    Other actions:"
+    echo "        -h/?: Show this help message"
+    echo "        -l: List the available tests"
+}
+
+# First find the profile, if it is set
+optString="h?P:p:n:N:H:r:b:B:m:T:l"
+profile="default"
+while getopts "$optString" opt; do
+    case "$opt" in
+    P)  profile=$OPTARG
+        ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2
+      exit 1
+      ;;
+    esac
+done
+
+# Check if the profile exists
+profileDir="$ezBenchDir/profiles.d/$profile"
+if [ ! -d "$profileDir" ]; then
+    echo "Profile '$profile' does not exist." >&2
+    exit 1
+fi
+
+# Default user options
+for conf in $profileDir/conf.d/**/*.conf; do
+    [ "$conf" = "$ezBenchDir/conf.d/**/*.conf" ] && continue
+    source $conf
+done
+source "$ezBenchDir/test_options.sh" # Allow test_options.sh to override all
+source "$profileDir/profile"
+
+# Start again the argument parsing, this time with every option
+unset OPTIND
+while getopts "$optString" opt; do
     case "$opt" in
     h|\?)
         show_help 
@@ -117,7 +136,7 @@ while getopts "h?p:n:N:H:r:b:B:m:T:l" opt; do
         ;;
     n)  lastNCommits=$OPTARG
         ;;
-    N)  name=$OPTARG
+    N)  reportName=$OPTARG
         ;;
     H)  uptoCommit=$OPTARG
         ;;
@@ -125,9 +144,9 @@ while getopts "h?p:n:N:H:r:b:B:m:T:l" opt; do
         ;;
     b)  testsList="$testsList $OPTARG"
         ;;
-    B)  excludeList="$excludeList $OPTARG"
+    B)  testExcludeList="$testExcludeList $OPTARG"
         ;;
-    m)  makeCommand=$OPTARG
+    m)  makeAndDeployCmd=$OPTARG
         ;;
     T)  testsDir="$testsDir $OPTARG"
         ;;
@@ -144,7 +163,7 @@ done
 shift $((OPTIND-1))
 
 # redirect the output to both a log file and stdout
-logsFolder="$ezBenchDir/logs/${name:-$(date +"%Y-%m-%d-%T")}"
+logsFolder="$ezBenchDir/logs/${reportName:-$(date +"%Y-%m-%d-%T")}"
 [ -d $logsFolder ] || mkdir -p $logsFolder || exit 1
 exec > >(tee -a $logsFolder/results)
 exec 2>&1
@@ -226,8 +245,8 @@ for test_dir in ${testsDir:-$ezBenchDir/tests.d}; do
                     fi
                 done
             fi
-            if [ -n "$excludeList" ]; then
-                for filter in $excludeList; do
+            if [ -n "$testExcludeList" ]; then
+                for filter in $testExcludeList; do
                     if [[ $t =~ $filter ]]; then
                         testFilter[$filter]=-1
                         found=0
@@ -269,7 +288,7 @@ if [ -n "$missing_tests" ]; then
 fi
 
 # Set the average compilation time to 0 when we are not compiling
-if [ -z "$makeCommand" ]
+if [ -z "$makeAndDeployCmd" ]
 then
     avgBuildTime=0
 else
@@ -300,7 +319,7 @@ good_color=$c_bright_green
 meh_color=$c_bright_yellow
 
 function compile {
-    [ -z "$makeCommand" ] && return
+    [ -z "$makeAndDeployCmd" ] && return
 
     # Call the user-defined pre-compile hook
     callIfDefined compile_pre_hook
@@ -308,7 +327,7 @@ function compile {
     # Compile the commit and check for failure. If it failed, go to the next commit.
     compile_logs=$logsFolder/${commit}_compile_log
     compile_start=$(date +%s)
-    eval $makeCommand > $compile_logs 2>&1
+    eval $makeAndDeployCmd > $compile_logs 2>&1
     compile_end=$(date +%s)
     if [ $? -ne 0 ]
     then
