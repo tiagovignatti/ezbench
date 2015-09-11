@@ -1,0 +1,91 @@
+= TODO =
+
+== Priority list ==
+ - ezbench profiles : Blocks smart ezbench for checking which version of the repo is currently installed
+ -
+
+== Ezbench.sh ==
+
+=== Profiles ===
+
+Profiles allow users to link hooks, tests list and repo path under one name to
+reduce any kind of error and ease reproducibility.
+
+ - Have a folder called profiles.d/ that will store profiles
+ - Profiles may be stored in sub-directories (to allow sharing between machines)
+ - A profile's ID is its path in the
+ - A git repo's config may contain the ezbench profile to be used (overridable by the user, but displaying a warning)
+
+=== Tests ===
+
+Let tests tell what kind of units are returned and if bigger is better or worse.
+
+=== Compilation ===
+
+Do not recompile if the version that is currently being used is the right one!
+
+== Reports ==
+
+=== Move commits to a different folder ===
+
+The current report folder is kind of a mess because it potentially contains thousands of files.
+
+We could create one folder per commit and store the data there. The name could be suffixed with the commit date.
+
+=== Store the environment used when benchmarking ===
+
+We need this to allow devs to reproduce the entire environment the benchmark used.
+
+The environment contains:
+
+- All the versions and commit IDs of graphics stack:
+    - kernel (git, sha1 of the file and /proc/kconfig.gz)
+    - libdrm
+    - mesa
+    - xserver
+    - xf86-video-xxxx
+    - etc
+- The hardware used
+- The BIOS version
+
+This could be made easier if the graphics stack was entirely compiled using a set of scripts hosted by ezbench.
+
+=== Potentially share commit results between reports ===
+
+Benchmarks take forever to run, so it really is infuriating to have to re-run them over and over again when nothing changed!
+
+This issue will be mitigated when Smart_Ezbench lands as one could copy the benchmark results of a previous run in the new report folder to avoid re-executing them. This would be made easy if using folders per commits.
+
+The actual solution will be to store results in a separate folder with the state that got used to generate them. This would allow re-using results when nothing changed :)
+
+In the mean time, we can store the results of each commits in a separate folder
+
+== Smart Ezbench ==
+
+Smart Ezbench is trying to store all the necessary information about benchmarking report to the disk so as if the computer crashes or reboots, the benchmarking can keep on going.
+
+=== Experiment mode ===
+
+There is currently only one mode to ezbench, it is making a report.
+
+This is not very convenient during the development phase as we often want to compare different approches to a baseline.
+
+The goal would be to remember what were the settings set for the baseline and automatically run the experiment when asked to by the user.
+
+At a user's wish (amd probably at the end of every run), a report should be created to show the differences.
+
+Upon changes to the baseline parameters (set of benchmarks, # of runs, ...), the previous experiments should also be updated to contain all the needed data. This allows the developer to add data over-night for a broader set of benchmarks or reducing the variance by adding runs.
+
+== Utils ==
+
+=== Easy way to build the graphics stack from git ===
+
+To ease up the set-up of the build environment which is also error-prone and prone to having differences from machines to machines, we propose adding a bunch of scripts that would set up the graphics stack from git, have sane defaults values and work together.
+
+Having such a script set could allow us to store the git SHA1 IDs and build-ids in the generated binaries.
+
+== gen_report.py ==
+
+=== Allow filtering the results ===
+
+There is a ton of data in a performance report. It would be nice if we could filter the rest of the data when we unselect a benchmark in the trend view.
