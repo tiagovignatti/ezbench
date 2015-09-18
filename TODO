@@ -47,6 +47,7 @@ The environment contains:
     - etc
 - The hardware used
 - The BIOS version
+- The screens layout and resolution
 
 This could be made easier if the graphics stack was entirely compiled using a set of scripts hosted by ezbench.
 
