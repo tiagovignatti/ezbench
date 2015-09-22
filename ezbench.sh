@@ -44,7 +44,7 @@ LC_NUMERIC="C"
 ezBenchDir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
 # initial cleanup
-mkdir $ezBenchDir/logs/ 2> /dev/null
+mkdir "$ezBenchDir/logs" 2> /dev/null
 
 # parse the options
 function available_tests {
@@ -55,7 +55,7 @@ function available_tests {
             unset test_name
             unset test_exec_time
 
-            source $test_file || continue
+            source "$test_file" || continue
             [ -z "$test_name" ] && continue
             [ -z "$test_exec_time" ] && continue
             for t in $test_name; do
@@ -66,10 +66,10 @@ function available_tests {
     echo
 }
 function callIfDefined() {
-    if [ "`type -t $1`" == 'function' ]; then
+    if [ "`type -t "$1"`" == 'function' ]; then
         local funcName=$1
         shift
-        $funcName $@
+        $funcName "$@"
     else
         return 1
     fi
@@ -119,7 +119,7 @@ fi
 # Default user options
 for conf in $profileDir/conf.d/**/*.conf; do
     [ "$conf" = "$ezBenchDir/conf.d/**/*.conf" ] && continue
-    source $conf
+    source "$conf"
 done
 source "$ezBenchDir/test_options.sh" # Allow test_options.sh to override all
 source "$profileDir/profile"
@@ -164,12 +164,12 @@ shift $((OPTIND-1))
 
 # redirect the output to both a log file and stdout
 logsFolder="$ezBenchDir/logs/${reportName:-$(date +"%Y-%m-%d-%T")}"
-[ -d $logsFolder ] || mkdir -p $logsFolder || exit 1
-exec > >(tee -a $logsFolder/results)
+[ -d "$logsFolder" ] || mkdir -p "$logsFolder" || exit 1
+exec > >(tee -a "$logsFolder/results")
 exec 2>&1
 
 # Check the git repo, saving then displaying the HEAD commit
-cd $gitRepoDir
+cd "$gitRepoDir"
 commit_head=$(git rev-parse HEAD 2>/dev/null)
 if [ $? -ne 0 ]
 then
@@ -190,9 +190,9 @@ fi
 commitList=
 for id in "$@"; do
     if [[ $id =~ \.\. ]]; then
-        commitList+=$(git rev-list --abbrev-commit --reverse $id)
+        commitList+=$(git rev-list --abbrev-commit --reverse "$id")
     else
-        commitList+=$(git rev-list --abbrev-commit -n 1 `git rev-parse $id`)
+        commitList+=$(git rev-list --abbrev-commit -n 1 "`git rev-parse "$id"`")
     fi
     commitList+=" "
 done
@@ -200,8 +200,8 @@ done
 # function to call on exit
 function finish {
     # to be executed on exit, possibly twice!
-    git reset --hard $commit_head 2> /dev/null
-    [ -n "$stash" ] && git stash apply $stash > /dev/null
+    git reset --hard "$commit_head" 2> /dev/null
+    [ -n "$stash" ] && git stash apply "$stash" > /dev/null
 
     # Execute the user-defined post hook
     callIfDefined ezbench_post_hook
@@ -214,7 +214,7 @@ callIfDefined ezbench_pre_hook
 
 # Seed the results with the last round?
 commitListLog="$logsFolder/commit_list"
-last_commit=$(tail -1 $commitListLog 2>/dev/null | cut -f 1 -d ' ')
+last_commit=$(tail -1 "$commitListLog" 2>/dev/null | cut -f 1 -d ' ')
 
 # Generate the actual list of tests
 typeset -A testNames
@@ -230,7 +230,7 @@ for test_dir in ${testsDir:-$ezBenchDir/tests.d}; do
         unset test_invert
         unset test_exec_time
 
-        source $test_file || continue
+        source "$test_file" || continue
 
         for t in $test_name; do
             # Check that the user wants this test or not
@@ -261,7 +261,7 @@ for test_dir in ${testsDir:-$ezBenchDir/tests.d}; do
 
             last_result="$logsFolder/${last_commit}_result_${t}"
             if [ -e "$logsFolder/${last_commit}_result_${t}" ]; then
-                testPrevFps[$total_tests]=$(cat $last_result)
+                testPrevFps[$total_tests]=$(cat "$last_result")
             fi
             unset last_result
 
@@ -297,13 +297,13 @@ fi
 
 # Estimate the execution time
 if [ -z "$commitList" ]; then
-    commitList=$(git rev-list --abbrev-commit --reverse -n ${lastNCommits} ${uptoCommit})
+    commitList=$(git rev-list --abbrev-commit --reverse -n "${lastNCommits}" "${uptoCommit}")
     [ "${uptoCommit}" == "HEAD" ] && commitList="${commitList} ${stash}"
 fi
-num_commits=$(wc -w <<< $commitList)
+num_commits=$(wc -w <<< "$commitList")
 secs=$(( ($total_round_time * $rounds + $avgBuildTime) * $num_commits))
 finishDate=$(date +"%y-%m-%d - %T" --date="$secs seconds")
-printf "Testing %d commits, estimated finish date: $finishDate (%02dh:%02dm:%02ds)\n\n" ${num_commits} $(($secs/3600)) $(($secs%3600/60)) $(($secs%60))
+printf "Testing %d commits, estimated finish date: $finishDate (%02dh:%02dm:%02ds)\n\n" "${num_commits}" $(($secs/3600)) $(($secs%3600/60)) $(($secs%60))
 startTime=`date +%s`
 
 # ANSI colors
@@ -327,7 +327,7 @@ function compile {
     # Compile the commit and check for failure. If it failed, go to the next commit.
     compile_logs=$logsFolder/${commit}_compile_log
     compile_start=$(date +%s)
-    eval $makeAndDeployCmd > $compile_logs 2>&1
+    eval "$makeAndDeployCmd" > "$compile_logs" 2>&1
     compile_end=$(date +%s)
     if [ $? -ne 0 ]
     then
@@ -339,7 +339,7 @@ function compile {
 
     # Update our build time estimator
     avgBuildTime=$(bc <<< "0.75*$avgBuildTime + 0.25*($compile_end - $compile_start)")
-    git config --replace-all ezbench.average-build-time $(printf "%.0f" $avgBuildTime)
+    git config --replace-all ezbench.average-build-time "$(printf "%.0f" "$avgBuildTime")"
 
     # Call the user-defined post-compile hook
     callIfDefined compile_post_hook
@@ -352,24 +352,24 @@ do
     # save the commit in the commit_list
 
     # Make sure we are in the right folder
-    cd $gitRepoDir
+    cd "$gitRepoDir"
 
     # Select the commit of interest
-    if [ $commit == "$stash" ]
+    if [ "$commit" == "$stash" ]
     then
-        git reset --hard $commit_head > /dev/null
-        git stash apply $stash > /dev/null
+        git reset --hard "$commit_head" > /dev/null
+        git stash apply "$stash" > /dev/null
         echo -e "${c_bright_yellow}WIP${c_reset}"
-        echo "$commit" >> $commitListLog
-        git diff > $logsFolder/${commit}.patch
+        echo "$commit" >> "$commitListLog"
+        git diff > "$logsFolder/${commit}.patch"
     else
-        git reset --hard $commit > /dev/null
+        git reset --hard "$commit" > /dev/null
         git show --format="%Cblue%h%Creset %Cgreen%s%Creset" -s
-        if [ -z "`grep ^$commit $commitListLog 2> /dev/null`" ]
+        if [ -z "`grep ^"$commit" "$commitListLog" 2> /dev/null`" ]
         then
-            git show --format="%h %s" -s >> $commitListLog
+            git show --format="%h %s" -s >> "$commitListLog"
         fi
-        git format-patch HEAD~ --format=fuller --stdout > $logsFolder/${commit}.patch
+        git format-patch HEAD~ --format=fuller --stdout > "$logsFolder/${commit}.patch"
     fi
 
     compile
@@ -394,12 +394,12 @@ do
             done
         else
             # The file did not exist, create it
-            echo "# FPS of '${testNames[$t]}' using commit ${commit}" > $fps_logs
+            echo "# FPS of '${testNames[$t]}' using commit ${commit}" > "$fps_logs"
             run=0
         fi
 
         # display the run name
-        printf "%28s: " ${testNames[$t]}
+        printf "%28s: " "${testNames[$t]}"
 
         # compute the different hook names
         runFuncName=${testNames[$t]}_run
@@ -409,11 +409,11 @@ do
 
         # Run the benchmark
         unset ERROR
-        callIfDefined $preHookFuncName
+        callIfDefined "$preHookFuncName"
         callIfDefined benchmark_run_pre_hook
-        output=$($runFuncName $rounds $fps_logs $run 2>$error_logs || ERROR=1)
+        output=$("$runFuncName" "$rounds" "$fps_logs" "$run" 2> "$error_logs" || ERROR=1)
         callIfDefined benchmark_run_post_hook
-        callIfDefined $postHookFuncName
+        callIfDefined "$postHookFuncName"
 
         if [ -n "$ERROR" -o -z "$output" ]; then
             echo -e "${c_red}failed${c_reset}"
@@ -421,20 +421,20 @@ do
         fi
 
         # delete the error file if it is empty
-        if [ ! -s $error_logs ] ; then
-            rm $error_logs
+        if [ ! -s "$error_logs" ] ; then
+            rm "$error_logs"
         fi
 
-        echo "$output" >> $fps_logs
+        echo "$output" >> "$fps_logs"
 
         # Process the data ourselves
         statistics=
-        result=$(callIfDefined $processHookFuncName "$output") || {
-            statistics=$(echo "$output" | $ezBenchDir/fps_stats.awk)
+        result=$(callIfDefined "$processHookFuncName" "$output") || {
+            statistics=$(echo "$output" | "$ezBenchDir/fps_stats.awk")
             result=$(echo "$statistics" | cut -d ' ' -f 1)
             statistics=$(echo "$statistics" | cut -d ' ' -f 2-)
         }
-        echo $result > $logsFolder/${commit}_result_${testNames[$t]}
+        echo "$result" > "$logsFolder/${commit}_result_${testNames[$t]}"
 	if [ -z "${testPrevFps[$t]}" ]; then
 		testPrevFps[$t]=$result
 	fi
@@ -451,15 +451,15 @@ do
         else
             color="$meh_color"
         fi
-        printf "%9.2f ($color%+.2f%%$c_reset): %s\n" $result $fpsDiff "$statistics"
+        printf "%9.2f ($color%+.2f%%$c_reset): %s\n" "$result" "$fpsDiff" "$statistics"
         [ -z "$result" ] || fpsALL="$fpsALL $result"
     done
 
     # finish with the geometric mean (when we have multiple tests)
     if [ $t -gt 1 ]; then
-	    fpsALL=$(awk '{r=0; for(i=1; i<=NF; i++) { r += log($i) } print exp(r / NF) }' <<< $fpsALL)
+	    fpsALL=$(awk '{r=0; for(i=1; i<=NF; i++) { r += log($i) } print exp(r / NF) }' <<< "$fpsALL")
 	if [ -z "${testPrevFps[-1]}" ]; then
-		testPrevFps[-1]=$fpsALL
+		testPrevFps[-1]="$fpsALL"
 	fi
         fpsDiff=$(echo "scale=3;($fpsALL * 100.0 / ${testPrevFps[-1]}) - 100" | bc 2>/dev/null)
         [ $? -eq 0 ] && testPrevFps[-1]=$fpsALL
@@ -472,8 +472,8 @@ do
         fi
         printf "$c_bright_white%28s: %9.2f ($color%+.2f%%$c_bright_white)$c_reset\n"  \
                 "geometric mean" \
-                $fpsALL \
-                $fpsDiff
+                "$fpsALL" \
+                "$fpsDiff"
     fi
     echo
 done
