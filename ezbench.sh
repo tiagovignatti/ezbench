@@ -129,7 +129,7 @@ unset OPTIND
 while getopts "$optString" opt; do
     case "$opt" in
     h|\?)
-        show_help 
+        show_help
         exit 0
         ;;
     p)  gitRepoDir=$OPTARG
@@ -319,7 +319,7 @@ good_color=$c_bright_green
 meh_color=$c_bright_yellow
 
 function compile {
-    [ -z "$makeAndDeployCmd" ] && return
+    [ -z "$makeAndDeployCmd" ] && return 0
 
     # Call the user-defined pre-compile hook
     callIfDefined compile_pre_hook
@@ -334,7 +334,7 @@ function compile {
         echo "    ERROR: Compilation failed, log saved in $compile_logs"
         echo
         git reset --hard HEAD~ > /dev/null 2> /dev/null
-        continue
+        exit 1
     fi
 
     # Update our build time estimator
@@ -343,7 +343,6 @@ function compile {
 
     # Call the user-defined post-compile hook
     callIfDefined compile_post_hook
-
 }
 
 # Iterate through the commits
