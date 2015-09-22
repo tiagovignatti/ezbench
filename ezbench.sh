@@ -169,7 +169,12 @@ exec > >(tee -a "$logsFolder/results")
 exec 2>&1
 
 # Check the git repo, saving then displaying the HEAD commit
-cd "$gitRepoDir"
+if [ -z "$gitRepoDir" ]
+then
+    echo "ERROR: You did not specify a git repository path (-p). Aborting..."
+    exit 1
+fi
+cd "$gitRepoDir" || exit 1
 commit_head=$(git rev-parse HEAD 2>/dev/null)
 if [ $? -ne 0 ]
 then
@@ -351,7 +356,7 @@ do
     # save the commit in the commit_list
 
     # Make sure we are in the right folder
-    cd "$gitRepoDir"
+    cd "$gitRepoDir" || exit 1
 
     # Select the commit of interest
     if [ "$commit" == "$stash" ]
