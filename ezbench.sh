@@ -66,7 +66,7 @@ function available_tests {
     echo
 }
 function callIfDefined() {
-    if [ "`type -t "$1"`" == 'function' ]; then
+    if [ "$(type -t "$1")" == 'function' ]; then
         local funcName=$1
         shift
         $funcName "$@"
@@ -179,7 +179,7 @@ fi
 echo "Original commit = $commit_head"
 
 # Preserve any local modifications
-stash=`git stash create`
+stash=$(git stash create)
 if [ $? -ne 0 ]
 then
     echo "ERROR: Unable to preserve dirty state in '$gitRepoDir'. Aborting..."
@@ -192,7 +192,7 @@ for id in "$@"; do
     if [[ $id =~ \.\. ]]; then
         commitList+=$(git rev-list --abbrev-commit --reverse "$id")
     else
-        commitList+=$(git rev-list --abbrev-commit -n 1 "`git rev-parse "$id"`")
+        commitList+=$(git rev-list --abbrev-commit -n 1 "$(git rev-parse "$id")")
     fi
     commitList+=" "
 done
@@ -304,7 +304,7 @@ num_commits=$(wc -w <<< "$commitList")
 secs=$(( ($total_round_time * $rounds + $avgBuildTime) * $num_commits))
 finishDate=$(date +"%y-%m-%d - %T" --date="$secs seconds")
 printf "Testing %d commits, estimated finish date: $finishDate (%02dh:%02dm:%02ds)\n\n" "${num_commits}" $(($secs/3600)) $(($secs%3600/60)) $(($secs%60))
-startTime=`date +%s`
+startTime=$(date +%s)
 
 # ANSI colors
 c_red='\e[31m'
@@ -365,7 +365,7 @@ do
     else
         git reset --hard "$commit" > /dev/null
         git show --format="%Cblue%h%Creset %Cgreen%s%Creset" -s
-        if [ -z "`grep ^"$commit" "$commitListLog" 2> /dev/null`" ]
+        if [ -z "$(grep ^"$commit" "$commitListLog" 2> /dev/null)" ]
         then
             git show --format="%h %s" -s >> "$commitListLog"
         fi
@@ -478,6 +478,6 @@ do
     echo
 done
 
-endTime=`date +%s`
+endTime=$(date +%s)
 runtime=$((endTime-startTime))
 printf "Actual run time: %02dh:%02dm:%02ds\n\n" $(($runtime/3600)) $(($runtime%3600/60)) $(($runtime%60))
