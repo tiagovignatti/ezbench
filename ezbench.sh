@@ -267,8 +267,8 @@ for test_dir in ${testsDir:-$ezBenchDir/tests.d}; do
 
             echo -n "${testNames[$total_tests]} "
 
-            total_round_time=$(( $total_round_time + $test_exec_time ))
-            total_tests=$(( $total_tests + 1))
+            total_round_time=$(( total_round_time + test_exec_time ))
+            total_tests=$(( total_tests + 1))
         done
     done
 done
@@ -301,9 +301,9 @@ if [ -z "$commitList" ]; then
     [ "${uptoCommit}" == "HEAD" ] && commitList="${commitList} ${stash}"
 fi
 num_commits=$(wc -w <<< "$commitList")
-secs=$(( ($total_round_time * $rounds + $avgBuildTime) * $num_commits))
+secs=$(( (total_round_time * rounds + avgBuildTime) * num_commits))
 finishDate=$(date +"%y-%m-%d - %T" --date="$secs seconds")
-printf "Testing %d commits, estimated finish date: $finishDate (%02dh:%02dm:%02ds)\n\n" "${num_commits}" $(($secs/3600)) $(($secs%3600/60)) $(($secs%60))
+printf "Testing %d commits, estimated finish date: $finishDate (%02dh:%02dm:%02ds)\n\n" "${num_commits}" $((secs/3600)) $((secs%3600/60)) $((secs%60))
 startTime=$(date +%s)
 
 # ANSI colors
@@ -480,4 +480,4 @@ done
 
 endTime=$(date +%s)
 runtime=$((endTime-startTime))
-printf "Actual run time: %02dh:%02dm:%02ds\n\n" $(($runtime/3600)) $(($runtime%3600/60)) $(($runtime%60))
+printf "Actual run time: %02dh:%02dm:%02ds\n\n" $((runtime/3600)) $((runtime%3600/60)) $((runtime%60))
