@@ -4,7 +4,7 @@ sudo -n true || return 1
 function __trace__ {
     sudo $IGT_BENCHMARKS/gem_exec_trace $IGT_TRACES/$2.gem_exec_trace >/dev/null
     for (( c=0; c<$1; c++ )); do
-        sudo $IGT_BENCHMARKS/gem_exec_trace $IGT_TRACES/$2.gem_exec_trace | sed 's/.*: //'
+        run_bench 0 sudo $IGT_BENCHMARKS/gem_exec_trace $IGT_TRACES/$2.gem_exec_trace | sed 's/.*: //'
     done
 }
 

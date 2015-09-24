@@ -14,7 +14,7 @@ unigine:valley_run() {
         LD_LIBRARY_PATH=bin:bin/x64:$LD_LIBRARY_PATH \
         MESA_EXTENSION_OVERRIDE="-GL_ARB_sample_shading -GL_ARB_blend_func_extended" \
         MESA_GL_VERSION_OVERRIDE="3.2" \
-        vblank_mode=0 taskset 1 \
+        run_bench 0 \
         ./bin/valley_x64 \
             -video_app opengl \
             -data_path ../ \

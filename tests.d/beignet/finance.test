@@ -19,7 +19,7 @@ test -d ${FINANCEBENCH_FOLDER} || return 1
 __finance__() {
     cd $(dirname $2)
     for (( c=0; c<$1; c++ )); do
-        ./$(basename $2) | sed '/Processing time/!d; s/.*://' || return 1
+        run_bench 0 ./$(basename $2) | sed '/Processing time/!d; s/.*://' || return 1
     done
 }
 

@@ -12,7 +12,7 @@ unigine:heaven_run() {
 
         LIBFRAMETIME_FILE=/tmp/frametime.log LD_PRELOAD=$LIBFRAMETIME64_SO \
         LD_LIBRARY_PATH=bin:bin/x64:$LD_LIBRARY_PATH \
-        vblank_mode=0 taskset 1 \
+        run_bench 0 \
         ./bin/heaven_x64 \
             -video_app opengl \
             -data_path ../ \

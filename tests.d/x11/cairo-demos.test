@@ -9,7 +9,7 @@ xdpyinfo >/dev/null 2>&1 || return 1
 function __xlib__ {
     cd $CAIRO_DEMOS
     for (( c=0; c<$1; c++ )); do
-        timeout 20 ./$2-demo --benchmark --xlib | sed -e '/fps/!d; s/.*: \(.*\) fps.*/\1/'
+        run_bench 20 ./$2-demo --benchmark --xlib | sed -e '/fps/!d; s/.*: \(.*\) fps.*/\1/'
     done
 }
 

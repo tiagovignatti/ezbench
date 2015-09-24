@@ -3,12 +3,11 @@ test -e "$XONOTIC_FOLDER/xonotic-sdl" || return 1
 # 1 argument: $rounds
 __xonotic__() {
     # 10510 frames 24.7782191 seconds 424.1628480 fps, one-second fps min/avg/max: 57 1352 7027 (336 seconds)
-    local unbuf="stdbuf -oL"
     local extract_fps="egrep -e '[0-9]+ frames' | cut -d ' ' -f 5 2> /dev/null"
 
     for (( c=0; c<$1; c++ ))
     do
-        vblank_mode=0 $unbuf taskset 1 \
+        run_bench 0 \
         $XONOTIC_FOLDER/xonotic-sdl -benchmark demos/the-big-keybench | eval $extract_fps
     done
 }

@@ -2,13 +2,13 @@ xdpyinfo >/dev/null 2>&1 || return 1
 
 function __dri2__ {
     for (( c=0; c<$1; c++)); do
-        $XF86_VIDEO_INTEL/benchmarks/dri2-swap -d $2 -v $3 -w $4
+        run_bench 0 $XF86_VIDEO_INTEL/benchmarks/dri2-swap -d $2 -v $3 -w $4
     done
 }
 
 function __dri3__ {
     for (( c=0; c<$1; c++)); do
-        $XF86_VIDEO_INTEL/benchmarks/dri3-swap -d $2 -v $3 -w $4
+        run_bench 0 $XF86_VIDEO_INTEL/benchmarks/dri3-swap -d $2 -v $3 -w $4
     done
 }
 

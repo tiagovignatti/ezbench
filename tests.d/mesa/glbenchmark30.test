@@ -59,7 +59,7 @@ function __gl30run__ {
     for (( c=0; c<$1; c++ ))
     do
 	LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${GLBENCHMARK30_FOLDER}/build/linux/poco_Release/lib/ \
-        vblank_mode=0 \
+        run_bench 0 \
 	./mainapp -data ${GLB30_DATA} -w $W -h $H -ow $W -oh $H -t $2 -fullscreen $3 |\
 	grep score | cut -d : -f 2- | cut -d " " -f 2 | cut -d ',' -f 1
     done

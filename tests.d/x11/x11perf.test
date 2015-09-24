@@ -4,7 +4,7 @@ which x11perf >/dev/null 2>&1 || return 1
 xdpyinfo >/dev/null 2>&1 || return 1
 
 function __x11perf__ {
-    x11perf -time 10 -repeat $1 $2 | sed -e '/reps/!d; s#.*(\(.*\)/sec.*#\1#'
+    run_bench 0 x11perf -time 10 -repeat $1 $2 | sed -e '/reps/!d; s#.*(\(.*\)/sec.*#\1#'
 }
 
 x11perf_help=$(x11perf --help 2>&1)

@@ -46,6 +46,15 @@ ezBenchDir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 # initial cleanup
 mkdir "$ezBenchDir/logs" 2> /dev/null
 
+# set the default run_bench function which can be overriden by the profiles:
+# Arguments: $1 : timeout (set to 0 for infinite wait)
+#            $2+: command line executing the test AND NOTHING ELSE!
+function run_bench {
+    timeout=$1
+    shift
+    eval "vblank_mode=0 stdbuf -oL timeout $timeout "$@""
+}
+
 # parse the options
 function available_tests {
     # Generate the list of available tests

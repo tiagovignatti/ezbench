@@ -2,21 +2,19 @@ test -e "$SYNMARK_FOLDER/synmark2" || return 1
 
 function __synmark__ {
     cd $SYNMARK_FOLDER # Set this variable in test_options.sh
-    local unbuf="stdbuf -o L"
 
     for (( c=0; c<$1; c++ ))
     do
-        $unbuf ./synmark2 $2 | grep FPS | cut -d ' ' -f 2
+        run_bench 0 ./synmark2 $2 | grep FPS | cut -d ' ' -f 2
     done
 }
 
 function __cpu__ {
     cd /tmp # just in case synmark likes emitting stray output files
-    local unbuf="stdbuf -o L"
 
     for (( c=0; c<$1; c++ ))
     do
-        INTEL_NO_HW=1 $unbuf $SYNMARK_FOLDER/synmark2 $2 | grep FPS | cut -d ' ' -f 2
+        INTEL_NO_HW=1 run_bench 0 $SYNMARK_FOLDER/synmark2 $2 | grep FPS | cut -d ' ' -f 2
     done
 }
 

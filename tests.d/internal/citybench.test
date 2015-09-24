@@ -11,6 +11,6 @@ citybench_run() {
 
     for (( c=0; c<$1; c++ ))
     do
-        vblank_mode=0 taskset 1 $unbuf timeout $test_exec_time ./replay_GL_64 -f 1478
+        run_bench $test_exec_time ./replay_GL_64 -f 1478
     done | $unbuf grep fps | cut -d ' ' -f 1
 }

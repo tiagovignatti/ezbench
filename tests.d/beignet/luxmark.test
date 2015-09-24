@@ -4,7 +4,7 @@ __luxmark__() {
     cd $LUXMARK_FOLDER # set me in test_options.sh!
     for (( c=0; c<$1; c++ )); do
         LD_LIBRARY_PATH=./lib:$LD_LIBRARY_PATH \
-        ./luxmark.bin --single-run --mode=BENCHMARK_OCL_GPU --scene=$2 \
+        run_bench 0 ./luxmark.bin --single-run --mode=BENCHMARK_OCL_GPU --scene=$2 \
         | awk '{print $2 }' || return 1
     done
 }

@@ -10,7 +10,7 @@ sudo -n true || return 1
 for i in nop switch create; do
     name="gem:exec:ctx:$i"
     test_name="$test_name $name"
-    eval "${name}_run() { sudo $IGT_BENCHMARKS/gem_exec_ctx -b $i -r \$1; }"
+    eval "${name}_run() { run_bench 0 sudo $IGT_BENCHMARKS/gem_exec_ctx -b $i -r \$1; }"
     eval "${name}_process() { bc -l <<< \"1000000 / \${@: -1}\"; }"
 done
 
