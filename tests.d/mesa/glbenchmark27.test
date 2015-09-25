@@ -2,60 +2,53 @@ GLB27=${GLBENCHMARK27_PATH:-${GLBENCHMARK27_FOLDER}/build_x86_64/binaries/GLBenc
 GLB27_DATA=${GLBENCHMARK27_DATA:-${GLBENCHMARK27_FOLDER}/data}
 
 test -e ${GLB27} || return 1
+xdpyinfo >/dev/null 2>&1 || return 1
 
 # Output:
 #    GLBenchmark 2.5 Egypt HD ETC1 - C24Z16 Onscreen Fixed timestep: 9340 msec (121 fps)
 
 # Large versions, fullscreen with flipping (seems to be variable size)
+# 1 argument: $benchmark
 function __gl27fullscreen__ {
     local W="${GLBENCHMARK27_WIDTH:-1920}"
     local H="${GLBENCHMARK27_HEIGHT:-1080}"
 
     read width height <<< $(xdpyinfo | sed '/dimensions/!d; s/.*dimensions:\(.*\)x\(.*\) pixels.*/\1 \2/')
 
-    for (( c=0; c<$1; c++ ))
-    do
-        run_bench 0 ${GLB27} -data ${GLB27_DATA} -skip_load_frames \
-            -w $width -h $height -ow $W -oh $H -t $2 | \
-            sed '/fps/!d; s#.*: \(.*\) msec.*#1000000 / \1#' | bc -l
-    done
+    run_bench 0 ${GLB27} -data ${GLB27_DATA} -skip_load_frames \
+        -w $width -h $height -ow $W -oh $H -t $1 | \
+        sed '/fps/!d; s#.*: \(.*\) msec.*#1000000 / \1#' | bc -l
 }
 
 function __gl27window__ {
+# 1 argument: $benchmark
     local W="${GLBENCHMARK27_WIDTH:-1920}"
     local H="${GLBENCHMARK27_HEIGHT:-1080}"
 
     read width height <<< $(xdpyinfo | sed '/dimensions/!d; s/.*dimensions:\(.*\)x\(.*\) pixels.*/\1 \2/')
 
-    for (( c=0; c<$1; c++ ))
-    do
-        run_bench 0 ${GLB27} -data ${GLB27_DATA} -skip_load_frames \
-            -w $(( $width / 2 )) -h $(( $height / 2 )) -ow $W -oh $H -t $2 | \
-            sed '/fps/!d; s#.*: \(.*\) msec.*#1000000 / \1#' | bc -l
-    done
+    run_bench 0 ${GLB27} -data ${GLB27_DATA} -skip_load_frames \
+        -w $(( $width / 2 )) -h $(( $height / 2 )) -ow $W -oh $H -t $1 | \
+        sed '/fps/!d; s#.*: \(.*\) msec.*#1000000 / \1#' | bc -l
 }
 
 # Large versions, offscreen so no flip overhead?
+# 1 argument: $benchmark
 function __gl27offscreen__ {
     local W="${GLBENCHMARK27_WIDTH:-1920}"
     local H="${GLBENCHMARK27_HEIGHT:-1080}"
 
-    for (( c=0; c<$1; c++ ))
-    do
-        run_bench 0 ${GLB27} -data ${GLB27_DATA} -skip_load_frames \
-            -w $W -h $H -ow $W -oh $H -t $2 | \
-            sed '/fps/!d; s#.*: \(.*\) msec.*#1000000 / \1#' | bc -l
-    done
+    run_bench 0 ${GLB27} -data ${GLB27_DATA} -skip_load_frames \
+        -w $W -h $H -ow $W -oh $H -t $1 | \
+        sed '/fps/!d; s#.*: \(.*\) msec.*#1000000 / \1#' | bc -l
 }
 
 # Small versions, to exercise CPU overheads
+# 1 argument: $benchmark
 function __gl27cpu__ {
-    for (( c=0; c<$1; c++ ))
-    do
-        INTEL_NO_HW=1 run_bench 0 ${GLB27} -data ${GLB27_DATA} -skip_load_frames \
-            -w 16 -h 16 -ow 16 -oh 16 -t $2 | \
-            sed '/fps/!d; s#.*: \(.*\) msec.*#1000000 / \1#' | bc -l
-    done
+    INTEL_NO_HW=1 run_bench 0 ${GLB27} -data ${GLB27_DATA} -skip_load_frames \
+        -w 16 -h 16 -ow 16 -oh 16 -t $1 | \
+        sed '/fps/!d; s#.*: \(.*\) msec.*#1000000 / \1#' | bc -l
 }
 
 while read name benchmark; do

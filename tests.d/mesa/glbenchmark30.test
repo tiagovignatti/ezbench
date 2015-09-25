@@ -33,8 +33,8 @@ test -e ${GLB30} || return 1
 # ]
 #}
 
+# 1 argument: $benchmark
 function __gl30run__ {
-    set -o xtrace
     local W="${GLBENCHMARK30_WIDTH:-1920}"
     local H="${GLBENCHMARK30_HEIGHT:-1080}"
 
@@ -56,29 +56,25 @@ function __gl30run__ {
         ;;
     esac
 
-    for (( c=0; c<$1; c++ ))
-    do
-	LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${GLBENCHMARK30_FOLDER}/build/linux/poco_Release/lib/ \
-        run_bench 0 \
-	./mainapp -data ${GLB30_DATA} -w $W -h $H -ow $W -oh $H -t $2 -fullscreen $3 |\
-	grep score | cut -d : -f 2- | cut -d " " -f 2 | cut -d ',' -f 1
-    done
+    LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${GLBENCHMARK30_FOLDER}/build/linux/poco_Release/lib/ \
+    run_bench 0 ./mainapp -data ${GLB30_DATA} -w $W -h $H -ow $W -oh $H -t $1 -fullscreen $2 |\
+    grep score | cut -d : -f 2- | cut -d " " -f 2 | cut -d ',' -f 1
 
     unset MESA_GL_VERSION_OVERRIDE
     unset MESA_GLSL_VERSION_OVERRIDE
 }
 
 while read name benchmark; do
-   eval "${name}:fullscreen_run() { __gl30run__ \$1 $benchmark 1; }"
+   eval "${name}:fullscreen_run() { __gl30run__ $benchmark 1; }"
    test_name="$test_name $name:fullscreen"
 
-   eval "${name}:window_run() { __gl30run__ \$1 $benchmark 0; }"
+   eval "${name}:window_run() { __gl30run__ $benchmark 0; }"
    test_name="$test_name $name:window"
 
-   eval "${name}:offscreen_run() { __gl30run__ \$1 ${benchmark}_off 0; }"
+   eval "${name}:offscreen_run() { __gl30run__ ${benchmark}_off 0; }"
    test_name="$test_name $name:offscreen"
 
-   eval "${name}:cpu_run() { INTEL_NO_HW=1 __gl30run__ \$1 ${benchmark} 0; }"
+   eval "${name}:cpu_run() { INTEL_NO_HW=1 __gl30run__ ${benchmark} 0; }"
    test_name="$test_name $name:cpu"
 done<<EOL
         GLB30:Trex gl_trex

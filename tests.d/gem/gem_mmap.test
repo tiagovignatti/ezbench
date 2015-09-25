@@ -9,7 +9,7 @@ for i in cpu gtt wc; do
     for j in fault clear write read; do
         for k in none x y; do
             test_name="$test_name gem:mmap:$i:$j:$k"
-            eval "gem:mmap:${i}:${j}:${k}_run() { run_bench 0 sudo $IGT_BENCHMARKS/gem_mmap -m $i -d $j -t $k -r \$1 ; } "
+            eval "gem:mmap:${i}:${j}:${k}_run() { run_bench 0 sudo $IGT_BENCHMARKS/gem_mmap -m $i -d $j -t $k -r 300 ; } "
 
             eval "gem:mmap:${i}:${j}:${k}_process() { bc -l <<< \" 4*1000000 / \${@: -1} \" ; }"
         done

@@ -3,48 +3,34 @@ test_exec_time=21
 
 which glxgears >/dev/null 2>&1 || return 1
 
-# 4 arguments: $glxgears_flags $rounds $fps_logs_file $runID
 __glxgears__() {
     local unbuf="stdbuf -oL"
     local extract_fps="$unbuf cut -d ' '  -f7"
 
-    for (( c=$4; c<$2+$4; c++ ))
-    do
-        run_bench 21 \
-        glxgears $1 2> /dev/null | eval $extract_fps > $3#$c
-        awk '{sum=sum+$1} END {print sum/NR}' $3#$c
-    done
+    run_bench 21 glxgears $1 2> /dev/null | eval $extract_fps
 }
 
-# 3 arguments: $rounds $fps_logs_file $runID
 glxgears:window_run() {
-    __glxgears__ "" $1 $2 $3
+    __glxgears__ ""
 }
 
-# 3 arguments: $rounds $fps_logs_file $runID
 glxgears:cpu_run() {
-    INTEL_NO_HW=1 glxgears:window_run "" $1 $2 $3
+    INTEL_NO_HW=1 glxgears:window_run ""
 }
 
-# 3 arguments: $rounds $fps_logs_file $runID
 glxgears:fullscreen_run() {
-    __glxgears__ -fullscreen $1 $2 $3
+    __glxgears__ -fullscreen
 }
 
-# 3 arguments: $rounds $fps_logs_file $runID
 glxgears16_run() {
     local unbuf="stdbuf -oL"
     local extract_fps="$unbuf cut -d ' '  -f7"
 
-    for (( c=$3; c<$1+$3; c++ )); do
-        for (( n=0; n<15; n++ )); do
-            timeout 25 glxgears >&/dev/null 2>/dev/null &
-        done
-
-        run_bench 21 \
-        glxgears 2> /dev/null | eval $extract_fps > $2#$c
-        awk '{sum=sum+$1} END {print sum/NR}' $2#$c
-
-        sleep 5
+    for (( n=0; n<15; n++ )); do
+        timeout 25 glxgears >&/dev/null 2>/dev/null &
     done
+
+    run_bench 21 glxgears 2> /dev/null | eval $extract_fps
+
+    sleep 5
 }

@@ -4,5 +4,5 @@ test_exec_time=2
 sudo -n true || return 1
 
 test_name="gem:create:4k gem:create:4M"
-gem:create:4k_run() { run_bench 0 sudo $IGT_BENCHMARKS/gem_create -s 4096 -r $1; }
-gem:create:4M_run() { run_bench 0 sudo $IGT_BENCHMARKS/gem_create -s 4194304 -r $1; }
+gem:create:4k_run() { run_bench 0 sudo $IGT_BENCHMARKS/gem_create -s 4096 -r 1; }
+gem:create:4M_run() { run_bench 0 sudo $IGT_BENCHMARKS/gem_create -s 4194304 -r 1; }

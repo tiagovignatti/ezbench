@@ -13,5 +13,5 @@ test_exec_time=18
 [ -e $IGT_BENCHMARKS/gem_exec_nop ] || return 1
 sudo -n true || return 1
 
-gem:exec:nop_run() { run_bench 0 sudo $IGT_BENCHMARKS/gem_exec_nop -e 1 -r $1; }
+gem:exec:nop_run() { run_bench 0 sudo $IGT_BENCHMARKS/gem_exec_nop -e 1 -r 3; }
 gem:exec:nop_process() { bc -l <<< "1000000 / ${@: -1}"; }

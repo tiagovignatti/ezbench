@@ -47,12 +47,30 @@ ezBenchDir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 mkdir "$ezBenchDir/logs" 2> /dev/null
 
 # set the default run_bench function which can be overriden by the profiles:
+# Bash variables: $run_log_file : filename of the log report of the current run
 # Arguments: $1 : timeout (set to 0 for infinite wait)
 #            $2+: command line executing the test AND NOTHING ELSE!
 function run_bench {
     timeout=$1
     shift
-    eval "vblank_mode=0 stdbuf -oL timeout $timeout "$@""
+    cmd="LIBGL_DEBUG=verbose vblank_mode=0 stdbuf -oL timeout $timeout $@"
+
+    run_log_file_stdout="$run_log_file.stdout"
+    run_log_file_stderr="$run_log_file.stderr"
+    if [ ! -z "$run_log_file" ]; then
+        cmd="$cmd > >(tee $run_log_file_stdout) 2> >(tee $run_log_file_stderr >&2)"
+    fi
+
+    echo "$cmd" > /tmp/toto
+    eval $cmd
+
+    # delete the log files if they are empty
+    if [ ! -s "$run_log_file_stdout" ] ; then
+        rm "$run_log_file_stdout"
+    fi
+    if [ ! -s "$run_log_file_stderr" ] ; then
+        rm "$run_log_file_stderr"
+    fi
 }
 
 # parse the options
@@ -397,7 +415,7 @@ do
         fps_logs=$logsFolder/${commit}_bench_${testNames[$t]}
         error_logs=${fps_logs}.errors
 
-        # add the csv header and find the first run id available
+        # Find the first run id available
         if [ -f "$fps_logs" ]; then
             # The logs file exist, look for the number of runs
             run=0
@@ -406,7 +424,6 @@ do
                 run=$((run+1))
             done
         else
-            # The file did not exist, create it
             echo "# FPS of '${testNames[$t]}' using commit ${commit}" > "$fps_logs"
             run=0
         fi
@@ -424,23 +441,23 @@ do
         unset ERROR
         callIfDefined "$preHookFuncName"
         callIfDefined benchmark_run_pre_hook
-        output=$("$runFuncName" "$rounds" "$fps_logs" "$run" 2> "$error_logs" || ERROR=1)
+        for (( c=$run; c<$run+$rounds; c++ ))
+        do
+            run_log_file="${fps_logs}#$c"
+
+            # This function will return multiple fps readings
+            "$runFuncName" > "$run_log_file" 2> /dev/null || ERROR=1
+
+            # Add the fps values before adding the result to the average fps for
+            # the run.
+            fps_avg=$(awk '{sum=sum+$1} END {print sum/NR}' $run_log_file)
+            echo "$fps_avg" >> "$fps_logs"
+        done
         callIfDefined benchmark_run_post_hook
         callIfDefined "$postHookFuncName"
 
-        if [ -n "$ERROR" -o -z "$output" ]; then
-            echo -e "${c_red}failed${c_reset}"
-            continue
-        fi
-
-        # delete the error file if it is empty
-        if [ ! -s "$error_logs" ] ; then
-            rm "$error_logs"
-        fi
-
-        echo "$output" >> "$fps_logs"
-
         # Process the data ourselves
+        output=$(tail -n +1 "$fps_logs") # Read back the data, minus the header
         statistics=
         result=$(callIfDefined "$processHookFuncName" "$output") || {
             statistics=$(echo "$output" | "$ezBenchDir/fps_stats.awk")

@@ -2,17 +2,15 @@
 sudo -n true || return 1
 
 function __trace__ {
-    sudo $IGT_BENCHMARKS/gem_exec_trace $IGT_TRACES/$2.gem_exec_trace >/dev/null
-    for (( c=0; c<$1; c++ )); do
-        run_bench 0 sudo $IGT_BENCHMARKS/gem_exec_trace $IGT_TRACES/$2.gem_exec_trace | sed 's/.*: //'
-    done
+    sudo $IGT_BENCHMARKS/gem_exec_trace $IGT_TRACES/$1.gem_exec_trace >/dev/null
+    run_bench 0 sudo $IGT_BENCHMARKS/gem_exec_trace $IGT_TRACES/$1.gem_exec_trace | sed 's/.*: //'
 }
 
 for i in $IGT_TRACES/*.gem_exec_trace; do
         trace=$(basename $i .gem_exec_trace)
 	name=gem:exec:trace:$trace
 	test_name="$test_name $name"
-	eval "${name}_run() { __trace__ \$1 $trace; }"
+	eval "${name}_run() { __trace__ $trace; }"
 done
 
 test_exec_time=4

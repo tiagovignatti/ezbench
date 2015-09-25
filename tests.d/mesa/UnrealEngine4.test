@@ -2,43 +2,38 @@
 test -e "$LIBFRAMETIME64_SO" || return 1
 test -d "$UE4_FOLDER" || return 1
 
-# 5 arguments: $rounds $fps_logs_file $runID $benchmark $benchmark_params
+# 2 arguments: $benchmark $benchmark_params
 __ue4__() {
-    eval benchmark="$4"
+    eval benchmark="$1"
     test -d "$benchmark" || return 1
     benchmark=$(find "$benchmark" -type f -executable ! -name CrashReportClient)
 
-    for (( c=$3; c<$1+$3; c++ ))
-    do
         rm -f /tmp/frametime.log
 
         LIBFRAMETIME_FILE=/tmp/frametime.log LD_PRELOAD=$LIBFRAMETIME64_SO \
-        run_bench 60 \"$benchmark\" -NOSOUND -BENCHMARK $5 > /dev/null >&2
+        run_bench 60 \"$benchmark\" -NOSOUND -BENCHMARK $2 > /dev/null >&2
 
         # read back the result, skip the first frames since they are the loading frames
-        cat /tmp/frametime.log | awk '{if (++n > 10) {print 1000000/$2}}' > $2#$c
-        awk '{sum=sum+$1} END {print sum/NR}' $2#$c
-    done
+        cat /tmp/frametime.log | awk '{if (++n > 10) {print 1000000/$2}}'
 }
 
-# 4 arguments: $rounds $fps_logs_file $runID $benchmark
+# 1 argument: $benchmark
 __ue4:fullscreen__() {
     read width height <<< $(xdpyinfo | sed '/dimensions/!d; s/.*dimensions:\(.*\)x\(.*\) pixels.*/\1 \2/')
-    __ue4__ "$1" "$2" "$3" "$4" "-ResX=$width -ResY=$height"
+    __ue4__ "$1" "-ResX=$width -ResY=$height"
 }
 
-# 4 arguments: $rounds $fps_logs_file $runID $benchmark
+# 1 argument: $benchmark
 __ue4:window__() {
-    __ue4__ "$1" "$2" "$3" "$4" "-ResX=$UE4_WINDOW_SIZE_X -ResY=$UE4_WINDOW_SIZE_Y"
+    __ue4__ "$1" "-ResX=$UE4_WINDOW_SIZE_X -ResY=$UE4_WINDOW_SIZE_Y"
 }
 
-# 3 arguments: $rounds $fps_logs_file $runID
 eval $(IFS= find "$UE4_FOLDER" -mindepth 1 -maxdepth 1 -type d | \
 while read benchmark; do
     name=$(cat "$benchmark"/name 2>/dev/null || basename "$benchmark" | cut -f1 -d\  )
-    echo "ue4:${name}:fullscreen_run() { __ue4:fullscreen__ \$1 \$2 \$3 \"\\\"$benchmark\\\"\"; };"
+    echo "ue4:${name}:fullscreen_run() { __ue4:fullscreen__ \"\\\"$benchmark\\\"\"; };"
     echo "test_name=\"\$test_name ue4:${name}:fullscreen\";"
-    echo "ue4:${name}:window_run() { __ue4:window__ \$1 \$2 \$3 \"\\\"$benchmark\\\"\"; };"
+    echo "ue4:${name}:window_run() { __ue4:window__ \"\\\"$benchmark\\\"\"; };"
     echo "test_name=\"\$test_name ue4:${name}:window\";"
 done; )
 

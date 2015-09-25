@@ -1,4 +1,4 @@
-test_exec_time=18
+test_exec_time=2
 test_invert=1
 
 [ -e $IGT_BENCHMARKS/gem_exec_reloc ] || return 1
@@ -9,10 +9,10 @@ for i in old lut; do
 	for k in constant sequential reverse random; do
 	    for b in 2 4096; do
 		test_name="$test_name gem:exec:reloc:$i:$j:$k:$b"
-		eval "gem:exec:reloc:${i}:${j}:${k}:${b}_run() { run_bench 0 sudo $IGT_BENCHMARKS/gem_exec_reloc -s 65536 -m $i -e $j -o $k -l \$1 -b $b -r 4096 ; } "
+		eval "gem:exec:reloc:${i}:${j}:${k}:${b}_run() { run_bench 0 sudo $IGT_BENCHMARKS/gem_exec_reloc -s 65536 -m $i -e $j -o $k -l 1 -b $b -r 4096 ; } "
             done
 	done
     done
     test_name="$test_name gem:exec:reloc:$i:0:8192"
-    eval "gem:exec:reloc:${i}:0:8192_run() { run_bench 0 sudo $IGT_BENCHMARKS/gem_exec_reloc -s 4096 -m $i -e  none -o constant -l \$1 -b 8192 -r 0 ; } "
+    eval "gem:exec:reloc:${i}:0:8192_run() { run_bench 0 sudo $IGT_BENCHMARKS/gem_exec_reloc -s 4096 -m $i -e  none -o constant -l 1 -b 8192 -r 0 ; } "
 done
