@@ -10,3 +10,4 @@ for j in busy idle; do
 done
 
 test_exec_time=2
+test_unit="µs"

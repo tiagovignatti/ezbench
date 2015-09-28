@@ -23,3 +23,4 @@ for exe in $(find ${POLYBENCH_ACC_FOLDER}/OpenCL -name '*.exe'); do
 done
 test_exec_time=20
 test_invert=1 # output is duration in seconds
+test_unit="s"

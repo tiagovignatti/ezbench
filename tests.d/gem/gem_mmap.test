@@ -17,3 +17,4 @@ for i in cpu gtt wc; do
 done
 
 test_exec_time=1
+test_unit="µs"

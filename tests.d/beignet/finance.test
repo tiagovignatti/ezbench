@@ -28,3 +28,4 @@ for exe in $(find ${FINANCEBENCH_FOLDER} -name '*.exe'); do
 done
 test_exec_time=2
 test_invert=1 # output is duration in milliseconds
+test_unit="ms"

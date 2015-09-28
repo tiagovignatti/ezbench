@@ -259,6 +259,7 @@ echo -n "Tests that will be run: "
 for test_dir in ${testsDir:-$ezBenchDir/tests.d}; do
     for test_file in $test_dir/**/*.test; do
         unset test_name
+        unset test_unit
         unset test_invert
         unset test_exec_time
 
@@ -288,8 +289,12 @@ for test_dir in ${testsDir:-$ezBenchDir/tests.d}; do
             fi
             [ $found -eq 0 ] && continue
 
+            # Set the default unit to FPS
+            [ -z "$test_unit" ] && test_unit="FPS"
+
             testNames[$total_tests]=$t
-	    testInvert[$total_tests]=$test_invert
+            testUnit[$total_tests]=$test_unit
+            testInvert[$total_tests]=$test_invert
 
             last_result="$logsFolder/${last_commit}_result_${t}"
             if [ -e "$logsFolder/${last_commit}_result_${t}" ]; then
@@ -424,7 +429,12 @@ do
                 run=$((run+1))
             done
         else
-            echo "# FPS of '${testNames[$t]}' using commit ${commit}" > "$fps_logs"
+            if [ -z "${testInvert[$t]}" ]; then
+                direction="more is better"
+            else
+                direction="less is better"
+            fi
+            echo "# ${testUnit[$t]} ($direction) of '${testNames[$t]}' using commit ${commit}" > "$fps_logs"
             run=0
         fi
 

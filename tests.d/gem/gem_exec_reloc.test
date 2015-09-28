@@ -1,5 +1,6 @@
 test_exec_time=2
 test_invert=1
+test_unit="µs"
 
 [ -e $IGT_BENCHMARKS/gem_exec_reloc ] || return 1
 sudo -n true || return 1
