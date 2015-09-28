@@ -99,13 +99,13 @@ class Benchmark:
         self.unit_str = unit
 
 class BenchResult:
-    def __init__(self, commit, benchmark, data_raw_file, unit_str):
+    def __init__(self, commit, benchmark, data_raw_file):
         self.commit = commit
         self.benchmark = benchmark
         self.data_raw_file = data_raw_file
         self.data = []
         self.runs = []
-        self.unit_str = unit_str
+        self.unit_str = None
 
 class Commit:
     def __init__(self, sha1, full_name, compile_log, patch, label):
@@ -145,21 +145,25 @@ class Report:
 def readCsv(filepath, wantFrametime = False):
     data = []
 
+    h1 = re.compile('^# (.*) of \'(.*)\' using commit (.*)$')
+    h2 = re.compile('^# (.*) \\((.*) is better\\) of \'(.*)\' using commit (.*)$')
+
     with open(filepath, 'rt') as f:
         reader = csv.reader(f)
+        unit = None
         try:
-            hasSniffer = csv.Sniffer().has_header(f.read(1024))
-        except:
-            hasSniffer = False
-            pass
-
-        try:
-            if hasSniffer:
-                f.seek(0)
-                next(f)
-            else:
-                f.seek(0)
             for row in reader:
+                # try to extract information from the header
+                m1 = h1.match(row[0])
+                m2 = h2.match(row[0])
+                if m2 is not None:
+                    # groups: unit type, more|less qualifier, benchmark, commit_sha1
+                    unit = m2.groups()[0]
+                elif m1 is not None:
+                    # groups: unit type, benchmark, commit_sha1
+                    unit = unit = m1.groups()[0]
+
+                # Read the actual data
                 if len(row) > 0 and not row[0].startswith("# "):
                     try:
                         data.append(float(row[0]))
@@ -167,14 +171,15 @@ def readCsv(filepath, wantFrametime = False):
                         sys.stderr.write('Error in file %s, line %d: %s\n' % (filepath, reader.line_num, e))
         except csv.Error as e:
             sys.stderr.write('file %s, line %d: %s\n' % (filepath, reader.line_num, e))
-            return []
+            return [], "none"
 
     # Convert to frametime if needed
-    if wantFrametime:
+    if wantFrametime and unit == "FPS":
+        unit = "ms"
         for i in range(0, len(data)):
             data[i] = 1000.0 / data[i]
 
-    return data
+    return data, unit
 
 def readCommitLabels():
     labels = dict()
@@ -271,22 +276,22 @@ def genPerformanceReport(log_folder, wantFrametime = False, silentMode = False):
                 unit = "FPS"
 
             # Create the result object
-            result = BenchResult(commit, benchmark, benchFile, unit)
+            result = BenchResult(commit, benchmark, benchFile)
+
+            # Read the data and abort if there is no data
+            result.data, result.unit_str = readCsv(benchFile, wantFrametime)
+            if len(result.data) == 0:
+                continue
 
             # Check that the result file has the same default v
-            if benchmark.unit_str != unit:
+            if benchmark.unit_str != result.unit_str:
                 if benchmark.unit_str != "undefined":
                     msg = "The unit used by the benchmark '{bench}' changed from '{unit_old}' to '{unit_new}' in commit {commit}"
                     print(msg.format(bench=bench_name,
                                      unit_old=benchmark.unit_str,
                                      unit_new=unit,
                                      commit=commit.sha1))
-                benchmark.unit_str = unit
-
-            # Read the data and abort if there is no data
-            result.data = readCsv(benchFile, wantFrametime)
-            if len(result.data) == 0:
-                continue
+                benchmark.unit_str = result.unit_str
 
             # Look for the runs
             runsFiles = glob.glob("^{benchFile}#[0-9]+".format(benchFile=benchFile));
