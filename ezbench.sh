@@ -457,7 +457,7 @@ do
         callIfDefined "$postHookFuncName"
 
         # Process the data ourselves
-        output=$(tail -n +1 "$fps_logs") # Read back the data, minus the header
+        output=$(tail -n +2 "$fps_logs") # Read back the data, minus the header
         statistics=
         result=$(callIfDefined "$processHookFuncName" "$output") || {
             statistics=$(echo "$output" | "$ezBenchDir/fps_stats.awk")
