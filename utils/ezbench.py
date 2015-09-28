@@ -159,8 +159,11 @@ def readCsv(filepath, wantFrametime = False):
             else:
                 f.seek(0)
             for row in reader:
-                if len(row) > 0:
-                    data.append(float(row[0]))
+                if len(row) > 0 and not row[0].startswith("# "):
+                    try:
+                        data.append(float(row[0]))
+                    except ValueError as e:
+                        sys.stderr.write('Error in file %s, line %d: %s\n' % (filepath, reader.line_num, e))
         except csv.Error as e:
             sys.stderr.write('file %s, line %d: %s\n' % (filepath, reader.line_num, e))
             return []
@@ -248,7 +251,7 @@ def genPerformanceReport(log_folder, wantFrametime = False, silentMode = False):
                 continue
 
             # Skip on error files
-            if re.search(r'.errors$', benchFile) is not None:
+            if re.search(r'\.(stderr|stdout|errors)$', benchFile) is not None:
                 continue
 
             # Get the bench name
@@ -275,7 +278,7 @@ def genPerformanceReport(log_folder, wantFrametime = False, silentMode = False):
                 continue
 
             # Look for the runs
-            runsFiles = glob.glob("{benchFile}#*".format(benchFile=benchFile));
+            runsFiles = glob.glob("^{benchFile}#[0-9]+".format(benchFile=benchFile));
             for runFile in runsFiles:
                 data = readCsv(runFile, wantFrametime)
                 if len(data) > 0:
