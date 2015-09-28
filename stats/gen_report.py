@@ -187,6 +187,7 @@ html_template="""
 
     <head>
         <title>${title}</title>
+        <meta http-equiv="content-type" content="text/html; charset=utf-8" />
         <style>
             body {{ font-size: 10pt}}
         </style>
