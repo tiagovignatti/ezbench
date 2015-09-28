@@ -93,9 +93,10 @@ class Ezbench:
 
 # Report parsing
 class Benchmark:
-    def __init__(self, full_name):
+    def __init__(self, full_name, unit="undefined"):
         self.full_name = full_name
         self.prevValue = -1
+        self.unit_str = unit
 
 class BenchResult:
     def __init__(self, commit, benchmark, data_raw_file, unit_str):
@@ -271,6 +272,16 @@ def genPerformanceReport(log_folder, wantFrametime = False, silentMode = False):
 
             # Create the result object
             result = BenchResult(commit, benchmark, benchFile, unit)
+
+            # Check that the result file has the same default v
+            if benchmark.unit_str != unit:
+                if benchmark.unit_str != "undefined":
+                    msg = "The unit used by the benchmark '{bench}' changed from '{unit_old}' to '{unit_new}' in commit {commit}"
+                    print(msg.format(bench=bench_name,
+                                     unit_old=benchmark.unit_str,
+                                     unit_new=unit,
+                                     commit=commit.sha1))
+                benchmark.unit_str = unit
 
             # Read the data and abort if there is no data
             result.data = readCsv(benchFile, wantFrametime)
