@@ -474,15 +474,15 @@ do
             result=$(echo "$statistics" | cut -d ' ' -f 1)
             statistics=$(echo "$statistics" | cut -d ' ' -f 2-)
         }
-        echo "$result" > "$logsFolder/${commit}_result_${testNames[$t]}"
-	if [ -z "${testPrevFps[$t]}" ]; then
-		testPrevFps[$t]=$result
-	fi
-	if [ -z "${testInvert[$t]}" ]; then
-	    fpsDiff=$(echo "scale=3;($result * 100.0 / ${testPrevFps[$t]}) - 100" | bc 2>/dev/null)
-	else
-	    fpsDiff=$(echo "scale=3;(100.0 * ${testPrevFps[$t]} / $result) - 100" | bc 2>/dev/null)
-	fi
+        echo $result > $logsFolder/${commit}_result_${testNames[$t]}
+        if [ -z "${testPrevFps[$t]}" ]; then
+            testPrevFps[$t]=$result
+        fi
+        if [ -z "${testInvert[$t]}" ]; then
+            fpsDiff=$(echo "scale=3;($result * 100.0 / ${testPrevFps[$t]}) - 100" | bc 2>/dev/null)
+        else
+            fpsDiff=$(echo "scale=3;(100.0 * ${testPrevFps[$t]} / $result) - 100" | bc 2>/dev/null)
+        fi
         [ $? -eq 0 ] && testPrevFps[$t]=$result
         if (( $(bc -l <<< "$fpsDiff < -1.5" 2>/dev/null || echo 0) )); then
             color=$bad_color
@@ -497,10 +497,10 @@ do
 
     # finish with the geometric mean (when we have multiple tests)
     if [ $t -gt 1 ]; then
-	    fpsALL=$(awk '{r=0; for(i=1; i<=NF; i++) { r += log($i) } print exp(r / NF) }' <<< "$fpsALL")
-	if [ -z "${testPrevFps[-1]}" ]; then
-		testPrevFps[-1]="$fpsALL"
-	fi
+        fpsALL=$(awk '{r=0; for(i=1; i<=NF; i++) { r += log($i) } print exp(r / NF) }' <<< $fpsALL)
+        if [ -z "${testPrevFps[-1]}" ]; then
+            testPrevFps[-1]=$fpsALL
+        fi
         fpsDiff=$(echo "scale=3;($fpsALL * 100.0 / ${testPrevFps[-1]}) - 100" | bc 2>/dev/null)
         [ $? -eq 0 ] && testPrevFps[-1]=$fpsALL
         if (( $(bc -l <<< "$fpsDiff < -1.5" 2>/dev/null || echo 0) )); then
