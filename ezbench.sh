@@ -35,7 +35,7 @@
 
 shopt -s globstar || {
     echo "ERROR: ezbench requires bash 4.0+ or zsh with globstat support."
-    exit 1
+    exit 10
 }
 
 # Printf complains about floating point numbers having , as a delimiter otherwise
@@ -132,7 +132,7 @@ while getopts "$optString" opt; do
         ;;
     :)
       echo "Option -$OPTARG requires an argument." >&2
-      exit 1
+      exit 11
       ;;
     esac
 done
@@ -141,7 +141,7 @@ done
 profileDir="$ezBenchDir/profiles.d/$profile"
 if [ ! -d "$profileDir" ]; then
     echo "Profile '$profile' does not exist." >&2
-    exit 1
+    exit 12
 fi
 
 # Default user options
@@ -187,7 +187,7 @@ while getopts "$optString" opt; do
         ;;
     :)
       echo "Option -$OPTARG requires an argument." >&2
-      exit 1
+      exit 13
       ;;
     esac
 done
@@ -222,7 +222,7 @@ stash=$(git stash create)
 if [ $? -ne 0 ]
 then
     echo "ERROR: Unable to preserve dirty state in '$gitRepoDir'. Aborting..."
-    exit 1
+    exit 50
 fi
 [ -n "$stash" ] && echo "Preserving work-in-progress"
 
@@ -319,7 +319,7 @@ done
 echo
 unset last_commit
 
-[ -z "$total_tests" ] && exit 1
+[ -z "$total_tests" ] && exit 100
 
 missing_tests=
 for t in $testsList; do
@@ -328,7 +328,7 @@ done
 if [ -n "$missing_tests" ]; then
     echo "The tests \"${missing_tests:0:-1}\" do not exist"
     available_tests
-    exit 1
+    exit 101
 fi
 
 # Set the average compilation time to 0 when we are not compiling
