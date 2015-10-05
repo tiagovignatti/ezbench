@@ -382,6 +382,12 @@ function compile {
     callIfDefined compile_post_hook
 }
 
+if [ $rounds -eq 0 ]
+then
+    echo "Nothing to do (rounds == 0), exit."
+    exit 0
+fi
+
 # Iterate through the commits
 for commit in $commitList
 do
