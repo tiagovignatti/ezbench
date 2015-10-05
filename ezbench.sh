@@ -116,6 +116,7 @@ function show_help {
     echo "        -m <make and deploy command> (default: 'make -j8 install', '' to skip the compilation)"
     echo "        -N <log folder's name> (default: current date and time)"
     echo "        -T <path> source the test definitions from this folder"
+    echo "        -k dry run, do not compile any commit or execute any benchmark"
     echo ""
     echo "    Other actions:"
     echo "        -h/?: Show this help message"
@@ -123,7 +124,7 @@ function show_help {
 }
 
 # First find the profile, if it is set
-optString="h?P:p:n:N:H:r:b:B:m:T:l"
+optString="h?P:p:n:N:H:r:b:B:m:T:lk"
 profile="default"
 while getopts "$optString" opt; do
     case "$opt" in
@@ -181,6 +182,9 @@ while getopts "$optString" opt; do
         available_tests
         exit 0
         ;;
+    k)
+        dry_run=1
+        ;;
     :)
       echo "Option -$OPTARG requires an argument." >&2
       exit 1
@@ -190,10 +194,13 @@ done
 shift $((OPTIND-1))
 
 # redirect the output to both a log file and stdout
-logsFolder="$ezBenchDir/logs/${reportName:-$(date +"%Y-%m-%d-%T")}"
-[ -d "$logsFolder" ] || mkdir -p "$logsFolder" || exit 1
-exec > >(tee -a "$logsFolder/results")
-exec 2>&1
+if [ -z "$dry_run" ]
+then
+    logsFolder="$ezBenchDir/logs/${reportName:-$(date +"%Y-%m-%d-%T")}"
+    [ -d $logsFolder ] || mkdir -p $logsFolder || exit 1
+    exec > >(tee -a $logsFolder/results)
+    exec 2>&1
+fi
 
 # Check the git repo, saving then displaying the HEAD commit
 if [ -z "$gitRepoDir" ]
@@ -385,6 +392,12 @@ function compile {
 if [ $rounds -eq 0 ]
 then
     echo "Nothing to do (rounds == 0), exit."
+    exit 0
+fi
+
+if [ -n "$dry_run" ]
+then
+    echo "Dry-run mode, exit."
     exit 0
 fi
 
