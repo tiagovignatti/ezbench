@@ -214,6 +214,7 @@ def genPerformanceReport(log_folder, wantFrametime = False, silentMode = False):
     benchmarks = []
     commits = []
     labels = dict()
+    notes = []
 
     # Save the current working directory and switch to the log folder
     cwd = os.getcwd()
@@ -227,16 +228,18 @@ def genPerformanceReport(log_folder, wantFrametime = False, silentMode = False):
         finally:
             f.close()
     except IOError:
-        sys.stderr.write("The log folder '{0}' does not contain a commit_list file\n".format(log_folder))
-        return (commits, benchmarks)
+        if not silentMode:
+            sys.stderr.write("The log folder '{0}' does not contain a commit_list file\n".format(log_folder))
+        return Report(benchmarks, commits, notes)
 
     # Read all the commits' labels
     labels = readCommitLabels()
 
     # Check that there are commits
     if (len(commitsLines) == 0):
-        sys.stderr.write("The commit_list file is empty\n")
-        sys.exit(2)
+        if not silentMode:
+            sys.stderr.write("The commit_list file is empty\n")
+        return Report(benchmarks, commits, notes)
 
     # Gather all the information from the commits and generate the images
     if not silentMode:
