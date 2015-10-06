@@ -35,6 +35,12 @@ import os
 import re
 
 # Ezbench runs
+class EzbenchRun:
+    def __init__(self, commits, benchmarks, predicted_execution_time):
+        self.commits = commits
+        self.benchmarks = benchmarks
+        self.predicted_execution_time = predicted_execution_time
+
 class Ezbench:
     def __init__(self, ezbench_path, repo_path, make_command = None,
                  report_name = None, tests_folder = None):
@@ -44,7 +50,7 @@ class Ezbench:
         self.report_name = report_name
         self.tests_folder = tests_folder
 
-    def __ezbench_cmd_base(self, benchmarks, benchmark_excludes = [], rounds = None):
+    def __ezbench_cmd_base(self, benchmarks, benchmark_excludes = [], rounds = None, dry_run = False):
         ezbench_cmd = []
         ezbench_cmd.append(self.ezbench_path)
         ezbench_cmd.append("-p"); ezbench_cmd.append(self.repo_path)
@@ -65,31 +71,68 @@ class Ezbench:
         if self.tests_folder is not None:
             ezbench_cmd.append("-T"); ezbench_cmd.append(self.tests_folder)
 
+        if dry_run:
+            ezbench_cmd.append("-k")
+
         return ezbench_cmd
 
-    def __run_ezbench(self, cmd):
-        try:
-            subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError as e:
-            print("\n\nERROR: The following command '{}' failed with the error code {}. Here is its output:\n\n'{}'".format(" ".join(cmd), e.returncode, e.output.decode()))
-            return False
-        return True
+    def __run_ezbench(self, cmd, dry_run = False):
+        error = None
 
-    def run_commits(self, commits, benchmarks, benchmark_excludes = [], rounds = None):
-        ezbench_cmd = self.__ezbench_cmd_base(benchmarks, benchmark_excludes, rounds)
+        try:
+            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode()
+        except subprocess.CalledProcessError as e:
+            error = e
+            output = e.output.decode()
+            pass
+
+        if not dry_run and error is None:
+            return True
+
+        # we need to parse the output
+        commits= []
+        benchmarks = []
+        pred_exec_time = 0
+        re_commit_list = re.compile('^Testing \d+ commits: ')
+        for line in output.split("\n"):
+            m_commit_list = re_commit_list.match(line)
+            if line.startswith("Tests that will be run:"):
+                benchmarks = line[24:].split(" ")
+                if benchmarks[-1] == '':
+                    benchmarks.pop(-1)
+            elif line.find("estimated finish date:") >= 0:
+                pred_exec_time = ""
+            elif m_commit_list is not None:
+                commits = line[m_commit_list.end():].split(" ")
+                while '' in commits:
+                    commits.remove('')
+            elif error is not None:
+                if error.returncode == 101 and line.endswith("do not exist"):
+                    print(line)
+                    return False
+
+        if error is not None:
+            print("\n\nERROR: The following command '{}' failed with the error code {}. Here is its output:\n\n'{}'".format(" ".join(cmd), e.returncode, output))
+            return False
+
+        return EzbenchRun(commits, benchmarks, pred_exec_time)
+
+    def run_commits(self, commits, benchmarks, benchmark_excludes = [], rounds = None, dry_run = False):
+        ezbench_cmd = self.__ezbench_cmd_base(benchmarks, benchmark_excludes, rounds, dry_run)
 
         for commit in commits:
             ezbench_cmd.append(commit)
 
-        return self.__run_ezbench(ezbench_cmd)
+        return self.__run_ezbench(ezbench_cmd, dry_run)
 
-    def run_commit_range(self, head, commit_count, benchmarks, benchmark_excludes = [], rounds = None):
-        ezbench_cmd = self.__ezbench_cmd_base(benchmarks, benchmark_excludes, rounds)
+    def run_commit_range(self, head, commit_count, benchmarks, benchmark_excludes = [], rounds = None, dry_run = False):
+        ezbench_cmd = self.__ezbench_cmd_base(benchmarks, benchmark_excludes, rounds, dry_run)
 
         ezbench_cmd.append("-H"); ezbench_cmd.append(head)
         ezbench_cmd.append("-n"); ezbench_cmd.append(commit_count)
 
-        return self.__run_ezbench(ezbench_cmd)
+        return self.__run_ezbench(ezbench_cmd, dry_run)
+
 
 # Report parsing
 class Benchmark:
