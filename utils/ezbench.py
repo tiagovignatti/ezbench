@@ -153,6 +153,9 @@ def readCsv(filepath, wantFrametime = False):
         unit = None
         try:
             for row in reader:
+                if row is None or len(row) == 0:
+                    continue
+
                 # try to extract information from the header
                 m1 = h1.match(row[0])
                 m2 = h2.match(row[0])
