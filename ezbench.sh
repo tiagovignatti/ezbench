@@ -339,16 +339,19 @@ else
     avgBuildTime=$(git config --get ezbench.average-build-time 2>/dev/null || echo 30)
 fi
 
-# Estimate the execution time
+# finish computing the list of commits
 if [ -z "$commitList" ]; then
     commitList=$(git rev-list --abbrev-commit --reverse -n "${lastNCommits}" "${uptoCommit}")
     [ "${uptoCommit}" == "HEAD" ] && commitList="${commitList} ${stash}"
 fi
-num_commits=$(wc -w <<< "$commitList")
-secs=$(( (total_round_time * rounds + avgBuildTime) * num_commits))
+num_commits=$(wc -w <<< $commitList)
+printf "Testing %d commits: %s\n" $num_commits "$(echo "$commitList" | tr '\n' ' ')"
+
+# Estimate the execution time
+secs=$(( ($total_round_time * $rounds + $avgBuildTime) * $num_commits))
 finishDate=$(date +"%y-%m-%d - %T" --date="$secs seconds")
-printf "Testing %d commits, estimated finish date: $finishDate (%02dh:%02dm:%02ds)\n\n" "${num_commits}" $((secs/3600)) $((secs%3600/60)) $((secs%60))
-startTime=$(date +%s)
+printf "Estimated finish date: $finishDate (%02dh:%02dm:%02ds)\n\n" $(($secs/3600)) $(($secs%3600/60)) $(($secs%60))
+startTime=`date +%s`
 
 # ANSI colors
 c_red='\e[31m'
