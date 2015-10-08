@@ -36,10 +36,11 @@ import re
 
 # Ezbench runs
 class EzbenchRun:
-    def __init__(self, commits, benchmarks, predicted_execution_time):
+    def __init__(self, commits, benchmarks, predicted_execution_time, deployed_commit):
         self.commits = commits
         self.benchmarks = benchmarks
         self.predicted_execution_time = predicted_execution_time
+        self.deployed_commit = deployed_commit
 
 class Ezbench:
     def __init__(self, ezbench_path, repo_path, make_command = None,
@@ -93,15 +94,20 @@ class Ezbench:
         commits= []
         benchmarks = []
         pred_exec_time = 0
+        deployed_commit = ""
         re_commit_list = re.compile('^Testing \d+ commits: ')
+        re_deployed_version = re.compile('.*, deployed version = ')
         for line in output.split("\n"):
             m_commit_list = re_commit_list.match(line)
+            m_deployed_version = re_deployed_version.match(line)
             if line.startswith("Tests that will be run:"):
                 benchmarks = line[24:].split(" ")
                 if benchmarks[-1] == '':
                     benchmarks.pop(-1)
             elif line.find("estimated finish date:") >= 0:
                 pred_exec_time = ""
+            elif m_deployed_version is not None:
+                deployed_commit = line[m_deployed_version.end():]
             elif m_commit_list is not None:
                 commits = line[m_commit_list.end():].split(" ")
                 while '' in commits:
@@ -115,7 +121,7 @@ class Ezbench:
             print("\n\nERROR: The following command '{}' failed with the error code {}. Here is its output:\n\n'{}'".format(" ".join(cmd), e.returncode, output))
             return False
 
-        return EzbenchRun(commits, benchmarks, pred_exec_time)
+        return EzbenchRun(commits, benchmarks, pred_exec_time, deployed_commit)
 
     def run_commits(self, commits, benchmarks, benchmark_excludes = [], rounds = None, dry_run = False):
         ezbench_cmd = self.__ezbench_cmd_base(benchmarks, benchmark_excludes, rounds, dry_run)

@@ -202,6 +202,15 @@ then
     exec 2>&1
 fi
 
+function read_git_version_deployed() {
+    if [ -n "$gitVersionDeployedCmd" ]
+    then
+        eval "$gitVersionDeployedCmd"
+        return $?
+    fi
+    return 1
+}
+
 # Check the git repo, saving then displaying the HEAD commit
 if [ -z "$gitRepoDir" ]
 then
@@ -215,7 +224,11 @@ then
     echo "ERROR: The path '$gitRepoDir' does not contain a valid git repository. Aborting..."
     exit 1
 fi
-echo "Original commit = $commit_head"
+printf "Original commit = $commit_head"
+
+deployedVersion=$(read_git_version_deployed)
+[ $? -eq 0 ] && printf ", deployed version = $deployedVersion"
+echo
 
 # Preserve any local modifications
 stash=$(git stash create)
@@ -366,7 +379,15 @@ good_color=$c_bright_green
 meh_color=$c_bright_yellow
 
 function compile {
+    # Accessible variables
+    # $commit     [RO]: SHA1 id of the current commit
+    # $commitName [RO]: Name of the commit
+
     [ -z "$makeAndDeployCmd" ] && return 0
+
+    # early exit if the deployed version is the wanted commit
+    version=$(read_git_version_deployed)
+    [ $? -eq 0 ] && [[ "$version" =~ "$commit" ]] && return 0
 
     # Call the user-defined pre-compile hook
     callIfDefined compile_pre_hook
@@ -390,6 +411,14 @@ function compile {
 
     # Call the user-defined post-compile hook
     callIfDefined compile_post_hook
+
+    # Check that the deployed image is the right one
+    version=$(read_git_version_deployed)
+    if [ $? -eq 0 ] && [[ ! "$version" =~ "$commit" ]]
+    then
+        printf "${c_bright_red}ERROR${c_reset}: The deployed version ($version) does not match the wanted one($commit)\n"
+    fi
+
 }
 
 if [ $rounds -eq 0 ]
