@@ -99,6 +99,11 @@ class Ezbench:
         if not dry_run and error is None:
             return True
 
+        if error is not None:
+            # Invalid profile
+            if error.returncode == 12:
+                return False
+
         # we need to parse the output
         commits= []
         benchmarks = []
