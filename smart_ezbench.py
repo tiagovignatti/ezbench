@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+
+"""
+Copyright (c) 2015, Intel Corporation
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright notice,
+      this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+    * Neither the name of Intel Corporation nor the names of its contributors
+      may be used to endorse or promote products derived from this software
+      without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+"""
+
+from subprocess import call,check_output
+from pprint import pprint
+from numpy import *
+import subprocess
+import argparse
+import shutil
+import sys
+import os
+
+# Import ezbench from the utils/ folder
+ezbench_dir = os.path.abspath(sys.path[0])
+sys.path.append(ezbench_dir + '/utils/')
+from ezbench import *
+
+def break_lists(input_list, sep=" "):
+    res = []
+    if input_list is None:
+        return res
+    for entry in input_list:
+        res.extend(entry.split(sep))
+    return res
+
+# parse the options
+parser = argparse.ArgumentParser()
+parser.add_argument("-b", dest='benchmarks', help="<benchmark regexp> include these benchmarks to run",
+                    action="append")
+parser.add_argument("-B", dest='benchmarks_exclude', help="<benchmark regexp> exclude these benchamrks from running",
+                    action="append")
+parser.add_argument("-c", dest='commits', help="Commits to run the benchmarks on",
+                    action="append")
+parser.add_argument("-r", dest='rounds', help="Number of execution rounds",
+                    action="store", type=int, nargs='?')
+parser.add_argument("-p", dest='profile', help="Profile to be used by ezbench",
+                    action="store")
+parser.add_argument("report_name")
+parser.add_argument("command", help="Command to execute (start|state)", nargs='?',
+                    choices=('start', 'state'))
+args = parser.parse_args()
+
+
+sbench = SmartEzbench(ezbench_dir, args.report_name)
+
+if sbench.profile() is None and args.profile is not None:
+    sbench.set_profile(args.profile)
+
+# add commits and benchmarks
+if args.commits is not None and args.benchmarks is not None:
+    # remove duplicates in the lists
+    commits = list(set(break_lists(args.commits)))
+    benchmarks = list(set(break_lists(args.benchmarks)))
+    benchmarks_exclude = list(set(break_lists(args.benchmarks_exclude)))
+
+    # we cannot fetch the git sha1 without a profile/git repo
+    if sbench.profile() is None:
+        print("No profile is set, set one first with -p before adding benchmark runs")
+
+    # get the list of benchmarks that actually need to be ran
+    ezbench = Ezbench(ezbench_path=ezbench_dir + "/ezbench.sh",
+                  profile=sbench.profile(),
+                  report_name="tmp")
+    run_info = ezbench.run_commits(commits, benchmarks, benchmarks_exclude, dry_run=True)
+    if run_info == False:
+        sys.exit(1)
+
+    # Add all the commits and benchmarks to commit
+    for commit in run_info.commits:
+        for bench in run_info.benchmarks:
+            print("add {count} runs to {bench} on {commit}".format(count=args.rounds, bench=bench, commit=commit))
+            sbench.add_benchmark(commit, bench, args.rounds)
+
+if args.command is not None:
+    if args.command == "start":
+        sbench.run()
+    elif args.command == "state":
+        pprint.pprint(sbench.state)
+    else:
+        print("Unknown command '{cmd}'".format(cmd=args.command))

@@ -26,9 +26,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 from array import array
+from enum import Enum
 from numpy import *
 import subprocess
+import datetime
+import atexit
+import pprint
+import fcntl
+import time
+import json
 import glob
+import copy
 import csv
 import sys
 import os
@@ -155,6 +163,259 @@ class Ezbench:
 
         return self.__run_ezbench(ezbench_cmd, dry_run, verbose)
 
+# Smart-ezbench-related classes
+class Criticality(Enum):
+    II = 0
+    WW = 1
+    EE = 2
+    DD = 3
+
+class TaskEntry:
+    def __init__(self, commit, benchmark, rounds):
+        self.commit = commit
+        self.benchmark = benchmark
+        self.rounds = rounds
+
+class SmartEzbench:
+    def __init__(self, ezbench_dir, report_name):
+        state = dict()
+        state['ezbench_dir'] = ezbench_dir
+        state['report_name'] = report_name
+        state['log_folder'] = ezbench_dir + '/logs/' + report_name
+        state['smart_ezbench_state'] = state['log_folder'] + "/smartezbench.state"
+        state['smart_ezbench_log'] = state['log_folder'] + "/smartezbench.log"
+        state['commits'] = dict()
+        state['beenRunBefore'] = False
+
+         # check if a report already exists
+        try:
+            with open(state['smart_ezbench_state'], 'rt') as f:
+                try:
+                    self.state = json.loads(f.read())
+                except:
+                    # Exit and write an error
+                    pass
+        except IOError:
+            pass
+
+        # Create the log directory
+        if not os.path.exists(state['log_folder']):
+            os.makedirs(state['log_folder'])
+
+        # Open the log file as append
+        self.log_file = open(state['smart_ezbench_log'], "a")
+
+        # First run!
+        if not hasattr(self, 'state'):
+            self.state = state
+            self.__log(Criticality.II,
+                       "Created report '{report_name}' in {log_folder}".format(report_name=report_name,
+                                                                               log_folder=self.state['log_folder']))
+
+        atexit.register(self.__save_state)
+        self.__save_state()
+
+    def __del__(self):
+        self.log_file.close()
+
+    def __log(self, error, msg):
+        time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_msg = "{time}: ({error}) {msg}\n".format(time=time, error=error.name, msg=msg)
+        print(log_msg, end="")
+        self.log_file.write(log_msg)
+        self.log_file.flush()
+
+    def __lock_state(self):
+        self.lock_fd = open(self.state['smart_ezbench_state'], 'r')
+
+        n = 0
+        while n < 10:
+            try:
+                fcntl.flock(self.lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                return True
+            except IOError as e:
+                print(e)
+                time.sleep(0.01)
+                n = n + 1
+                pass
+
+        self.__log(Criticality.EE, "Failed to lock the state file")
+        return False
+
+    def __unlock_state(self):
+        if self.lock_fd is None:
+            self.__log(Criticality.EE, "Trying to unlock a non-locked file")
+
+        try:
+            fcntl.flock(self.lock_fd, fcntl.LOCK_UN)
+            del self.lock_fd
+        except Exception as e:
+            print(e)
+            pass
+
+    def __save_state(self):
+        if self.__lock_state() == False:
+            return False
+
+        try:
+            state_tmp = str(self.state['smart_ezbench_state']) + ".tmp"
+            with open(state_tmp, 'wt') as f:
+                f.write(json.dumps(self.state, sort_keys=True, indent=4, separators=(',', ': ')))
+                f.close()
+                os.rename(state_tmp, self.state['smart_ezbench_state'])
+                self.__unlock_state()
+                return True
+        except IOError:
+            self.__log(Criticality.EE, "Could not dump the current state to a file!")
+            self.__unlock_state()
+            return False
+
+    def __create_ezbench(self, ezbench_path = None, profile = None, report_name = None):
+        if ezbench_path is None:
+            ezbench_path = self.state['ezbench_dir'] + "/ezbench.sh"
+        if profile is None:
+            profile = self.profile()
+        if report_name is None:
+            report_name=self.state['report_name']
+
+        return Ezbench(ezbench_path = ezbench_path, profile = profile,
+                       report_name = report_name)
+
+    def profile(self):
+        if "profile" in self.state:
+            return self.state['profile']
+        else:
+            return None
+
+    def set_profile(self, profile):
+        if 'profile' not in self.state:
+            # Check that the profile exists!
+            ezbench = self.__create_ezbench(profile = profile)
+            run_info = ezbench.run_commits(["HEAD"], [], [], dry_run=True)
+            if run_info == False:
+                self.__log(Criticality.EE, "Invalid profile name '{profile}'.".format(profile=profile))
+                return
+
+            self.state['profile'] = profile
+            self.__log(Criticality.II, "Ezbench profile set to '{profile}'".format(profile=profile))
+            self.__save_state()
+        else:
+            self.__log(Criticality.EE, "You cannot change the profile of a report. Start a new one.")
+
+    def add_benchmark(self, commit, benchmark, rounds = None):
+        if commit not in self.state['commits']:
+            self.state['commits'][commit] = dict()
+            self.state['commits'][commit]["benchmarks"] = dict()
+
+        if rounds is None:
+            rounds = 3
+
+        if benchmark not in self.state['commits'][commit]['benchmarks']:
+            self.state['commits'][commit]['benchmarks'][benchmark] = dict()
+            self.state['commits'][commit]['benchmarks'][benchmark]['rounds'] = rounds
+        else:
+            self.state['commits'][commit]['benchmarks'][benchmark]['rounds'] += rounds
+
+        # if the number of rounds is equal to 0 for a benchmark, delete it
+        if self.state['commits'][commit]['benchmarks'][benchmark]['rounds'] <= 0:
+            del self.state['commits'][commit]['benchmarks'][benchmark]
+
+        # Delete a commit that has no benchmark
+        if len(self.state['commits'][commit]['benchmarks']) == 0:
+            del self.state['commits'][commit]
+
+        self.__save_state()
+
+    def __prioritize_runs(self, task_tree, deployed_version):
+        task_list = list()
+
+        if deployed_version is not None and deployed_version in task_tree:
+            for benchmark in task_tree[deployed_version]["benchmarks"]:
+                rounds = task_tree[deployed_version]["benchmarks"][benchmark]["rounds"]
+                task_list.append(TaskEntry(deployed_version, benchmark, rounds))
+            del task_tree[deployed_version]
+
+        # Add all the remaining tasks in whatever order!
+        for commit in task_tree:
+            for benchmark in task_tree[commit]["benchmarks"]:
+                rounds = task_tree[commit]["benchmarks"][benchmark]["rounds"]
+                task_list.append(TaskEntry(commit, benchmark, rounds))
+
+        return task_list
+
+    def run(self):
+        self.__log(Criticality.II, "----------------------")
+        self.__log(Criticality.II, "Starting a run...")
+        self.__log(Criticality.II, "Checking the dependencies:")
+
+        # check for dependencies
+        if 'profile' not in self.state:
+            self.__log(Criticality.EE, "    - Ezbench profile: Not set. Abort...")
+            return False
+        else:
+            profile = self.state["profile"]
+            self.__log(Criticality.II, "    - Ezbench profile: '{0}'".format(profile))
+
+        # Create the ezbench runner
+        ezbench = self.__create_ezbench()
+        run_info = ezbench.run_commits(["HEAD"], [], [], dry_run=True)
+        if run_info != False:
+            deployed_version = run_info.deployed_commit
+        else:
+            deployed_version = None
+        self.__log(Criticality.II, "    - Deployed version: '{0}'".format(deployed_version))
+        self.__log(Criticality.II, "All the dependencies are met, generate a report...")
+
+        # Generate a report to compare the goal with the current state
+        report = genPerformanceReport(self.state['log_folder'], silentMode = True)
+        self.__log(Criticality.II,
+                   "The report contains {count} commits".format(count=len(report.commits)))
+
+        # Walk down the report and get rid of every run that has already been made!
+        task_tree = copy.deepcopy(self.state['commits'])
+        for commit in report.commits:
+            for result in commit.results:
+                self.__log(Criticality.DD,
+                           "Found {count} runs for benchmark {benchmark} using commit {commit}".format(count=len(result.data),
+                                                                                                       commit=commit.sha1,
+                                                                                                       benchmark=result.benchmark.full_name))
+                if commit.sha1 not in task_tree:
+                    continue
+                if result.benchmark.full_name not in task_tree[commit.sha1]["benchmarks"]:
+                    continue
+
+                task_tree[commit.sha1]["benchmarks"][result.benchmark.full_name]['rounds'] -= len(result.data)
+
+                if task_tree[commit.sha1]["benchmarks"][result.benchmark.full_name]['rounds'] <= 0:
+                    del task_tree[commit.sha1]["benchmarks"][result.benchmark.full_name]
+
+                if len(task_tree[commit.sha1]["benchmarks"]) == 0:
+                    del task_tree[commit.sha1]
+
+        if len(task_tree) == 0:
+            self.__log(Criticality.II, "Nothing left to do, exit")
+            return
+
+        task_tree_str = pprint.pformat(task_tree)
+        self.__log(Criticality.II, "Task list: {tsk_str}".format(tsk_str=task_tree_str))
+
+
+
+        # Prioritize --> return a list of commits to do in order
+        task_list = self.__prioritize_runs(task_tree, deployed_version)
+
+        # Let's start!
+        self.state['beenRunBefore'] = True
+
+        # Start generating ezbench calls
+        for e in task_list:
+            self.__log(Criticality.DD,
+                       "make {count} runs for benchmark {benchmark} using commit {commit}".format(count=e.rounds,
+                                                                                                  commit=e.commit,
+                                                                                                  benchmark=e.benchmark))
+            ezbench.run_commits([e.commit], [e.benchmark + '$'], rounds=e.rounds)
+
+        self.__log(Criticality.II, "Done")
 
 # Report parsing
 class Benchmark:
