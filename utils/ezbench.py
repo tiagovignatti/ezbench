@@ -43,9 +43,10 @@ class EzbenchRun:
         self.deployed_commit = deployed_commit
 
 class Ezbench:
-    def __init__(self, ezbench_path, repo_path, make_command = None,
-                 report_name = None, tests_folder = None):
+    def __init__(self, ezbench_path, profile = None, repo_path = None,
+                 make_command = None, report_name = None, tests_folder = None):
         self.ezbench_path = ezbench_path
+        self.profile = profile
         self.repo_path = repo_path
         self.make_command = make_command
         self.report_name = report_name
@@ -54,7 +55,12 @@ class Ezbench:
     def __ezbench_cmd_base(self, benchmarks, benchmark_excludes = [], rounds = None, dry_run = False):
         ezbench_cmd = []
         ezbench_cmd.append(self.ezbench_path)
-        ezbench_cmd.append("-p"); ezbench_cmd.append(self.repo_path)
+
+        if self.profile is not None:
+            ezbench_cmd.append("-P"); ezbench_cmd.append(self.profile)
+
+        if self.repo_path is not None:
+            ezbench_cmd.append("-p"); ezbench_cmd.append(self.repo_path)
 
         for benchmark in benchmarks:
             ezbench_cmd.append("-b"); ezbench_cmd.append(benchmark)
@@ -121,7 +127,7 @@ class Ezbench:
                     return False
 
         if error is not None:
-            print("\n\nERROR: The following command '{}' failed with the error code {}. Here is its output:\n\n'{}'".format(" ".join(cmd), e.returncode, output))
+            print("\n\nERROR: The following command '{}' failed with the error code {}. Here is its output:\n\n'{}'".format(" ".join(cmd), error.returncode, output))
             return False
 
         return EzbenchRun(commits, benchmarks, pred_exec_time, deployed_commit)
