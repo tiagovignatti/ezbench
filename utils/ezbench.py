@@ -77,8 +77,11 @@ class Ezbench:
 
         return ezbench_cmd
 
-    def __run_ezbench(self, cmd, dry_run = False):
+    def __run_ezbench(self, cmd, dry_run = False, verbose = False):
         error = None
+
+        if verbose:
+            print(cmd)
 
         try:
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode()
@@ -123,21 +126,23 @@ class Ezbench:
 
         return EzbenchRun(commits, benchmarks, pred_exec_time, deployed_commit)
 
-    def run_commits(self, commits, benchmarks, benchmark_excludes = [], rounds = None, dry_run = False):
+    def run_commits(self, commits, benchmarks, benchmark_excludes = [],
+                    rounds = None, dry_run = False, verbose = False):
         ezbench_cmd = self.__ezbench_cmd_base(benchmarks, benchmark_excludes, rounds, dry_run)
 
         for commit in commits:
             ezbench_cmd.append(commit)
 
-        return self.__run_ezbench(ezbench_cmd, dry_run)
+        return self.__run_ezbench(ezbench_cmd, dry_run, verbose)
 
-    def run_commit_range(self, head, commit_count, benchmarks, benchmark_excludes = [], rounds = None, dry_run = False):
+    def run_commit_range(self, head, commit_count, benchmarks, benchmark_excludes = [],
+                         rounds = None, dry_run = False, verbose = False):
         ezbench_cmd = self.__ezbench_cmd_base(benchmarks, benchmark_excludes, rounds, dry_run)
 
         ezbench_cmd.append("-H"); ezbench_cmd.append(head)
         ezbench_cmd.append("-n"); ezbench_cmd.append(commit_count)
 
-        return self.__run_ezbench(ezbench_cmd, dry_run)
+        return self.__run_ezbench(ezbench_cmd, dry_run, verbose)
 
 
 # Report parsing
