@@ -208,12 +208,12 @@ class SmartEzbench:
         # First run!
         if not hasattr(self, 'state'):
             self.state = state
+            self.__save_state()
             self.__log(Criticality.II,
                        "Created report '{report_name}' in {log_folder}".format(report_name=report_name,
                                                                                log_folder=self.state['log_folder']))
 
         atexit.register(self.__save_state)
-        self.__save_state()
 
     def __del__(self):
         self.log_file.close()
