@@ -226,7 +226,11 @@ class SmartEzbench:
         self.log_file.flush()
 
     def __lock_state(self):
-        self.lock_fd = open(self.state['smart_ezbench_state'], 'r')
+        try:
+            self.lock_fd = open(self.state['smart_ezbench_state'], 'r')
+        except FileNotFoundError:
+            # Nothing ot do as the project is being created
+            return
 
         n = 0
         while n < 10:
@@ -243,7 +247,7 @@ class SmartEzbench:
         return False
 
     def __unlock_state(self):
-        if self.lock_fd is None:
+        if hasattr(self, "lock_fd") and self.lock_fd is None:
             self.__log(Criticality.EE, "Trying to unlock a non-locked file")
 
         try:
