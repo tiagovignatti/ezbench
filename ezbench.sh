@@ -123,6 +123,9 @@ function show_help {
     echo "        -l: List the available tests"
 }
 
+# Read the user parameters
+source "$ezBenchDir/user_parameters.sh"
+
 # First find the profile, if it is set
 optString="h?P:p:n:N:H:r:b:B:m:T:lk"
 profile="default"
@@ -149,7 +152,6 @@ for conf in $profileDir/conf.d/**/*.conf; do
     [ "$conf" = "$ezBenchDir/conf.d/**/*.conf" ] && continue
     source "$conf"
 done
-source "$ezBenchDir/test_options.sh" # Allow test_options.sh to override all
 source "$profileDir/profile"
 
 # Start again the argument parsing, this time with every option
