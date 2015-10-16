@@ -178,45 +178,29 @@ class TaskEntry:
 
 class SmartEzbench:
     def __init__(self, ezbench_dir, report_name):
-        state = dict()
-        state['ezbench_dir'] = ezbench_dir
-        state['report_name'] = report_name
-        state['log_folder'] = ezbench_dir + '/logs/' + report_name
-        state['smart_ezbench_state'] = state['log_folder'] + "/smartezbench.state"
-        state['smart_ezbench_log'] = state['log_folder'] + "/smartezbench.log"
-        state['commits'] = dict()
-        state['beenRunBefore'] = False
-
-         # check if a report already exists
-        try:
-            with open(state['smart_ezbench_state'], 'rt') as f:
-                try:
-                    self.state = json.loads(f.read())
-                except:
-                    # Exit and write an error
-                    pass
-        except IOError:
-            pass
+        self.state = dict()
+        self.state['ezbench_dir'] = ezbench_dir
+        self.state['report_name'] = report_name
+        self.state['log_folder'] = ezbench_dir + '/logs/' + report_name
+        self.state['smart_ezbench_state'] = self.state['log_folder'] + "/smartezbench.state"
+        self.state['smart_ezbench_lock'] = self.state['log_folder'] + "/smartezbench.lock"
+        self.state['smart_ezbench_log'] = self.state['log_folder'] + "/smartezbench.log"
+        self.state['commits'] = dict()
+        self.state['beenRunBefore'] = False
 
         # Create the log directory
-        if not os.path.exists(state['log_folder']):
-            os.makedirs(state['log_folder'])
+        if not os.path.exists(self.state['log_folder']):
+            os.makedirs(self.state['log_folder'])
 
         # Open the log file as append
-        self.log_file = open(state['smart_ezbench_log'], "a")
+        self.log_file = open(self.state['smart_ezbench_log'], "a")
 
-        # First run!
-        if not hasattr(self, 'state'):
-            self.state = state
+        # Load the state but use the newly-created state if we cannot load it
+        if not self.__reload_state():
             self.__save_state()
             self.__log(Criticality.II,
                        "Created report '{report_name}' in {log_folder}".format(report_name=report_name,
                                                                                log_folder=self.state['log_folder']))
-
-        atexit.register(self.__save_state)
-
-    def __del__(self):
-        self.log_file.close()
 
     def __log(self, error, msg):
         time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -225,53 +209,56 @@ class SmartEzbench:
         self.log_file.write(log_msg)
         self.log_file.flush()
 
-    def __lock_state(self):
+    def __grab_lock(self):
+        self.lock_fd = open(self.state['smart_ezbench_lock'], 'w')
         try:
-            self.lock_fd = open(self.state['smart_ezbench_state'], 'r')
-        except FileNotFoundError:
-            # Nothing ot do as the project is being created
-            return
-
-        n = 0
-        while n < 10:
-            try:
-                fcntl.flock(self.lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                return True
-            except IOError as e:
-                print(e)
-                time.sleep(0.01)
-                n = n + 1
-                pass
-
-        self.__log(Criticality.EE, "Failed to lock the state file")
-        return False
-
-    def __unlock_state(self):
-        if hasattr(self, "lock_fd") and self.lock_fd is None:
-            self.__log(Criticality.EE, "Trying to unlock a non-locked file")
-
-        try:
-            fcntl.flock(self.lock_fd, fcntl.LOCK_UN)
-            del self.lock_fd
-        except Exception as e:
-            print(e)
-            pass
-
-    def __save_state(self):
-        if self.__lock_state() == False:
+            fcntl.flock(self.lock_fd, fcntl.LOCK_EX)
+            return True
+        except IOError as e:
+            self.__log(Criticality.EE, "Could not lock the report: " + str(e))
             return False
 
+    def __release_lock(self):
+        try:
+            fcntl.flock(self.lock_fd, fcntl.LOCK_UN)
+            self.lock_fd.close()
+        except Exception as e:
+            self.__log(Criticality.EE, "Cannot release the lock: " + str(e))
+            pass
+
+    def __reload_state_unlocked(self):
+        # check if a report already exists
+        try:
+            with open(self.state['smart_ezbench_state'], 'rt') as f:
+                self.state_read_time = time.time()
+                try:
+                    self.state = json.loads(f.read())
+                except Exception as e:
+                    self.__log(Criticality.EE, "Exception while reading the state: " + str(e))
+                    pass
+                return True
+        except IOError as e:
+            self.__log(Criticality.WW, "Cannot open the state file: " + str(e))
+            pass
+        return False
+
+    def __reload_state(self, keep_lock = False):
+        self.__grab_lock()
+        ret = self.__reload_state_unlocked()
+        if not keep_lock:
+            self.__release_lock()
+        return ret
+
+    def __save_state(self):
         try:
             state_tmp = str(self.state['smart_ezbench_state']) + ".tmp"
             with open(state_tmp, 'wt') as f:
                 f.write(json.dumps(self.state, sort_keys=True, indent=4, separators=(',', ': ')))
                 f.close()
                 os.rename(state_tmp, self.state['smart_ezbench_state'])
-                self.__unlock_state()
                 return True
         except IOError:
             self.__log(Criticality.EE, "Could not dump the current state to a file!")
-            self.__unlock_state()
             return False
 
     def __create_ezbench(self, ezbench_path = None, profile = None, report_name = None):
@@ -292,12 +279,14 @@ class SmartEzbench:
             return None
 
     def set_profile(self, profile):
+        self.__reload_state(keep_lock=True)
         if 'profile' not in self.state:
             # Check that the profile exists!
             ezbench = self.__create_ezbench(profile = profile)
             run_info = ezbench.run_commits(["HEAD"], [], [], dry_run=True)
             if run_info == False:
                 self.__log(Criticality.EE, "Invalid profile name '{profile}'.".format(profile=profile))
+                self.__release_lock()
                 return
 
             self.state['profile'] = profile
@@ -305,8 +294,10 @@ class SmartEzbench:
             self.__save_state()
         else:
             self.__log(Criticality.EE, "You cannot change the profile of a report. Start a new one.")
+        self.__release_lock()
 
     def add_benchmark(self, commit, benchmark, rounds = None):
+        self.__reload_state(keep_lock=True)
         if commit not in self.state['commits']:
             self.state['commits'][commit] = dict()
             self.state['commits'][commit]["benchmarks"] = dict()
@@ -329,6 +320,7 @@ class SmartEzbench:
             del self.state['commits'][commit]
 
         self.__save_state()
+        self.__release_lock()
 
     def __prioritize_runs(self, task_tree, deployed_version):
         task_list = list()
