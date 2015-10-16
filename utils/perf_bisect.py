@@ -101,7 +101,7 @@ if os.path.exists(logs_dir):
     shutil.rmtree(logs_dir, ignore_errors=True)
     print()
 
-ezbench = Ezbench(ezbench_path=ezbench_dir + "ezbench.sh",
+ezbench = Ezbench(ezbench_path=ezbench_dir + "core.sh",
                   repo_path=args.repo_path,
                   make_command = args.make_cmd,
                   report_name=reportName)

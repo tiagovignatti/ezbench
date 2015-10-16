@@ -103,7 +103,7 @@ function callIfDefined() {
 }
 
 function show_help {
-    echo "    ezbench.sh [list of SHA1]"
+    echo "    core.sh [list of SHA1]"
     echo ""
     echo "    Optional arguments:"
     echo "        -P <profile name>"

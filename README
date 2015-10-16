@@ -35,7 +35,7 @@ configuration file.
 You will need to adjust this file to give the location of the base directory of
 all the benchmark folders.
 
-Another important note about ezbench.sh is that it is highly modular and
+Another important note about core.sh is that it is highly modular and
 hook-based. Have a look at conf.d/README for the documentation about the
 different hooks. The hooks can be defined in test_options.sh or in whatever file
 whose extension would be .conf and located in the conf.d directory.
@@ -48,20 +48,20 @@ The following command will test all the GLB27:Egypt cases but the ones
 containing the word cpu in them. It will run all the benchmarks 5 times on
 the 10 commits before HEAD~~.
 
-    ./ezbench.sh -p ~/repos/mesa -B cpu -b GLB27:Egypt -r 5 -n 10 -H HEAD~~
+    ./core.sh -p ~/repos/mesa -B cpu -b GLB27:Egypt -r 5 -n 10 -H HEAD~~
 
 The following command run the synmark:Gl21Batch2 benchmark (note the $ at the
 end that indicates that we do not want the :cpu variant). It will run all the
 benchmarks 3 times on 3 commits (in this order), HEAD~5 HEAD~2 HEAD~10.
 
-    ./ezbench.sh -p ~/repos/mesa -b synmark:Gl21Batch2$ -r 3 HEAD~5 HEAD~2 HEAD~10
+    ./core.sh -p ~/repos/mesa -b synmark:Gl21Batch2$ -r 3 HEAD~5 HEAD~2 HEAD~10
 
 ==== Retrospectives ====
 
 Here is an example of how to generate a retrospective. The interesting part is
 the call to utils/get_commit_list.py which generates a list of commits
 
-    ./ezbench.sh -p ~/repos/mesa -B cpu -b GLB27:Egypt:offscreen \
+    ./core.sh -p ~/repos/mesa -B cpu -b GLB27:Egypt:offscreen \
                  -b GLB27:Trex:offscreen -b GLB30:Manhattan:offscreen \
                  -b GLB30:Trex:offscreen -b unigine:heaven -b unigine:valley \
                  -r 3 -m "./recompile-release.sh" `utils/get_commit_list.py \
@@ -110,6 +110,6 @@ to use, so just check out the example.
 === Examples ===
 
 The following command will bisect a performance difference between commit
-HEAD~100 and HEAD. The -p, -b, -r and -m arguments are the same as ezbench.sh.
+HEAD~100 and HEAD. The -p, -b, -r and -m arguments are the same as core.sh.
 
     utils/perf_bisect.py -p ~/repos/mesa -b glxgears:window -r 1 HEAD~100 HEAD

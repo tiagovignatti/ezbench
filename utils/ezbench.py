@@ -278,7 +278,7 @@ class SmartEzbench:
 
     def __create_ezbench(self, ezbench_path = None, profile = None, report_name = None):
         if ezbench_path is None:
-            ezbench_path = self.state['ezbench_dir'] + "/ezbench.sh"
+            ezbench_path = self.state['ezbench_dir'] + "/core.sh"
         if profile is None:
             profile = self.profile()
         if report_name is None:
