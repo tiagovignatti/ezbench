@@ -349,7 +349,7 @@ class SmartEzbench:
 
     def run(self):
         self.__log(Criticality.II, "----------------------")
-        self.__log(Criticality.II, "Starting a run...")
+        self.__log(Criticality.II, "Starting a run: {report}".format(report=self.state['report_name']))
         self.__log(Criticality.II, "Checking the dependencies:")
 
         # check for dependencies
