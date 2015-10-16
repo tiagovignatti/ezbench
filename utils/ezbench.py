@@ -170,6 +170,21 @@ class Criticality(Enum):
     EE = 2
     DD = 3
 
+def list_smart_ezbench_report_names(ezbench_dir, updatedSince = 0):
+    log_dir = ezbench_dir + '/logs'
+    state_files = glob.glob("{log_dir}/*/smartezbench.state".format(log_dir=log_dir));
+
+    reports = []
+    for state_file in state_files:
+        if os.path.getmtime(state_file) < updatedSince:
+            continue
+
+        start = len(log_dir) + 1
+        stop = len(state_file) - 19
+        reports.append(state_file[start:stop])
+
+    return reports
+
 class TaskEntry:
     def __init__(self, commit, benchmark, rounds):
         self.commit = commit
