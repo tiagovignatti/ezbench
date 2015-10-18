@@ -1,0 +1,69 @@
+= Env dump =
+
+== Description ==
+
+This library is meant to be used in conjunction with LD_PRELOAD to dump all
+the shared-object dependencies of the binary you are trying to analyze. It also
+shows which fd received ioctls which is very handy to know which GPU got used
+for the rendering.
+
+The output of the library is saved in a file. You can select the filename using
+the environment variable ENV_DUMP_FILE. If the file is already present, the pid
+will be appended to avoid overriding existing data. If you do not set the
+ENV_DUMP_FILE env. var., the default output file will be '/tmp/env_dump'.
+
+== Compilation ==
+
+Please install the libcrypto and then type make in the directory containing this
+README. You should get a env_dump.so.
+
+== Usage ==
+
+$ LD_PRELOAD=$PWD/env_dump.so ENV_DUMP_FILE=report glxgears
+[...]
+$ cat report
+-- Env dump loaded successfully! --
+EXE,/usr/bin/glxgears,'glxgears',947487c10657d2f84c0aaf8f60602a6077f1784e
+BOOTLINK,/home/mupuf/install/lib/valgrind/vgpreload_core-amd64-linux.so,a9831875028f1f9cb64b03e26668ca26c8fae054
+BOOTLINK,/home/mupuf/install/lib/valgrind/vgpreload_memcheck-amd64-linux.so,9a895908ab632583db29153fa927dc7a260ab4c5
+BOOTLINK,/home/mupuf/Programmation/ezbench/utils/env_dump/env_dump.so,c27f1df084f01b32d15549898ab0b9223add64b3
+BOOTLINK,/home/mupuf/install/lib/libGL.so.1,5a8975bae55c1e1b4b4ff12e5652e2e0ea35279b
+BOOTLINK,/usr/lib/libm.so.6,b7cf4803a0a49905d990adfcc56989721b156e71
+BOOTLINK,/usr/lib/libX11.so.6,70b697ed434727e99bbd3b8f2f486c9267690a56
+BOOTLINK,/usr/lib/libc.so.6,e3e01c77ab3d4d73ff3f969948465debaffa2b61
+BOOTLINK,/usr/lib/libdl.so.2,3e032a705b7724f27e78d4f078d7c6961ffd54e0
+BOOTLINK,/usr/lib/libpthread.so.0,54f2d4f765876c54194bed2964bdd1a0cdde03db
+BOOTLINK,/usr/lib/libcrypto.so.1.0.0,211d0b48fb40546c8524303e67493819d531aea8
+BOOTLINK,/usr/lib/libexpat.so.1,084d5f181adc197d5cf12ba1e576b82ce9aa865e
+BOOTLINK,/home/mupuf/install/lib/libglapi.so.0,e96bb64809428331719ed837f279adfb7ae68ead
+BOOTLINK,/usr/lib/libXext.so.6,3359d6805126c28630c922219a6daaf9a5836f42
+BOOTLINK,/usr/lib/libXdamage.so.1,5628004f4fe77abeca831a8ead1c24e54ed3890a
+BOOTLINK,/usr/lib/libXfixes.so.3,c116fb23a09d318ea0d32012374a0b4819529c8d
+BOOTLINK,/usr/lib/libX11-xcb.so.1,a5cce5a5e2d6a6c3f8e4d9a31c9ef0445f63b4b3
+BOOTLINK,/usr/lib/libxcb-glx.so.0,ea5dc27e4bae75cdff70216ebeaffccfc22ce1bb
+BOOTLINK,/usr/lib/libxcb-dri2.so.0,24ff4164929f13a15ec65336a836739f6f557d55
+BOOTLINK,/usr/lib/libxcb.so.1,25ec0f295c31eebb496ba429d038348719724b35
+BOOTLINK,/usr/lib/libXxf86vm.so.1,4a916951fe388431de5448d9818e293b73191d32
+BOOTLINK,/usr/lib/libdrm.so.2,f7c856982b794ff1f93d0465ae5b58bdc93ca964
+BOOTLINK,/lib64/ld-linux-x86-64.so.2,7911a1b3866a389fa9ad46a08432b7efe2639478
+BOOTLINK,/usr/lib/libz.so.1,a2f2ed3e528cee1527cf30a14f01ca246bf530b5
+BOOTLINK,/usr/lib/libXau.so.6,df47f8963111fa3850a26fa61f0b4c137433a745
+BOOTLINK,/usr/lib/libXdmcp.so.6,28cced3ef7d1994417672308aee548be47a6deaa
+IOCTL,8,/dev/dri/card0
+DYNLINK,/usr/lib/libudev.so.1.6.4,6587c22b9f0ba359d68a6315cc7f24284664f52f
+DYNLINK,/usr/lib/libudev.so.1,6587c22b9f0ba359d68a6315cc7f24284664f52f
+DYNLINK,/usr/lib/librt.so.1,93294cf925d436e5167e0777ca875d7ca14647a8
+DYNLINK,/usr/lib/libresolv.so.2,a31a77f08069f211113d3aafb3d422c11694dd97
+DYNLINK,/usr/lib/libcap.so.2,0e11f218f90843afb6359c1d1856d974a1d9fe58
+DYNLINK,/usr/lib/libattr.so.1,f0cdbed41dcfb9772873406569fac2e155abd222
+DYNLINK,/home/mupuf/install/lib/libGL.so.1.2.0,5a8975bae55c1e1b4b4ff12e5652e2e0ea35279b
+DYNLINK,/home/mupuf/install/lib/dri/i965_dri.so,928a06da26383285ebac02387029e5d687968486
+DYNLINK,/usr/lib/libnettle.so.6,141b6bf17aa0176724a3b913150db7b566e75674
+DYNLINK,/usr/lib/libdrm_intel.so.1,5ed4c11d8f726ce08406cdd72d8c4e3ce1538e9f
+DYNLINK,/usr/lib/libstdc++.so.6,5153a9f4f464116cc8fcff7f285fc215a5cefba0
+DYNLINK,/usr/lib/libgcc_s.so.1,e7650e7ef499ba6afcce6be4012931747ce20991
+DYNLINK,/usr/lib/libpciaccess.so.0,035c8ad06e10405e5b850af23f98ff6eff03c96c
+DYNLINK,/usr/lib/libtxc_dxtn.so,61959dd2bc5b130891e44c780d9a2d0ce74b6b3c
+-- Env dump fini, closing the file! --
+
+That's it for now, folks!
