@@ -14,7 +14,12 @@
 # $testExcludeList       [WO]: List of tests that should be excluded in this profile
 
 function __default_make_and_deploy__() {
-    make -j8 install
+    # Return error codes:
+    # 71: Compilation error
+    # 72: Deployment error
+
+    make -j8 || exit 71
+    make install || exit 72
 }
 
 rounds=3

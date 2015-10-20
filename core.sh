@@ -30,12 +30,38 @@
 # - Martin Peres <martin.peres@intel.com>
 # - Chris Wilson <chris@chris-wilson.co.uk>
 
+# Error codes:
+#   Argument parsing:
+#       - 11: Need a profile name after the -P option
+#       - 12: The profile does not exist
+#       - 13: Missing optarg after a parameter
+#       - 14: Missing git repository directory
+#
+#   OS:
+#       - 30: The shell does not support globstat
+#       - 31: Cannot create the log folder
+#       - 32: Cannot move to the git repo directory
+#
+#   Git:
+#       - 50: Unable to preserve dirty state of the repository
+#       - 51: Invalid commit ID
+#
+#   Compilation & deployment:
+#       - 70: Compilation or deployment failed
+#       - 71: Compilation failed
+#       - 72: Deployment failed
+#       - 73: The deployed version does not match the wanted version
+#
+#   Tests:
+#       - 100: At least one test does not exist
+#
+
 # Uncomment the following to track all the executed commands
 #set -o xtrace
 
 shopt -s globstar || {
     echo "ERROR: ezbench requires bash 4.0+ or zsh with globstat support."
-    exit 10
+    exit 30
 }
 
 # Printf complains about floating point numbers having , as a delimiter otherwise
@@ -199,7 +225,7 @@ shift $((OPTIND-1))
 if [ -z "$dry_run" ]
 then
     logsFolder="$ezBenchDir/logs/${reportName:-$(date +"%Y-%m-%d-%T")}"
-    [ -d $logsFolder ] || mkdir -p $logsFolder || exit 1
+    [ -d $logsFolder ] || mkdir -p $logsFolder || exit 30
     exec > >(tee -a $logsFolder/results)
     exec 2>&1
 fi
@@ -217,7 +243,7 @@ function read_git_version_deployed() {
 if [ -z "$gitRepoDir" ]
 then
     echo "ERROR: You did not specify a git repository path (-p). Aborting..."
-    exit 1
+    exit 14
 fi
 cd "$gitRepoDir" || exit 1
 commit_head=$(git rev-parse HEAD 2>/dev/null)
@@ -244,10 +270,11 @@ fi
 commitList=
 for id in "$@"; do
     if [[ $id =~ \.\. ]]; then
-        commitList+=$(git rev-list --abbrev-commit --reverse "$id")
+        commitList+=$(git rev-list --abbrev-commit --reverse "$id" 2> /dev/null)
     else
-        commitList+=$(git rev-list --abbrev-commit -n 1 "$(git rev-parse "$id")")
+        commitList+=$(git rev-list --abbrev-commit -n 1 "$(git rev-parse "$id" 2> /dev/null)" 2> /dev/null)
     fi
+    [ $? -ne 0 ] && printf "ERROR: Invalid commit ID '$id'\n" && exit 51
     commitList+=" "
 done
 
@@ -334,8 +361,6 @@ done
 echo
 unset last_commit
 
-[ -z "$total_tests" ] && exit 100
-
 missing_tests=
 for t in $testsList; do
     [ -z ${testFilter[$t]} ] && missing_tests+="$t "
@@ -398,13 +423,22 @@ function compile {
     compile_logs=$logsFolder/${commit}_compile_log
     compile_start=$(date +%s)
     eval "$makeAndDeployCmd" > "$compile_logs" 2>&1
+    local exit_code=$?
     compile_end=$(date +%s)
-    if [ $? -ne 0 ]
-    then
-        echo "    ERROR: Compilation failed, log saved in $compile_logs"
-        echo
+    if [ "$exit_code" -ne '0' ]; then
         git reset --hard HEAD~ > /dev/null 2> /dev/null
-        exit 1
+
+        # Forward the error code from $makeAndDeployCmd if it is a valid error code
+        if [ $exit_code -eq 71 ]; then
+            component="Compilation"
+        elif [ $exit_code -eq 72 ]; then
+            component="Deployment"
+        else
+            exit_code=70
+        fi
+
+        printf "    ${c_bright_red}ERROR${c_reset}: $component failed, log saved in $compile_logs\n"
+        exit $exit_code
     fi
 
     # Update our build time estimator
@@ -418,7 +452,8 @@ function compile {
     version=$(read_git_version_deployed)
     if [ $? -eq 0 ] && [[ ! "$version" =~ "$commit" ]]
     then
-        printf "${c_bright_red}ERROR${c_reset}: The deployed version ($version) does not match the wanted one($commit)\n"
+        printf "    ${c_bright_red}ERROR${c_reset}: The deployed version ($version) does not match the wanted one($commit)\n"
+        exit 73
     fi
 
 }
@@ -441,7 +476,7 @@ do
     # save the commit in the commit_list
 
     # Make sure we are in the right folder
-    cd "$gitRepoDir" || exit 1
+    cd "$gitRepoDir" || exit 31
 
     # Select the commit of interest
     if [ "$commit" == "$stash" ]
