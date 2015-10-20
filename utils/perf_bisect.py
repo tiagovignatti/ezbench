@@ -42,9 +42,9 @@ sys.path.append(ezbench_dir + 'utils/')
 from ezbench import *
 
 # function that tests the performance of one commit
-def check_commit_perf(ezbench, commit, benchmark, logs_dir):
+def check_commit_perf(ezbench, commit, benchmark, rounds, logs_dir):
     # Run ezbench
-    if ezbench.run_commits([commit], [benchmark + '$']) == False:
+    if ezbench.run_commits([commit], [benchmark + '$'], rounds = rounds) == False:
         return 0.0
 
     # parse the logs, read the perf of the last entry!
@@ -110,11 +110,11 @@ print("Checking the performance of:")
 
 # First, try the before and after commits
 print("\tBEFORE_COMMIT: ", end="",flush=True)
-before_perf = check_commit_perf(ezbench, args.BEFORE_COMMIT, args.benchmark, logs_dir)
+before_perf = check_commit_perf(ezbench, args.BEFORE_COMMIT, args.benchmark, args.rounds, logs_dir)
 print("Performance index {before_perf}".format(before_perf=before_perf))
 
 print("\tAFTER_COMMIT:  ", end="",flush=True)
-after_perf = check_commit_perf(ezbench, args.AFTER_COMMIT, args.benchmark, logs_dir)
+after_perf = check_commit_perf(ezbench, args.AFTER_COMMIT, args.benchmark, args.rounds, logs_dir)
 print("Performance index {after_perf}".format(after_perf=after_perf))
 print()
 
@@ -141,7 +141,7 @@ output = check_output(['git', 'bisect', 'bad', args.AFTER_COMMIT], stderr=subpro
 print(output, end="")
 
 while not isEndOfBisect(output):
-    perf = check_commit_perf(ezbench, "HEAD", args.benchmark, logs_dir)
+    perf = check_commit_perf(ezbench, "HEAD", args.benchmark, args.rounds, logs_dir)
     res = checkPerformance(before_perf, after_perf, threshold, perf)
     print("Performance index = {perf} (diffThreshold = {diff}). Marking as {res}\n".format(perf=perf,
                                                                                            diff=perf - threshold,
