@@ -44,7 +44,7 @@ from ezbench import *
 # function that tests the performance of one commit
 def check_commit_perf(ezbench, commit, benchmark, rounds, logs_dir):
     # Run ezbench
-    if ezbench.run_commits([commit], [benchmark + '$'], rounds = rounds) == False:
+    if not ezbench.run_commits([commit], [benchmark + '$'], rounds = rounds).success():
         return 0.0
 
     # parse the logs, read the perf of the last entry!

@@ -63,7 +63,8 @@ while not stop_requested:
     lastPoll = futureLastPoll
     for report_name in reports:
         sbench = SmartEzbench(ezbench_dir, report_name)
-        sbench.run()
+        if sbench.running_mode() == RunningMode.RUN:
+            sbench.run()
 
     # TODO: Replace this by inotify
     time.sleep(1)

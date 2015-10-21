@@ -62,8 +62,8 @@ parser.add_argument("-r", dest='rounds', help="Number of execution rounds",
 parser.add_argument("-p", dest='profile', help="Profile to be used by ezbench",
                     action="store")
 parser.add_argument("report_name")
-parser.add_argument("command", help="Command to execute (start|state)", nargs='?',
-                    choices=('start', 'state'))
+parser.add_argument("command", help="Command to execute", nargs='?',
+                    choices=('start', 'run', 'pause', 'abort', 'status'))
 args = parser.parse_args()
 
 
@@ -88,7 +88,7 @@ if args.commits is not None and args.benchmarks is not None:
                   profile=sbench.profile(),
                   report_name="tmp")
     run_info = ezbench.run_commits(commits, benchmarks, benchmarks_exclude, dry_run=True)
-    if run_info == False:
+    if not run_info.success():
         sys.exit(1)
 
     # Add all the commits and benchmarks to commit
@@ -100,7 +100,13 @@ if args.commits is not None and args.benchmarks is not None:
 if args.command is not None:
     if args.command == "start":
         sbench.run()
-    elif args.command == "state":
+    elif args.command == "run":
+        sbench.set_running_mode(RunningMode.RUN)
+    elif args.command == "pause":
+        sbench.set_running_mode(RunningMode.PAUSE)
+    elif args.command == "abort":
+        sbench.set_running_mode(RunningMode.ABORT)
+    elif args.command == "status":
         pprint.pprint(sbench.state)
     else:
         print("Unknown command '{cmd}'".format(cmd=args.command))

@@ -43,12 +43,34 @@ import os
 import re
 
 # Ezbench runs
+class EzbenchExitCode(Enum):
+    NO_ERROR = 0
+    ARG_PROFILE_NAME_MISSING = 11
+    ARG_PROFILE_INVALID = 12
+    ARG_OPTARG_MISSING = 13
+    ARG_GIT_REPO_MISSING = 14
+    OS_SHELL_GLOBSTAT_MISSING = 30
+    OS_LOG_FOLDER_CREATE_FAILED = 31
+    OS_CD_GIT_REPO = 32
+    GIT_STASH_FAILED = 50
+    GIT_INVALID_COMMIT_ID = 50
+    COMP_DEP_UNK_ERROR = 70
+    COMPILATION_FAILED = 71
+    DEPLOYMENT_FAILED = 72
+    DEPLOYMENT_ERROR = 73
+    TEST_INVALID_NAME = 100
+    UNK_ERROR = 255
+
 class EzbenchRun:
-    def __init__(self, commits, benchmarks, predicted_execution_time, deployed_commit):
+    def __init__(self, commits, benchmarks, predicted_execution_time, deployed_commit, exit_code):
         self.commits = commits
         self.benchmarks = benchmarks
         self.predicted_execution_time = predicted_execution_time
         self.deployed_commit = deployed_commit
+        self.exit_code = EzbenchExitCode(exit_code)
+
+    def success(self):
+        return self.exit_code == EzbenchExitCode.NO_ERROR
 
 class Ezbench:
     def __init__(self, ezbench_path, profile = None, repo_path = None,
@@ -92,25 +114,18 @@ class Ezbench:
         return ezbench_cmd
 
     def __run_ezbench(self, cmd, dry_run = False, verbose = False):
-        error = None
+        exit_code = None
 
         if verbose:
             print(cmd)
 
         try:
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode()
+            exit_code = EzbenchExitCode.NO_ERROR
         except subprocess.CalledProcessError as e:
-            error = e
+            exit_code = EzbenchExitCode(e.returncode)
             output = e.output.decode()
             pass
-
-        if not dry_run and error is None:
-            return True
-
-        if error is not None:
-            # Invalid profile
-            if error.returncode == 12:
-                return False
 
         # we need to parse the output
         commits= []
@@ -134,16 +149,13 @@ class Ezbench:
                 commits = line[m_commit_list.end():].split(" ")
                 while '' in commits:
                     commits.remove('')
-            elif error is not None:
-                if error.returncode == 101 and line.endswith("do not exist"):
-                    print(line)
-                    return False
+            elif exit_code == EzbenchExitCode.TEST_INVALID_NAME and line.endswith("do not exist"):
+                print(line)
 
-        if error is not None:
-            print("\n\nERROR: The following command '{}' failed with the error code {}. Here is its output:\n\n'{}'".format(" ".join(cmd), error.returncode, output))
-            return False
+        if exit_code != EzbenchExitCode.NO_ERROR:
+            print("\n\nERROR: The following command '{}' failed with the error code {}. Here is its output:\n\n'{}'".format(" ".join(cmd), exit_code, output))
 
-        return EzbenchRun(commits, benchmarks, pred_exec_time, deployed_commit)
+        return EzbenchRun(commits, benchmarks, pred_exec_time, deployed_commit, exit_code)
 
     def run_commits(self, commits, benchmarks, benchmark_excludes = [],
                     rounds = None, dry_run = False, verbose = False):
@@ -169,6 +181,13 @@ class Criticality(Enum):
     WW = 1
     EE = 2
     DD = 3
+
+class RunningMode(Enum):
+    INITIAL = 0
+    RUN = 1
+    PAUSE = 2
+    ERROR = 3
+    ABORT = 4
 
 def list_smart_ezbench_report_names(ezbench_dir, updatedSince = 0):
     log_dir = ezbench_dir + '/logs'
@@ -201,17 +220,19 @@ class SmartEzbench:
         self.state['smart_ezbench_lock'] = self.state['log_folder'] + "/smartezbench.lock"
         self.state['smart_ezbench_log'] = self.state['log_folder'] + "/smartezbench.log"
         self.state['commits'] = dict()
-        self.state['beenRunBefore'] = False
+        self.state['mode'] = RunningMode.INITIAL.value
 
         # Create the log directory
+        first_run = False
         if not os.path.exists(self.state['log_folder']):
             os.makedirs(self.state['log_folder'])
+            first_run = True
 
         # Open the log file as append
         self.log_file = open(self.state['smart_ezbench_log'], "a")
 
-        # Load the state but use the newly-created state if we cannot load it
-        if not self.__reload_state():
+        # Add the welcome message
+        if first_run or not self.__reload_state():
             self.__save_state()
             self.__log(Criticality.II,
                        "Created report '{report_name}' in {log_folder}".format(report_name=report_name,
@@ -287,7 +308,23 @@ class SmartEzbench:
         return Ezbench(ezbench_path = ezbench_path, profile = profile,
                        report_name = report_name)
 
+    def running_mode(self):
+        self.__reload_state(keep_lock=False)
+        if 'mode' not in self.state:
+            return RunningMode.INITIAL
+        else:
+            return RunningMode(self.state['mode'])
+
+    def set_running_mode(self, mode):
+        self.__reload_state(keep_lock=True)
+        if 'mode' not in self.state or self.state['mode'] != mode.value:
+            self.state['mode'] = mode.value
+            self.__log(Criticality.II, "Ezbench running mode set to '{mode}'".format(mode=mode.name))
+        self.__save_state()
+        self.__release_lock()
+
     def profile(self):
+        self.__reload_state(keep_lock=False)
         if "profile" in self.state:
             return self.state['profile']
         else:
@@ -299,8 +336,13 @@ class SmartEzbench:
             # Check that the profile exists!
             ezbench = self.__create_ezbench(profile = profile)
             run_info = ezbench.run_commits(["HEAD"], [], [], dry_run=True)
-            if run_info == False:
-                self.__log(Criticality.EE, "Invalid profile name '{profile}'.".format(profile=profile))
+            if not run_info.success():
+                if run_info.exit_code == EzbenchExitCode.ARG_PROFILE_INVALID:
+                    self.__log(Criticality.EE,
+                               "Invalid profile name '{profile}'.".format(profile=profile))
+                else:
+                    self.__log(Criticality.EE,
+                               "The following error arose '{error}'.".format(error=run_info.exit_code.name))
                 self.__release_lock()
                 return
 
@@ -357,6 +399,18 @@ class SmartEzbench:
     def run(self):
         self.__log(Criticality.II, "----------------------")
         self.__log(Criticality.II, "Starting a run: {report}".format(report=self.state['report_name']))
+
+        # Check the current state (FIXME: racy)
+        running_state=self.running_mode()
+        if running_state == RunningMode.INITIAL or running_state == RunningMode.RUN:
+            self.set_running_mode(RunningMode.RUN)
+        else:
+            self.__log(Criticality.II,
+                       "We cannot run when the current running mode is {mode}.".format(mode=self.running_mode()))
+            self.__release_lock()
+            return False
+
+
         self.__log(Criticality.II, "Checking the dependencies:")
 
         # check for dependencies
@@ -370,11 +424,7 @@ class SmartEzbench:
         # Create the ezbench runner
         ezbench = self.__create_ezbench()
         run_info = ezbench.run_commits(["HEAD"], [], [], dry_run=True)
-        if run_info != False:
-            deployed_version = run_info.deployed_commit
-        else:
-            deployed_version = None
-        self.__log(Criticality.II, "    - Deployed version: '{0}'".format(deployed_version))
+        self.__log(Criticality.II, "    - Deployed version: '{0}'".format(run_info.deployed_commit))
         self.__log(Criticality.II, "All the dependencies are met, generate a report...")
 
         # Generate a report to compare the goal with the current state
@@ -410,23 +460,40 @@ class SmartEzbench:
         task_tree_str = pprint.pformat(task_tree)
         self.__log(Criticality.II, "Task list: {tsk_str}".format(tsk_str=task_tree_str))
 
-
-
         # Prioritize --> return a list of commits to do in order
-        task_list = self.__prioritize_runs(task_tree, deployed_version)
+        task_list = self.__prioritize_runs(task_tree, run_info.deployed_commit)
 
         # Let's start!
         self.state['beenRunBefore'] = True
 
         # Start generating ezbench calls
         for e in task_list:
+            running_mode = self.running_mode()
+            if running_mode != RunningMode.RUN:
+                self.__log(Criticality.II,
+                       "Running mode changed from RUN to {mode}. Exit...".format(mode=running_mode.name))
+                return False
+
             self.__log(Criticality.DD,
                        "make {count} runs for benchmark {benchmark} using commit {commit}".format(count=e.rounds,
                                                                                                   commit=e.commit,
                                                                                                   benchmark=e.benchmark))
-            ezbench.run_commits([e.commit], [e.benchmark + '$'], rounds=e.rounds)
+            # TODO: Separate the compilation and execution of tests to detect deployment errors
+            run_info = ezbench.run_commits([e.commit], [e.benchmark + '$'], rounds=e.rounds)
+            if run_info.success():
+                continue
+
+            # We got an error, let's see what we can do about it!
+            if run_info.exit_code.value < 40:
+                # Error we cannot do anything about, probably a setup issue
+                # Let's mark the run as aborted until the user resets it!
+                self.set_running_mode(RunningMode.ERROR)
+            #elif run_info.exit_code == EzbenchExitCode.COMPILATION_FAILED:
+                # TODO:Mark the commit as broken
 
         self.__log(Criticality.II, "Done")
+
+        return True
 
 # Report parsing
 class Benchmark:
