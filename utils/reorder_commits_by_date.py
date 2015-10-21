@@ -36,11 +36,11 @@ import os
 
 # Start by checking what the user wants to monitor!
 parser = argparse.ArgumentParser()
-parser.add_argument("--path", "-p", help="Repository path")
+parser.add_argument("--path", "-p", help="Repository path", required=True)
 parser.add_argument("log_folder")
 args = parser.parse_args()
 
-if len(args.path) == 0:
+if args.path is None or len(args.path) == 0:
     print ("You need to specify a path to the git repo using -p.")
     exit(1)
 
