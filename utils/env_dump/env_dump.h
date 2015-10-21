@@ -40,6 +40,9 @@ void _env_dump_fd_fini();
 void _env_dump_gl_init();
 void _env_dump_gl_fini();
 
+void _env_dump_net_init();
+void _env_dump_net_fini();
+
 void _env_dump_posix_env_init();
 void _env_dump_posix_env_fini();
 

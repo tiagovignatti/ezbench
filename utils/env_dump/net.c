@@ -24,61 +24,40 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#define _GNU_SOURCE
+
 #include "env_dump.h"
 
-#include <sys/stat.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/un.h>
+#include <link.h>
 
-FILE *env_file = NULL;
+int
+connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
+{
+	static int(*orig_connect)(int, const struct sockaddr *, socklen_t);
+	struct sockaddr_un *addr_unix;
+	int ret;
 
-__attribute__((constructor))
-static void init() {
-	const char *base_path = getenv("ENV_DUMP_FILE");
-	char *path;
-	int fd;
+	if (orig_connect == NULL)
+		orig_connect = dlsym(RTLD_NEXT, "connect");
 
-	if (base_path == NULL)
-		base_path = "/tmp/env_dump";
-
-	/* if the file asked by the user already exists, append the pid to the
-	 * name. Otherwise, just use the name.
-	 */
-	fd = open(base_path, O_EXCL | O_CREAT | O_WRONLY, 0777);
-	if (fd >= 0) {
-		env_file = fdopen(fd, "w");
-		fprintf(stderr, "path = %s\n", base_path);
-	} else {
-		path = malloc(strlen(base_path) + 1 + 10 + 1); /* log(2^32) = 10 */
-		if (!path)
-			exit(1);
-		sprintf(path, "%s.%i", base_path, getpid());
-		fprintf(stderr, "path = %s.%i\n", base_path, getpid());
-		env_file = fopen(path, "w");
-		free(path);
+	ret = orig_connect(sockfd, addr, addrlen);
+	if (!ret && addr->sa_family == AF_UNIX) {
+		addr_unix = (struct sockaddr_un *)addr;
+		fprintf(env_file, "SOCKET_UNIX_CONNECT,%s\n", addr_unix->sun_path+1);
 	}
-	/* do not buffer this stream */
-	setvbuf(env_file, (char *)NULL, _IONBF, 0);
 
-	fprintf(env_file, "-- Env dump loaded successfully! --\n");
-
-	_env_dump_posix_env_init();
-	_env_dump_fd_init();
-	_env_dump_gl_init();
-	_env_dump_libs_init();
-	_env_dump_net_init();
+	return ret;
 }
 
-__attribute__((destructor))
-static void fini() {
-	_env_dump_net_fini();
-	_env_dump_libs_fini();
-	_env_dump_gl_fini();
-	_env_dump_fd_init();
-	_env_dump_posix_env_fini();
+void _env_dump_net_init()
+{
 
-	fprintf(env_file, "-- Env dump fini, closing the file! --\n");
-	fclose(env_file);
+}
+
+void _env_dump_net_fini()
+{
+
 }

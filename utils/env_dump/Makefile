@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -c -Wall -fPIC
 LDFLAGS = -shared
 
-SOURCES = env_dump.c fd.c gl.c libs.c posix_env.c
+SOURCES = env_dump.c fd.c gl.c libs.c net.c posix_env.c
 OBJECTS = $(SOURCES:.c=.o)
 
 # Name of executable target:
