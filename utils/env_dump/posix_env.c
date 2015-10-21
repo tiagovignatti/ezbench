@@ -30,6 +30,7 @@
 
 #include <stdlib.h>
 #include <unistd.h>
+#include <link.h>
 
 static void
 dump_binary_information()
@@ -83,11 +84,87 @@ dump_binary_information()
 	free(buf);
 }
 
+static void
+dump_env_vars()
+{
+	char **env = environ;
+
+	while (*env) {
+		fprintf(env_file, "ENV,%s\n", *env);
+		env++;
+	}
+}
+
+int
+putenv(char *string)
+{
+	static int(*orig_putenv)(char *);
+	int ret;
+
+	if (orig_putenv == NULL)
+		orig_putenv = dlsym(RTLD_NEXT, "putenv");
+
+	ret = orig_putenv(string);
+	if (!ret)
+		fprintf(env_file, "ENV_UNSET,%s\n", string);
+
+	return ret;
+}
+
+int
+setenv(const char *name, const char *value, int replace)
+{
+	static int(*orig_setenv)(const char *, const char *, int);
+	int ret;
+
+	if (orig_setenv == NULL)
+		orig_setenv = dlsym(RTLD_NEXT, "setenv");
+
+	ret = orig_setenv(name, value, replace);
+	if (!ret)
+		fprintf(env_file, "ENV_SET,%s=%s\n", name, value);
+
+	return ret;
+}
+
+int
+unsetenv(const char *name)
+{
+	static int(*orig_unsetenv)(const char *);
+	int ret;
+
+	if (orig_unsetenv == NULL)
+		orig_unsetenv = dlsym(RTLD_NEXT, "unsetenv");
+
+	ret = orig_unsetenv(name);
+	if (!ret)
+		fprintf(env_file, "ENV_UNSET,%s\n", name);
+
+	return ret;
+}
+
+int
+clearenv(void)
+{
+	static int(*orig_clearenv)(void);
+	int ret;
+
+	if (orig_clearenv == NULL)
+		orig_clearenv = dlsym(RTLD_NEXT, "clearenv");
+
+	ret = orig_clearenv();
+	if (!ret)
+		fprintf(env_file, "ENV_CLEAR\n");
+
+	return ret;
+}
+
 void
 _env_dump_posix_env_init()
 {
 	/* Start by showing the binary, command line and sha1 */
 	dump_binary_information();
+	dump_env_vars();
 }
 
 void
