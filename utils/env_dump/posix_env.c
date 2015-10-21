@@ -24,59 +24,74 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#define _GNU_SOURCE
+
 #include "env_dump.h"
 
-#include <sys/stat.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
-#include <fcntl.h>
 
-FILE *env_file = NULL;
+static void
+dump_binary_information()
+{
+	size_t buflen = 4096, size;
+	char *buf = malloc(buflen), *cur;
+	FILE *cmd_file;
 
-__attribute__((constructor))
-static void init() {
-	const char *base_path = getenv("ENV_DUMP_FILE");
-	char *path;
-	int fd;
-
-	if (base_path == NULL)
-		base_path = "/tmp/env_dump";
-
-	/* if the file asked by the user already exists, append the pid to the
-	 * name. Otherwise, just use the name.
-	 */
-	fd = open(base_path, O_EXCL | O_CREAT | O_WRONLY, 0777);
-	if (fd >= 0) {
-		env_file = fdopen(fd, "w");
-		fprintf(stderr, "path = %s\n", base_path);
-	} else {
-		path = malloc(strlen(base_path) + 1 + 10 + 1); /* log(2^32) = 10 */
-		if (!path)
-			exit(1);
-		sprintf(path, "%s.%i", base_path, getpid());
-		fprintf(stderr, "path = %s.%i\n", base_path, getpid());
-		env_file = fopen(path, "w");
-		free(path);
+	if (!buf) {
+		fprintf(stderr, "Error, no memory left. Exit!");
+		exit(1);
 	}
-	/* do not buffer this stream */
-	setvbuf(env_file, (char *)NULL, _IONBF, 0);
 
-	fprintf(env_file, "-- Env dump loaded successfully! --\n");
+	fprintf(env_file, "EXE,");
 
-	_env_dump_posix_env_init();
-	_env_dump_fd_init();
-	_env_dump_gl_init();
-	_env_dump_libs_init();
+	/* first read the url of the program */
+	size = readlink("/proc/self/exe", buf, buflen);
+	buf[size] = '\0';
+	fprintf(env_file, "%s,", buf);
+
+	/* then read the arguments */
+	cmd_file = fopen("/proc/self/cmdline", "r");
+	if (cmd_file) {
+		size = fread(buf, 1, buflen, cmd_file);
+
+		/* the fields are separated by \0 characters, replace them by
+		 * spaces and add '' arounds them. The last field has two null
+		 * characters.
+		 */
+		cur = buf;
+		while (*cur && (cur - buf) < size) {
+			if (cur == buf || *(cur - 1) == '\0')
+				fprintf(env_file, "'");
+			fprintf(env_file, "%c", *cur);
+
+			cur++;
+
+			if (*cur == '\0') {
+				fprintf(env_file, "' ");
+				cur++;
+			}
+		}
+		fprintf(env_file, ",");
+
+	} else
+		fprintf(env_file, "ERROR,");
+
+	_env_dump_compute_and_print_sha1("/proc/self/exe");
+
+	fprintf(env_file, "\n");
+	free(buf);
 }
 
-__attribute__((destructor))
-static void fini() {
-	_env_dump_libs_fini();
-	_env_dump_gl_fini();
-	_env_dump_fd_init();
-	_env_dump_posix_env_fini();
+void
+_env_dump_posix_env_init()
+{
+	/* Start by showing the binary, command line and sha1 */
+	dump_binary_information();
+}
 
-	fprintf(env_file, "-- Env dump fini, closing the file! --\n");
-	fclose(env_file);
+void
+_env_dump_posix_env_fini()
+{
+
 }

@@ -24,59 +24,23 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "env_dump.h"
+#include <stdio.h>
 
-#include <sys/stat.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
+extern FILE *env_file;
 
-FILE *env_file = NULL;
+#define likely(x)       __builtin_expect(!!(x), 1)
+#define unlikely(x)     __builtin_expect(!!(x), 0)
 
-__attribute__((constructor))
-static void init() {
-	const char *base_path = getenv("ENV_DUMP_FILE");
-	char *path;
-	int fd;
+void _env_dump_libs_init();
+void _env_dump_libs_fini();
 
-	if (base_path == NULL)
-		base_path = "/tmp/env_dump";
+void _env_dump_fd_init();
+void _env_dump_fd_fini();
 
-	/* if the file asked by the user already exists, append the pid to the
-	 * name. Otherwise, just use the name.
-	 */
-	fd = open(base_path, O_EXCL | O_CREAT | O_WRONLY, 0777);
-	if (fd >= 0) {
-		env_file = fdopen(fd, "w");
-		fprintf(stderr, "path = %s\n", base_path);
-	} else {
-		path = malloc(strlen(base_path) + 1 + 10 + 1); /* log(2^32) = 10 */
-		if (!path)
-			exit(1);
-		sprintf(path, "%s.%i", base_path, getpid());
-		fprintf(stderr, "path = %s.%i\n", base_path, getpid());
-		env_file = fopen(path, "w");
-		free(path);
-	}
-	/* do not buffer this stream */
-	setvbuf(env_file, (char *)NULL, _IONBF, 0);
+void _env_dump_gl_init();
+void _env_dump_gl_fini();
 
-	fprintf(env_file, "-- Env dump loaded successfully! --\n");
+void _env_dump_posix_env_init();
+void _env_dump_posix_env_fini();
 
-	_env_dump_posix_env_init();
-	_env_dump_fd_init();
-	_env_dump_gl_init();
-	_env_dump_libs_init();
-}
-
-__attribute__((destructor))
-static void fini() {
-	_env_dump_libs_fini();
-	_env_dump_gl_fini();
-	_env_dump_fd_init();
-	_env_dump_posix_env_fini();
-
-	fprintf(env_file, "-- Env dump fini, closing the file! --\n");
-	fclose(env_file);
-}
+void _env_dump_compute_and_print_sha1(const char *full_path);

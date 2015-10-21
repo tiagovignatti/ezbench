@@ -26,57 +26,45 @@
 
 #include "env_dump.h"
 
-#include <sys/stat.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
+#include <link.h>
 
-FILE *env_file = NULL;
+#if 0
+#include <GL/glx.h>
+#include <EGL/egl.h>
 
-__attribute__((constructor))
-static void init() {
-	const char *base_path = getenv("ENV_DUMP_FILE");
-	char *path;
-	int fd;
+void
+glXSwapBuffers(Display *dpy, GLXDrawable drawable)
+{
+	static void (*orig_glXSwapBuffers)(Display *, GLXDrawable);
+	if (orig_glXSwapBuffers == NULL)
+		orig_glXSwapBuffers = dlsym(RTLD_NEXT, "glXSwapBuffers");
 
-	if (base_path == NULL)
-		base_path = "/tmp/env_dump";
+	fprintf(stderr, "glXSwapBuffers'\n");
 
-	/* if the file asked by the user already exists, append the pid to the
-	 * name. Otherwise, just use the name.
-	 */
-	fd = open(base_path, O_EXCL | O_CREAT | O_WRONLY, 0777);
-	if (fd >= 0) {
-		env_file = fdopen(fd, "w");
-		fprintf(stderr, "path = %s\n", base_path);
-	} else {
-		path = malloc(strlen(base_path) + 1 + 10 + 1); /* log(2^32) = 10 */
-		if (!path)
-			exit(1);
-		sprintf(path, "%s.%i", base_path, getpid());
-		fprintf(stderr, "path = %s.%i\n", base_path, getpid());
-		env_file = fopen(path, "w");
-		free(path);
-	}
-	/* do not buffer this stream */
-	setvbuf(env_file, (char *)NULL, _IONBF, 0);
+	orig_glXSwapBuffers(dpy, drawable);
+}*/
 
-	fprintf(env_file, "-- Env dump loaded successfully! --\n");
+EGLBoolean *
+eglSwapBuffers(EGLDisplay display, EGLSurface surface)
+{
+	static EGLBoolean (*orig_eglSwapBuffers)(EGLDisplay, EGLSurface);
+	if (orig_eglSwapBuffers == NULL)
+		orig_eglSwapBuffers = dlsym(RTLD_NEXT, "eglSwapBuffers");
 
-	_env_dump_posix_env_init();
-	_env_dump_fd_init();
-	_env_dump_gl_init();
-	_env_dump_libs_init();
+	//fprintf(stderr, "eglSwapBuffers'\n");
+
+	return orig_eglSwapBuffers(display, surface);
+}
+#endif
+
+void
+_env_dump_gl_init()
+{
+
 }
 
-__attribute__((destructor))
-static void fini() {
-	_env_dump_libs_fini();
-	_env_dump_gl_fini();
-	_env_dump_fd_init();
-	_env_dump_posix_env_fini();
+void
+_env_dump_gl_fini()
+{
 
-	fprintf(env_file, "-- Env dump fini, closing the file! --\n");
-	fclose(env_file);
 }
