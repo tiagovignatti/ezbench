@@ -87,7 +87,6 @@ function run_bench {
         cmd="$cmd > >(tee $run_log_file_stdout) 2> >(tee $run_log_file_stderr >&2)"
     fi
 
-    echo "$cmd" > /tmp/toto
     eval $cmd
 
     # delete the log files if they are empty
@@ -544,12 +543,16 @@ do
             run_log_file="${fps_logs}#$c"
 
             # This function will return multiple fps readings
-            "$runFuncName" > "$run_log_file" 2> /dev/null || ERROR=1
+            "$runFuncName" > "$run_log_file" 2> /dev/null
 
-            # Add the fps values before adding the result to the average fps for
-            # the run.
-            fps_avg=$(awk '{sum=sum+$1} END {print sum/NR}' $run_log_file)
-            echo "$fps_avg" >> "$fps_logs"
+            if [ -s "$run_log_file" ]; then
+                # Add the fps values before adding the result to the average fps for
+                # the run.
+                fps_avg=$(awk '{sum=sum+$1} END {print sum/NR}' $run_log_file)
+                echo "$fps_avg" >> "$fps_logs"
+            else
+                echo "0" >> "$fps_logs"
+            fi
         done
         callIfDefined benchmark_run_post_hook
         callIfDefined "$postHookFuncName"
