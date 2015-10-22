@@ -32,11 +32,12 @@
 #include <unistd.h>
 #include <link.h>
 
-static void
-dump_binary_information()
+void
+env_var_dump_binary_information(int pid)
 {
 	size_t buflen = 4096, size;
 	char *buf = malloc(buflen), *cur;
+	char proc_path[22]; /* longest fd path is /proc/4194303/cmdline */
 	FILE *cmd_file;
 
 	if (!buf) {
@@ -44,15 +45,18 @@ dump_binary_information()
 		exit(1);
 	}
 
-	fprintf(env_file, "EXE,");
+	if (pid == 0)
+		pid = getpid();
 
 	/* first read the url of the program */
-	size = readlink("/proc/self/exe", buf, buflen);
+	snprintf(proc_path, sizeof(proc_path), "/proc/%i/exe", pid);
+	size = readlink(proc_path, buf, buflen);
 	buf[size] = '\0';
 	fprintf(env_file, "%s,", buf);
 
 	/* then read the arguments */
-	cmd_file = fopen("/proc/self/cmdline", "r");
+	snprintf(proc_path, sizeof(proc_path), "/proc/%i/cmdline", pid);
+	cmd_file = fopen(proc_path, "r");
 	if (cmd_file) {
 		size = fread(buf, 1, buflen, cmd_file);
 
@@ -78,9 +82,9 @@ dump_binary_information()
 	} else
 		fprintf(env_file, "ERROR,");
 
+	snprintf(proc_path, sizeof(proc_path), "/proc/%i/exe", pid);
 	_env_dump_compute_and_print_sha1("/proc/self/exe");
 
-	fprintf(env_file, "\n");
 	free(buf);
 }
 
@@ -162,8 +166,10 @@ clearenv(void)
 void
 _env_dump_posix_env_init()
 {
-	/* Start by showing the binary, command line and sha1 */
-	dump_binary_information();
+	fprintf(env_file, "EXE,");
+	env_var_dump_binary_information(0);
+	fprintf(env_file, "\n");
+
 	dump_env_vars();
 }
 

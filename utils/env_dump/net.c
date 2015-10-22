@@ -31,6 +31,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/un.h>
+#include <errno.h>
 #include <link.h>
 
 int
@@ -38,6 +39,7 @@ connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
 {
 	static int(*orig_connect)(int, const struct sockaddr *, socklen_t);
 	struct sockaddr_un *addr_unix;
+	socklen_t len;
 	int ret;
 
 	if (orig_connect == NULL)
@@ -45,8 +47,24 @@ connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
 
 	ret = orig_connect(sockfd, addr, addrlen);
 	if (!ret && addr->sa_family == AF_UNIX) {
+		struct ucred ucred;
+		const char *filepath = NULL;
+
 		addr_unix = (struct sockaddr_un *)addr;
-		fprintf(env_file, "SOCKET_UNIX_CONNECT,%s\n", addr_unix->sun_path+1);
+		filepath = addr_unix->sun_path;
+		if (filepath[0] == '\0')
+			filepath++;
+
+		len = sizeof(struct ucred);
+		if(getsockopt(sockfd, SOL_SOCKET, SO_PEERCRED, &ucred, &len) < 0){
+			fprintf(env_file, "SOCKET_UNIX_CONNECT,%s,,%s\n", filepath, strerror(errno));
+			return ret;
+		}
+
+		/* display a lot more information about the process! */
+		fprintf(env_file, "SOCKET_UNIX_CONNECT,%s,", filepath);
+		env_var_dump_binary_information(ucred.pid);
+		fprintf(env_file, "\n");
 	}
 
 	return ret;

@@ -47,3 +47,4 @@ void _env_dump_posix_env_init();
 void _env_dump_posix_env_fini();
 
 void _env_dump_compute_and_print_sha1(const char *full_path);
+void env_var_dump_binary_information(int pid);
