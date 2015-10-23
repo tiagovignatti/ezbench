@@ -66,14 +66,16 @@ env_var_dump_binary_information(int pid)
 		 */
 		cur = buf;
 		while (*cur && (cur - buf) < size) {
-			if (cur == buf || *(cur - 1) == '\0')
+			if (cur == buf)
 				fprintf(env_file, "'");
+			else if (*(cur - 1) == '\0')
+				fprintf(env_file, " '");
 			fprintf(env_file, "%c", *cur);
 
 			cur++;
 
 			if (*cur == '\0') {
-				fprintf(env_file, "' ");
+				fprintf(env_file, "'");
 				cur++;
 			}
 		}
