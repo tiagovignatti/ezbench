@@ -1,0 +1,27 @@
+# Profiles
+
+Here, you can find all the pre-set profiles to check the performance of some
+components.
+
+The 'default' profile is the one that is picked when no profile is explicitely
+selected. Other profiles can be added by the user or one can use some other
+profiles provided with ezbench.
+
+## File hierarchy
+
+profiles.d/$profile_name/
+    - profile: this file contains the default values to be used by the profile
+    - conf.d/: this folder contains multiple file named '*.conf' that can set
+               some hooks (described in the hooks section).
+
+### Hooks
+
+Hooks can be defined in a profile's conf.d/ folder. Here is a list of them:
+ - ezbench_pre_hook: called when core is launched
+ - ezbench_post_hook: called when core is being closed
+ - compile_pre_hook: called before the compilation/deployment happens
+ - compile_post_hook: called after the compilation/deployment happened
+ - benchmark_run_pre_hook: called before running a benchmark
+ - benchmark_run_post_hook: called after running a benchmark
+ - <benchmark name>_run_pre_hook: called before running a particular benchmark
+ - <benchmark name>_run_post_hook: called after running a particular benchmark

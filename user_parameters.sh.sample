@@ -1,5 +1,8 @@
 # WARNING: Hooks should be put in the profiles, not in this file
 
+# Frequencies
+WANTED_CPU_FREQ_kHZ=2000000
+
 # Repo addresses
 REPO_MESA=/opt/git/mesa
 REPO_LINUX=/opt/git/linux

@@ -1,0 +1,122 @@
+# Requires
+function xserver_setup_start() {
+    [[ $dry_run -eq 1 ]] && return
+
+    export EZBENCH_VT_ORIG=$(fgconsole)
+
+    sudo chvt 5
+    sleep 1 # Wait for the potential x-server running to release MASTER
+    sudo $ezBenchDir/profiles.d/utils/_launch_xorg.sh 2> /dev/null > /dev/null # TODO: Save the xorg logs
+
+    export DISPLAY=:42
+    export XAUTHORITY=/tmp/ezbench_XAuth
+}
+
+function xserver_setup_stop() {
+    [[ $dry_run -eq 1 ]] && return
+
+    sudo kill $(cat /tmp/ezbench_x.pid)
+    sleep 1
+    sudo chvt $EZBENCH_VT_ORIG
+    unset EZBENCH_VT_ORIG
+    sleep 1
+}
+
+function xserver_reset() {
+    [[ $dry_run -eq 1 ]] && return
+
+    xrandr --auto
+}
+
+function x_show_debug_info_start() {
+    [[ $dry_run -eq 1 ]] && return
+    [ -z $DISPLAY ] && return
+
+    export EZBENCH_COMPILATION_LOGS=$compile_logs
+    export EZBENCH_COMMIT_SHA1=$commit
+
+    $ezBenchDir/profiles.d/utils/_show_debug_info.sh&
+    export EZBENCH_DEBUG_SESSION_PID=$!
+
+    unset EZBENCH_COMMIT_SHA1
+    unset EZBENCH_COMPILATION_LOGS
+}
+
+function x_show_debug_info_stop() {
+    [[ $dry_run -eq 1 ]] && return
+    [ -z "$DISPLAY" ] && return
+    [ -z "$EZBENCH_DEBUG_SESSION_PID" ] && return
+
+    # Kill all the processes under the script
+    # FIXME: Would be better with a session id of a pid namespace
+    kill $(ps -o pid= --ppid $EZBENCH_DEBUG_SESSION_PID)
+    unset EZBENCH_DEBUG_SESSION_PID
+}
+
+function cpu_id_max_get() {
+    grep "processor" /proc/cpuinfo | tail -n 1 | rev | cut -f 1 -d ' '
+}
+
+function cpu_reclocking_disable_start() {
+    # Disable turbo (TODO: Fix it for other cpu schedulers)
+    sudo sh -c "echo 1 > /sys/devices/system/cpu/intel_pstate/no_turbo"
+
+
+    # Set the frequency to a fixed one
+    [ -z "WANTED_CPU_FREQ_kHZ" ] && return
+    cpu_id_max=$(cpu_id_max_get)
+    for (( i=0; i<=${cpu_id_max}; i++ )); do
+        sudo sh -c "echo $WANTED_CPU_FREQ_kHZ > /sys/devices/system/cpu/cpu${i}/cpufreq/scaling_max_freq"
+        sudo sh -c "echo $WANTED_CPU_FREQ_kHZ > /sys/devices/system/cpu/cpu${i}/cpufreq/scaling_min_freq"
+    done
+    export EZBENCH_CPU_RECLOCKED=1
+}
+
+function cpu_reclocking_disable_stop() {
+    # Re-enable turbo (TODO: Fix it for other cpu schedulers)
+    sudo sh -c "echo 0 > /sys/devices/system/cpu/intel_pstate/no_turbo"
+
+    # Reset the scaling to the original values
+    [ -z "EZBENCH_CPU_RECLOCKED" ] && return
+    cpu_id_max=$(cpu_id_max_get)
+    cwd=$(pwd)
+    for (( i=0; i<=${cpu_id_max}; i++ )); do
+        cd "/sys/devices/system/cpu/cpu${i}/cpufreq/"
+        sudo sh -c "cat cpuinfo_min_freq > scaling_min_freq"
+        sudo sh -c "cat cpuinfo_max_freq > scaling_max_freq"
+    done
+    cd $cwd
+    unset EZBENCH_CPU_RECLOCKED
+}
+
+function aslr_disable_start() {
+    sudo sh -c "echo 0 > /proc/sys/kernel/randomize_va_space"
+}
+
+function aslr_disable_stop() {
+    sudo sh -c "echo 1 > /proc/sys/kernel/randomize_va_space"
+}
+
+function thp_disable_start() {
+    sudo sh -c "echo never > /sys/kernel/mm/transparent_hugepage/enabled"
+    sudo sh -c "echo never > /sys/kernel/mm/transparent_hugepage/defrag"
+}
+
+function thp_disable_stop() {
+    sudo sh -c "echo always > /sys/kernel/mm/transparent_hugepage/enabled"
+    sudo sh -c "echo always > /sys/kernel/mm/transparent_hugepage/defrag"
+}
+
+# function irq_remap_start() {
+#     cpu_id_max=$(cpu_id_max_get)
+#     for d in /proc/irq/*/ ; do
+#         sudo sh -c "echo $cpu_id_max > $d/smp_affinity"
+#     done
+# }
+#
+# function irq_remap_stop() {
+#     for d in /proc/irq/*/ ; do
+#         sudo sh -c "echo 0 > $d/smp_affinity"
+#     done
+# }
+

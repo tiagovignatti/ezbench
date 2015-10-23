@@ -1,0 +1,59 @@
+# Accessible variables
+# $ezBenchDir            [RO]: Directory of the ezbench
+# ------------------
+# $rounds                [WO]: Default number of rounds
+# $makeAndDeployCmd      [WO]: Command to compile and deploy the current git HEAD
+# $gitVersionDeployedCmd [WO]: Command to print out the sha1 of the version currently deployed
+# $lastNCommits          [WO]: Specifies how many commits back should be benchmarked
+# $uptoCommit            [WO]: Define starting from which commit $lastNCommits should count
+# $uptoCommit            [WO]: Define starting from which commit $lastNCommits should count
+# $gitRepoDir            [WO]: Path to the git repo to use for this profile
+# $reportName            [WO]: Name to give to your report
+# $testsDir              [WO]: List of pathes to the directories containing the tests for this profile
+# $testsList             [WO]: List of tests that should be ran in this profile
+# $testExcludeList       [WO]: List of tests that should be excluded in this profile
+
+function __default_make_and_deploy__() {
+    # Return error codes:
+    # 71: Compilation error
+    # 72: Deployment error
+
+    x_show_debug_info_start
+
+    # Compile the kernel. If any question arises, the default choice will be taken
+    # This part assumes that you have a working .config already set up. You can generate it using make localmodconfig.
+    yes '
+     ' | make oldconfig || exit 71
+    make -j8 || exit 71
+    capture=$(sudo make modules_install)
+    echo "$capture"
+    kernel_id=$(echo "$capture" | grep DEPMOD | grep -o '[^ ]*$')
+
+    # Tweak this part for your distribution
+    sudo cp arch/x86_64/boot/bzImage /boot/vmlinuz-linux-intel || exit 72
+    sudo mkinitcpio -k "$kernel_id" -g /boot/initramfs-linux-intel.img || exit 72
+
+    # Force grub to boot on the non-distro kernel that we just compiled
+    #
+    # WARNING: Make sure that grub reverts to the distro's kernel if the
+    # computer crashes!
+    sudo grub-reboot 1 || exit 72
+
+    x_show_debug_info_stop
+
+    # Here we go, reboot on the new kernel!
+    sudo reboot
+}
+
+function __git_version_deployed__() {
+    # Transforms 4.3.0-rc2-10901-gbcb183d into bcb183d
+    # This requires CONFIG_LOCALVERSION_AUTO=y
+    uname -r | cut -d 'g' -f 2
+}
+
+rounds=3
+makeAndDeployCmd="__default_make_and_deploy__"
+lastNCommits=
+uptoCommit="HEAD"
+gitRepoDir="$REPO_LINUX"
+gitVersionDeployedCmd="__git_version_deployed__"
