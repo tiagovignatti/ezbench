@@ -100,7 +100,7 @@ ioctl(int fd, unsigned long int request, ...)
 		char path[101];
 		size_t len = get_path_from_fd(fd, path, sizeof(path));
 		path[len] = '\0';
-		fprintf(env_file, "IOCTL,%i,%s\n", fd, path);
+		fprintf(env_file, "IOCTL,%s\n", path);
 		bit_write(fd, 1);
 	}
 	pthread_mutex_unlock(&fd_mp);
