@@ -1,0 +1,6 @@
+*.o
+*.so
+__pycache__
+
+logs/
+user_parameters.sh
