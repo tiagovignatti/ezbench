@@ -29,7 +29,9 @@
 #include "env_dump.h"
 
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
+#include <errno.h>
 #include <link.h>
 
 void
@@ -51,8 +53,12 @@ env_var_dump_binary_information(int pid)
 	/* first read the url of the program */
 	snprintf(proc_path, sizeof(proc_path), "/proc/%i/exe", pid);
 	size = readlink(proc_path, buf, buflen);
-	buf[size] = '\0';
-	fprintf(env_file, "%s,", buf);
+	if (size == -1) {
+		fprintf(env_file, "ERROR(%s),", strerror(errno));
+	} else {
+		buf[size] = '\0';
+		fprintf(env_file, "%s,", buf);
+	}
 
 	/* then read the arguments */
 	snprintf(proc_path, sizeof(proc_path), "/proc/%i/cmdline", pid);
