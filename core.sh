@@ -535,15 +535,18 @@ do
         processHookFuncName=${testNames[$t]}_process
 
         # Run the benchmark
-        unset ERROR
-        callIfDefined "$preHookFuncName"
-        callIfDefined benchmark_run_pre_hook
         for (( c=$run; c<$run+$rounds; c++ ))
         do
             run_log_file="${fps_logs}#$c"
 
+            callIfDefined "$preHookFuncName"
+            callIfDefined benchmark_run_pre_hook
+
             # This function will return multiple fps readings
             "$runFuncName" > "$run_log_file" 2> /dev/null
+
+            callIfDefined benchmark_run_post_hook
+            callIfDefined "$postHookFuncName"
 
             if [ -s "$run_log_file" ]; then
                 # Add the fps values before adding the result to the average fps for
@@ -554,8 +557,6 @@ do
                 echo "0" >> "$fps_logs"
             fi
         done
-        callIfDefined benchmark_run_post_hook
-        callIfDefined "$postHookFuncName"
 
         # Process the data ourselves
         output=$(tail -n +2 "$fps_logs") # Read back the data, minus the header
