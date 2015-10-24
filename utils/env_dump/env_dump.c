@@ -43,24 +43,28 @@ static void init() {
 	if (base_path == NULL)
 		base_path = "/tmp/env_dump";
 
-	/* if the file asked by the user already exists, append the pid to the
-	 * name. Otherwise, just use the name.
-	 */
-	fd = open(base_path, O_EXCL | O_CREAT | O_WRONLY, 0777);
-	if (fd >= 0) {
-		env_file = fdopen(fd, "w");
-		fprintf(stderr, "path = %s\n", base_path);
+	if (strcmp(base_path, "stderr") != 0) {
+		/* if the file asked by the user already exists, append the pid to the
+		* name. Otherwise, just use the name.
+		*/
+		fd = open(base_path, O_EXCL | O_CREAT | O_WRONLY, 0777);
+		if (fd >= 0) {
+			env_file = fdopen(fd, "w");
+			fprintf(stderr, "path = %s\n", base_path);
+		} else {
+			path = malloc(strlen(base_path) + 1 + 10 + 1); /* log(2^32) = 10 */
+			if (!path)
+				exit(1);
+			sprintf(path, "%s.%i", base_path, getpid());
+			fprintf(stderr, "path = %s.%i\n", base_path, getpid());
+			env_file = fopen(path, "w");
+			free(path);
+		}
+		/* do not buffer this stream */
+		setvbuf(env_file, (char *)NULL, _IONBF, 0);
 	} else {
-		path = malloc(strlen(base_path) + 1 + 10 + 1); /* log(2^32) = 10 */
-		if (!path)
-			exit(1);
-		sprintf(path, "%s.%i", base_path, getpid());
-		fprintf(stderr, "path = %s.%i\n", base_path, getpid());
-		env_file = fopen(path, "w");
-		free(path);
+		env_file = stderr;
 	}
-	/* do not buffer this stream */
-	setvbuf(env_file, (char *)NULL, _IONBF, 0);
 
 	fprintf(env_file, "-- Env dump loaded successfully! --\n");
 
