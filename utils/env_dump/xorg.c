@@ -50,6 +50,9 @@ _env_dump_xlib_compositor(Display *dpy, int screen)
 	wmName = XInternAtom(dpy, "_NET_WM_NAME", True);
 	stringType = XInternAtom(dpy, "UTF8_STRING", True);
 
+	if (wmCheckAtom == None || wmName == None || stringType == None)
+		return strdup("UNKOWN");
+
 	root = RootWindow(dpy, screen);
 	if (!(XGetWindowProperty(dpy, root, wmCheckAtom, 0, 1024, False,
 		XA_WINDOW, &typeRet, &format, &nitems, &after,
