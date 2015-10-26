@@ -666,8 +666,8 @@ def genPerformanceReport(log_folder, wantFrametime = False, silentMode = False):
             if re.search(r'#\d+$', benchFile) is not None:
                 continue
 
-            # Skip on error files
-            if re.search(r'\.(stderr|stdout|errors)$', benchFile) is not None:
+            # Skip on unrelated files
+            if "." in benchFile:
                 continue
 
             # Get the bench name
