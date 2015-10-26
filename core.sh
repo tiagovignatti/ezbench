@@ -79,7 +79,16 @@ mkdir "$ezBenchDir/logs" 2> /dev/null
 function run_bench {
     timeout=$1
     shift
-    cmd="LIBGL_DEBUG=verbose vblank_mode=0 stdbuf -oL timeout $timeout $@"
+    cmd="LIBGL_DEBUG=verbose vblank_mode=0 stdbuf -oL timeout $timeout"
+
+    env_dump_path="$ezBenchDir/utils/env_dump/env_dump.so"
+    if [ -f "$env_dump_path" ]; then
+        run_log_file_env_dump="$run_log_file.env_dump"
+        env_dump_launch="$ezBenchDir/utils/env_dump/env_dump.sh"
+        cmd="$env_dump_launch $run_log_file_env_dump $@"
+    else
+        cmd="$cmd $@"
+    fi
 
     run_log_file_stdout="$run_log_file.stdout"
     run_log_file_stderr="$run_log_file.stderr"
