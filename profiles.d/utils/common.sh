@@ -6,7 +6,8 @@ function xserver_setup_start() {
 
     sudo chvt 5
     sleep 1 # Wait for the potential x-server running to release MASTER
-    sudo $ezBenchDir/profiles.d/utils/_launch_xorg.sh 2> /dev/null > /dev/null # TODO: Save the xorg logs
+    x_pid=$(sudo $ezBenchDir/profiles.d/utils/_launch_background.sh Xorg -nolisten tcp -noreset :42 vt5 -auth /tmp/ezbench_XAuth 2> /dev/null) # TODO: Save the xorg logs
+    export EZBENCH_X_PID=$x_pid
 
     export DISPLAY=:42
     export XAUTHORITY=/tmp/ezbench_XAuth
@@ -15,8 +16,10 @@ function xserver_setup_start() {
 function xserver_setup_stop() {
     [[ $dry_run -eq 1 ]] && return
 
-    sudo kill $(cat /tmp/ezbench_x.pid)
-    sleep 1
+    sudo kill $EZBENCH_X_PID
+    wait_random_pid $EZBENCH_X_PID
+    unset EZBENCH_X_PID
+
     sudo chvt $EZBENCH_VT_ORIG
     unset EZBENCH_VT_ORIG
     sleep 1
@@ -120,3 +123,13 @@ function thp_disable_stop() {
 #     done
 # }
 
+function wait_random_pid() {
+    # This is generally unsafe, but better than waiting a random amount of time
+
+    ps -p $1 > /dev/null 2> /dev/null
+    while [[ ${?} == 0 ]]
+    do
+        sleep .01
+        ps -p $1 > /dev/null 2> /dev/null
+    done
+}
