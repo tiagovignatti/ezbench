@@ -80,12 +80,13 @@ function run_bench {
     timeout=$1
     shift
     cmd="LIBGL_DEBUG=verbose vblank_mode=0 stdbuf -oL timeout $timeout"
+    bench_binary=$(echo "$1" | rev | cut -d '/' -f 1 | rev)
 
     env_dump_path="$ezBenchDir/utils/env_dump/env_dump.so"
     if [ -f "$env_dump_path" ]; then
         run_log_file_env_dump="$run_log_file.env_dump"
         env_dump_launch="$ezBenchDir/utils/env_dump/env_dump.sh"
-        cmd="$env_dump_launch $run_log_file_env_dump $@"
+        cmd="$cmd $env_dump_launch $run_log_file_env_dump $@"
     else
         cmd="$cmd $@"
     fi
@@ -96,7 +97,9 @@ function run_bench {
         cmd="$cmd > >(tee $run_log_file_stdout) 2> >(tee $run_log_file_stderr >&2)"
     fi
 
+    callIfDefined run_bench_pre_hook
     eval $cmd
+    callIfDefined run_bench_post_hook
 
     # delete the log files if they are empty
     if [ ! -s "$run_log_file_stdout" ] ; then

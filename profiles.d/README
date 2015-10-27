@@ -25,3 +25,5 @@ Hooks can be defined in a profile's conf.d/ folder. Here is a list of them:
  - benchmark_run_post_hook: called after running a benchmark
  - <benchmark name>_run_pre_hook: called before running a particular benchmark
  - <benchmark name>_run_post_hook: called after running a particular benchmark
+ - run_bench_pre_hook: called before executing the benchmark's command line
+ - run_bench_post_hook: called after executing the benchmark's command line
