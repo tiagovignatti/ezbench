@@ -9,6 +9,9 @@ function xserver_setup_start() {
     x_pid=$(sudo $ezBenchDir/profiles.d/utils/_launch_background.sh Xorg -nolisten tcp -noreset :42 vt5 -auth /tmp/ezbench_XAuth 2> /dev/null) # TODO: Save the xorg logs
     export EZBENCH_X_PID=$x_pid
 
+    # disable DPMS
+    xset s off -dpms
+
     export DISPLAY=:42
     export XAUTHORITY=/tmp/ezbench_XAuth
 }
