@@ -10,11 +10,9 @@ EXECUTABLE = env_dump.so
 
 # libcrypto
 CFLAGS += `pkg-config --cflags libcrypto`
-LDFLAGS += `pkg-config --libs libcrypto`
 
 # libxrandr
 CFLAGS += `pkg-config --cflags xrandr`
-LDFLAGS += `pkg-config --libs xrandr`
 
 # other libs
 LDFLAGS += -lpthread -ldl

@@ -35,7 +35,7 @@
 #include <string.h>
 #include <link.h>
 
-/* XLib functions */
+/* XLib functions, should only be called if the libxcb or libX11 is loaded */
 static char *
 _env_dump_xlib_compositor(Display *dpy, int screen)
 {

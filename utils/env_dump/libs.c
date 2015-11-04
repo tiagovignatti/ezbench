@@ -45,6 +45,28 @@ struct shared_object {
 	/* more here? */
 } *found_so_list = NULL;
 
+void *handle_libcrypto = NULL;
+unsigned char *(*SHA1_local)(const unsigned char *d, size_t n, unsigned char *md);
+
+static int
+libcrypto_resolve_symbols()
+{
+	static void *(*orig_dlopen)(const char *, int);
+
+	if (handle_libcrypto == NULL) {
+		if (orig_dlopen == NULL)
+			orig_dlopen = dlsym(RTLD_NEXT, "dlopen");
+
+		/* Open a local version of the libcrypto */
+		handle_libcrypto = orig_dlopen("libcrypto.so",
+					       RTLD_LOCAL | RTLD_LAZY);
+		if (handle_libcrypto)
+			SHA1_local = dlsym(handle_libcrypto, "SHA1");
+	}
+
+	return !handle_libcrypto && !SHA1_local;
+}
+
 void
 _env_dump_compute_and_print_sha1(const char *full_path)
 {
@@ -53,22 +75,29 @@ _env_dump_compute_and_print_sha1(const char *full_path)
 	off_t size;
 	int fd, i;
 
-	fd = open(full_path, O_RDONLY);
-	size = lseek(fd, 0, SEEK_END);
-	data = mmap (0, size, PROT_READ, MAP_PRIVATE, fd, 0);
-	if (data == MAP_FAILED) {
-		fprintf(env_file, "UNK");
-		return;
+	/* this function can be called before init(), so let's check if the
+	 * libcrypto has been loaded or not yet.
+	 */
+	if (libcrypto_resolve_symbols()) {
+		fprintf(env_file, "ERR_MISSING_LIBCRYPTO");
+	} else {
+		fd = open(full_path, O_RDONLY);
+		size = lseek(fd, 0, SEEK_END);
+		data = mmap (0, size, PROT_READ, MAP_PRIVATE, fd, 0);
+		if (data == MAP_FAILED) {
+			fprintf(env_file, "UNK");
+			return;
+		}
+
+		SHA1_local(data, size, hash);
+
+		for (i = 0; i < 20; i++) {
+			fprintf(env_file, "%02x", hash[i]);
+		}
+
+		munmap(data, size);
+		close(fd);
 	}
-
-	SHA1(data, size, hash);
-
-	for (i = 0; i < 20; i++) {
-		fprintf(env_file, "%02x", hash[i]);
-	}
-
-	munmap(data, size);
-	close(fd);
 }
 
 static int
@@ -188,7 +217,7 @@ dlmopen (Lmid_t lmid, const char *filename, int flags)
 void
 _env_dump_libs_init()
 {
-	/* Show what are currently linking with */
+	/* Show what we are currently linking with */
 	dl_iterate_phdr(ldd_callback, NULL);
 }
 
@@ -204,4 +233,7 @@ _env_dump_libs_fini()
 	shared_object_count = 0;
 	free(found_so_list);
 	pthread_mutex_unlock(&found_so_list_mp);
+
+	if (handle_libcrypto)
+		dlclose(handle_libcrypto);
 }
