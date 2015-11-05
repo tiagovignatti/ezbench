@@ -24,6 +24,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#define _GNU_SOURCE
+
 #include "env_dump.h"
 
 #include <sys/stat.h>
@@ -31,8 +33,21 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <link.h>
 
 FILE *env_file = NULL;
+
+static void fini();
+
+/* Yes, the program may call _exit() and in this case, the fini() function will
+ * never be called. Fix this!
+ */
+void _exit(int status)
+{
+	void (*const orig__exit)(int) = dlsym(RTLD_NEXT, "_exit");
+	fini();
+	orig__exit(status);
+}
 
 __attribute__((constructor))
 static void init() {
