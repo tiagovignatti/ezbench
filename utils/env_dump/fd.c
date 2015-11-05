@@ -88,14 +88,15 @@ ioctl(int fd, unsigned long int request, ...)
 	void *arg;
 	va_list ap;
 
-	if (orig_ioctl == NULL)
-		orig_ioctl = dlsym(RTLD_NEXT,"ioctl");
-
 	va_start(ap, request);
 	arg = va_arg(ap, void *);
 
 	/* If it is the first time we see an ioctl on this fd */
 	pthread_mutex_lock(&fd_mp);
+
+	if (orig_ioctl == NULL)
+		orig_ioctl = dlsym(RTLD_NEXT,"ioctl");
+
 	if (!bit_read(fd)) {
 		char path[101];
 		size_t len = get_path_from_fd(fd, path, sizeof(path));
