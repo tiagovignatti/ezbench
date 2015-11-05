@@ -67,7 +67,6 @@ function cpu_reclocking_disable_start() {
     # Disable turbo (TODO: Fix it for other cpu schedulers)
     sudo sh -c "echo 1 > /sys/devices/system/cpu/intel_pstate/no_turbo"
 
-
     # Set the frequency to a fixed one
     [ -z "WANTED_CPU_FREQ_kHZ" ] && return
     cpu_id_max=$(cpu_id_max_get)

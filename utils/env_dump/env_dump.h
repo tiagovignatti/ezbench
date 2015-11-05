@@ -34,6 +34,9 @@ extern FILE *env_file;
 void _env_dump_libs_init();
 void _env_dump_libs_fini();
 
+void _env_dump_cpu_init();
+void _env_dump_cpu_fini();
+
 void _env_dump_fd_init();
 void _env_dump_fd_fini();
 
