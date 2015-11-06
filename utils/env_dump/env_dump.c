@@ -112,7 +112,7 @@ static void init() {
 	register_signal_handler(SIGPIPE);
 	register_signal_handler(SIGTERM);
 
-	fprintf(env_file, "-- Env dump loaded successfully! --\n");
+	fprintf(env_file, "-- Env dump start (version 1) --\n");
 
 	_env_dump_posix_env_init();
 	_env_dump_fd_init();
@@ -133,6 +133,6 @@ static void fini() {
 	_env_dump_fd_init();
 	_env_dump_posix_env_fini();
 
-	fprintf(env_file, "-- Env dump fini, closing the file! --\n");
+	fprintf(env_file, "-- Env dump end --\n");
 	fclose(env_file);
 }
