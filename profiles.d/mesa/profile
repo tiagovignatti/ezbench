@@ -19,7 +19,8 @@ function __default_make_and_deploy__() {
     # 72: Deployment error
 
     make -j8 || return 71
-    make install || return 72
+    make_install_autotools_sha1_dump
+    return $?
 }
 
 function __git_version_deployed__() {
