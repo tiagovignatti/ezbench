@@ -29,6 +29,7 @@
 #include "env_dump.h"
 
 #include <sys/stat.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -47,6 +48,26 @@ void _exit(int status)
 	void (*const orig__exit)(int) = dlsym(RTLD_NEXT, "_exit");
 	fini();
 	orig__exit(status);
+}
+
+/* handle exit signals to run the fini() functions */
+static void
+sig_handler(int sig, siginfo_t *siginfo, void *context)
+{
+	/* this will also call fini! */
+	_exit(-1);
+}
+
+static void
+register_signal_handler(int signal)
+{
+	struct sigaction act;
+	memset (&act, '\0', sizeof(act));
+	act.sa_sigaction = &sig_handler;
+	act.sa_flags = SA_SIGINFO;
+	if (sigaction(signal, &act, NULL) < 0) {
+		perror ("sigaction");
+	}
 }
 
 __attribute__((constructor))
@@ -80,6 +101,16 @@ static void init() {
 	} else {
 		env_file = stderr;
 	}
+
+	/* handle some signals that would normally result in an exit without
+	 * calling the fini functions. This will hopefully be done before any
+	 * other library does it. It is however OK if the program replaces the
+	 * handler as long as it calls exit() or _exit().
+	 */
+	register_signal_handler(SIGHUP);
+	register_signal_handler(SIGINT);
+	register_signal_handler(SIGPIPE);
+	register_signal_handler(SIGTERM);
 
 	fprintf(env_file, "-- Env dump loaded successfully! --\n");
 
