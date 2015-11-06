@@ -1,5 +1,8 @@
 # WARNING: Hooks should be put in the profiles, not in this file
 
+# SHA1 Database that contains the version of each library, based on their SHA1
+SHA1_DB=$ezBenchDir/SHA1_DB
+
 # Frequencies
 WANTED_CPU_FREQ_kHZ=2000000
 

@@ -101,6 +101,10 @@ function run_bench {
     eval $cmd
     callIfDefined run_bench_post_hook
 
+    if [ -f "$env_dump_path" ]; then
+        $ezBenchDir/utils/env_dump/env_dump_extend.sh "$SHA1_DB" "$run_log_file_env_dump"
+    fi
+
     # delete the log files if they are empty
     if [ ! -s "$run_log_file_stdout" ] ; then
         rm "$run_log_file_stdout"
