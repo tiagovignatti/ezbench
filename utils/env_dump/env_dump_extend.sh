@@ -3,19 +3,6 @@
 SHA1_DB="$1"
 dump_file="$2"
 
-# TODO: add dmidecode-related information here
-
-[ -z "$SHA1_DB" ] && exit $ret
-
-# Try to get the name of the distro from lsb-release, revert to pkcon if not
-# available
-distro=$(grep DISTRIB_ID /etc/lsb-release 2> /dev/null | cut -d '=' -f2)
-if [ -z "$distro" ];
-then
-	distro=$(pkcon backend-details 2> /dev/null | grep Name | xargs | cut -d ' ' -f 2)
-	[ -z "$distro" ] && distro="UNK_DISTRO"
-fi
-
 function get_binary_version() {
 	filename=$1
 	sha1=$2
@@ -44,20 +31,51 @@ function get_binary_version() {
 	fi
 }
 
-# resolve the SHA1 of the EXE
-exe_line=$(grep -e '^EXE,' $dump_file)
-filename=$(echo "$exe_line" | cut -d ',' -f 2)
-sha1=$(echo "$exe_line" | cut -d ',' -f 4)
-version=$(get_binary_version $filename $sha1)
-sed -i "s~$exe_line~$exe_line,$version~g" $dump_file
+function resolve_SHA1() {
+	SHA1_DB="$1"
+	dump_file="$2"
 
-# resolve the SHA1 of the libraries
-for line in $(grep -e '^BOOTLINK\|^DYNLINK,' $dump_file)
-do
-	filename=$(echo "$line" | cut -d ',' -f 2)
-	sha1=$(echo "$line" | cut -d ',' -f 3)
+	[ -z "$SHA1_DB" ] && return 0
+
+	# Try to get the name of the distro from lsb-release, revert to pkcon if not
+	# available
+	distro=$(grep DISTRIB_ID /etc/lsb-release 2> /dev/null | cut -d '=' -f2)
+	if [ -z "$distro" ];
+	then
+		distro=$(pkcon backend-details 2> /dev/null | grep Name | xargs | cut -d ' ' -f 2)
+		[ -z "$distro" ] && distro="UNK_DISTRO"
+	fi
+
+	# resolve the SHA1 of the EXE
+	exe_line=$(grep -e '^EXE,' $dump_file)
+	filename=$(echo "$exe_line" | cut -d ',' -f 2)
+	sha1=$(echo "$exe_line" | cut -d ',' -f 4)
 	version=$(get_binary_version $filename $sha1)
-	sed -i "s~$line~$line,$version~g" $dump_file
-done
+	sed -i "s~$exe_line~$exe_line,$version~g" $dump_file
 
-exit $ret
+	# resolve the SHA1 of the libraries
+	for line in $(grep -e '^BOOTLINK\|^DYNLINK,' $dump_file)
+	do
+		filename=$(echo "$line" | cut -d ',' -f 2)
+		sha1=$(echo "$line" | cut -d ',' -f 3)
+		version=$(get_binary_version $filename $sha1)
+		sed -i "s~$line~$line,$version~g" $dump_file
+	done
+
+	# resolve the SHA1 of the binary on the other side of a unix socket
+	grep -e '^SOCKET_UNIX_CONNECT,' $dump_file | while read line
+	do
+		filename=$(echo "$line" | cut -d ',' -f 3)
+		sha1=$(echo "$line" | cut -d ',' -f 5)
+		version=$(get_binary_version $filename $sha1)
+		sed -i "s~$line~$line,$version~g" $dump_file
+	done
+
+	return 0
+}
+
+resolve_SHA1 "$SHA1_DB" "$dump_file"
+
+# TODO: add dmidecode-related information here
+
+exit 0
