@@ -81,8 +81,68 @@ function resolve_SHA1() {
 	return 0
 }
 
-resolve_SHA1 "$SHA1_DB" "$dump_file"
+function add_dmidecode_info() {
+	dimdecode=$(sudo -n dmidecode 2> /dev/null)
 
-# TODO: add dmidecode-related information here
+	# test if dmidecode ran properly
+	[ $? -ne 0 ] && echo "WARNING; dmidecode is not present or not working..." && return 0
+
+	# Motherboard information
+	mobo_info=$(echo "$dimdecode" | grep -A 3 "Base Board Information")
+	manufacturer=$(echo "$mobo_info" | grep "Manufacturer:" | cut -d ':' -f 2- | xargs)
+	product_name=$(echo "$mobo_info" | grep "Product Name:" | cut -d ':' -f 2- | xargs)
+	version=$(echo "$mobo_info" | grep "Version:" | cut -d ':' -f 2- | xargs)
+	mobo_info=$(echo "MOTHERBOARD,$manufacturer,$product_name,$version\n")
+
+	# BIOS information
+	bios_info=$(echo "$dimdecode" | grep -A 6 "BIOS Information")
+	vendor=$(echo "$bios_info" | grep "Vendor:" | cut -d ':' -f 2- | xargs)
+	version=$(echo "$bios_info" | grep "Version:" | cut -d ':' -f 2- | xargs)
+	date=$(echo "$bios_info" | grep "Release Date:" | cut -d ':' -f 2- | xargs)
+	bios_info=$(echo "BIOS,$vendor,$version,$date\n")
+
+	# CPU information
+	cpu_count=$(echo "$dimdecode" | grep "Processor Information" | wc -l)
+	cpu_info=""
+	for i in $(seq 1 $cpu_count)
+	do
+		manufacturer=$(echo "$dimdecode" | grep -m $i -A 24 "Processor Information$" | grep "Manufacturer:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		id=$(echo "$dimdecode" | grep -m $i -A 24 "Processor Information$" | grep "ID:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		version=$(echo "$dimdecode" | grep -m $i -A 24 "Processor Information$" | grep "Version:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		max_speed=$(echo "$dimdecode" | grep -m $i -A 24 "Processor Information$" | grep "Max Speed:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		core_count=$(echo "$dimdecode" | grep -m $i -A 24 "Processor Information$" | grep "Core Count" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		thread_count=$(echo "$dimdecode" | grep -m $i -A 24 "Processor Information$" | grep "Thread Count:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+
+		l1_handle=$(echo "$dimdecode" | grep -m $i -A 24 "Processor Information$" | grep "L1 Cache Handle:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		l2_handle=$(echo "$dimdecode" | grep -m $i -A 24 "Processor Information$" | grep "L2 Cache Handle:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		l3_handle=$(echo "$dimdecode" | grep -m $i -A 24 "Processor Information$" | grep "L3 Cache Handle:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+
+		l1_size=$(echo "$dimdecode" | grep -A 15 "Handle $l1_handle" | grep "Installed Size:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		l2_size=$(echo "$dimdecode" | grep -A 15 "Handle $l2_handle" | grep "Installed Size:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		l3_size=$(echo "$dimdecode" | grep -A 15 "Handle $l3_handle" | grep "Installed Size:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+
+		cpu_info=$(echo "${cpu_info}PROCESSOR,$i,$manufacturer,$id,$version,$core_count,$thread_count,$l1_size,$l2_size,$l3_size,$max_speed\n")
+	done
+
+	# RAM information
+	stick_count=$(echo "$dimdecode" | grep "Memory Device$" | wc -l)
+	ram_info=""
+	for i in $(seq 1 $stick_count)
+	do
+		manufacturer=$(echo "$dimdecode" | grep -m $i -A 21 "Memory Device$" | grep "Manufacturer:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		part_number=$(echo "$dimdecode" | grep -m $i -A 21 "Memory Device$" | grep "Part Number:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		serial=$(echo "$dimdecode" | grep -m $i -A 21 "Memory Device$" | grep "Serial Number:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		type=$(echo "$dimdecode" | grep -m $i -A 21 "Memory Device$" | grep "Type:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		size=$(echo "$dimdecode" | grep -m $i -A 21 "Memory Device$" | grep "Size:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		clock=$(echo "$dimdecode" | grep -m $i -A 21 "Memory Device$" | grep "Configured Clock Speed:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+
+		ram_info=$(echo "${ram_info}RAM_STICK,$i,$type,$manufacturer,$part_number,$serial,$size,$clock\n")
+	done
+
+	sed -i "s~^EXE,~${mobo_info}${bios_info}${cpu_info}${ram_info}EXE,~g" $dump_file
+}
+
+resolve_SHA1 "$SHA1_DB" "$dump_file"
+add_dmidecode_info "$dump_file"
 
 exit 0
