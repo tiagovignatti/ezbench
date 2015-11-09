@@ -91,7 +91,7 @@ env_var_dump_binary_information(int pid)
 		fprintf(env_file, "ERROR,");
 
 	snprintf(proc_path, sizeof(proc_path), "/proc/%i/exe", pid);
-	_env_dump_compute_and_print_sha1("/proc/self/exe");
+	_env_dump_compute_and_print_sha1(proc_path);
 
 	free(buf);
 }
