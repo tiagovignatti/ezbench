@@ -24,9 +24,41 @@ There are two possible ways:
  - $ LD_PRELOAD=$PWD/env_dump.so ENV_DUMP_FILE=report xonotic-glx # either this way
  - $ env_dump.sh report xonotic-glx # or this way, your call!
 
-=== Adding data to the report and viewing ===
+=== SHA1 Database ===
+
+The SHA1 DB is meant to link the SHA1 of an executable to a release version or
+git SHA1 from an upstream branch along with how it got compiled.
+
+The DB can be accessed through a command line interface using /SHA1_DB/sha1_db.
+The tool supports adding new SHA1s, querying attributes and adding attributes.
+
+Use the function make_install_sha1_dump from /profiles.d/utils/sha1_db.sh to
+install a git version of any project supporting DESTDIR overriding. The command
+line is:
+
+$ SHA1_DB=/my/path/to/SHA1_DB make_install_sha1_dump
+
+The configuration is however not currently saved but it is being investigated.
+
+=== Adding data to the report ===
+
+If you have SHA1_DB set-up and have installed packagekit and dmidecode, it is
+possible to enhance the report by adding information about the HW and SW used
+during the run.
 
 $ env_dump_extend.sh ../../SHA1_DB/ report
+
+=== Parsing the output ===
+
+The output is a CSV file which should be easy to parse. The plan is to write a
+python parser that will evolve in sync with the format of the CSV.
+
+This work has not been started yet and will be the basis of a tool comparing
+the environment between two runs.
+
+=== Viewing the final report ===
+
+Here is an example of report for the game xonotic.
 
 $ cat report
 -- Env dump start (version 1) --
