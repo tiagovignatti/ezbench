@@ -1,33 +1,4 @@
-function make_install_autotools_sha1_dump() {
-    # install the result and track the installed files
-    installed_binaries=$(mktemp)
-    make install 2> /dev/null | tee >(grep /usr/bin/install | rev | cut -d ' ' -f 1 | rev | grep -v ".la$" > $installed_binaries) || return 72
-
-    installed_binaries_lst=$(cat $installed_binaries)
-    rm $installed_binaries
-
-    # Hash the binaries and add them to the SHA1_DB
-    [ -z "$SHA1_DB" ] && return 0
-
-    git_sha1=$(git rev-parse --short HEAD)
-    version="git-$git_sha1"
-
-    for binary in $installed_binaries_lst
-    do
-        sha1=$(sha1sum $binary 2> /dev/null | cut -d ' ' -f1)
-        [ -z "$sha1" ] && continue
-
-        echo "SHA1_DB: $binary -> $sha1"
-
-        mkdir -p "$SHA1_DB/$sha1" 2> /dev/null
-        [ $? -ne 0 ] && continue # the sha1 already exists
-        echo $binary > "$SHA1_DB/$sha1/filepath"
-        echo $version > "$SHA1_DB/$sha1/version"
-        git branch -lvv > "$SHA1_DB/$sha1/git_branch"
-    done
-
-    return 0
-}
+source "profiles.d/utils/sha1_db.sh"
 
 # Requires
 function xserver_setup_start() {

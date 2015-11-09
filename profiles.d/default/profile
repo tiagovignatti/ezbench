@@ -19,7 +19,7 @@ function __default_make_and_deploy__() {
     # 72: Deployment error
 
     make -j8 || exit 71
-    make install || exit 72
+    make_install_sha1_dump || exit 72
 }
 
 rounds=3

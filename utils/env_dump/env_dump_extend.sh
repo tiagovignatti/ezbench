@@ -14,8 +14,11 @@ function get_binary_version() {
 	filename=$1
 	sha1=$2
 
-	if [ -d "$SHA1_DB/$sha1" ]; then
-		cat "$SHA1_DB/$sha1/version"
+	upstream=$($SHA1_DB/sha1_db $SHA1_DB $sha1 read_attr upstream 2> /dev/null)
+	version=$($SHA1_DB/sha1_db $SHA1_DB $sha1 read_attr version 2> /dev/null)
+
+	if [ -n "$upstream" ] && [ -n "$version" ]; then
+		echo $upstream-$version
 		return 0
 	else
 		# We did not find the file, add it to the sha1 DB. First check if it was
@@ -26,13 +29,8 @@ function get_binary_version() {
 		# Now check that the SHA1 still matches the one used by the benchmark
 		if [ "$sha1" == $(sha1sum $filename | cut -d ' ' -f 1) ]
 		then
-			version=$distro-$pkg
-
-			mkdir -p $SHA1_DB/$sha1/
-			echo $version > $SHA1_DB/$sha1/version
-			echo $filename > $SHA1_DB/$sha1/filepath
-
-			echo $version
+			$SHA1_DB/sha1_db $SHA1_DB $sha1 add $pkg $filename $distro
+			echo $distro-$pkg
 			return 0
 		fi
 	fi
@@ -58,7 +56,7 @@ function resolve_SHA1() {
 	filename=$(echo "$exe_line" | cut -d ',' -f 2)
 	sha1=$(echo "$exe_line" | cut -d ',' -f 4)
 	version=$(get_binary_version $filename $sha1)
-	sed -i "s~$exe_line~$exe_line,$version~g" $dump_file
+	sed -i "s\`$exe_line\`$exe_line,$version\`g" $dump_file
 
 	# resolve the SHA1 of the libraries
 	for line in $(grep -e '^BOOTLINK\|^DYNLINK,' $dump_file)
@@ -66,7 +64,7 @@ function resolve_SHA1() {
 		filename=$(echo "$line" | cut -d ',' -f 2)
 		sha1=$(echo "$line" | cut -d ',' -f 3)
 		version=$(get_binary_version $filename $sha1)
-		sed -i "s~$line~$line,$version~g" $dump_file
+		sed -i "s\`$line\`$line,$version\`g" $dump_file
 	done
 
 	# resolve the SHA1 of the binary on the other side of a unix socket
@@ -75,7 +73,7 @@ function resolve_SHA1() {
 		filename=$(echo "$line" | cut -d ',' -f 3)
 		sha1=$(echo "$line" | cut -d ',' -f 5)
 		version=$(get_binary_version $filename $sha1)
-		sed -i "s~$line~$line,$version~g" $dump_file
+		sed -i "s\`$line\`$line,$version\`g" $dump_file
 	done
 
 	return 0
@@ -139,7 +137,7 @@ function add_dmidecode_info() {
 		ram_info=$(echo "${ram_info}RAM_STICK,$i,$type,$manufacturer,$part_number,$serial,$size,$clock\n")
 	done
 
-	sed -i "s~^EXE,~${mobo_info}${bios_info}${cpu_info}${ram_info}EXE,~g" $dump_file
+	sed -i "s\`^EXE,\`${mobo_info}${bios_info}${cpu_info}${ram_info}EXE,\`g" $dump_file
 }
 
 resolve_SHA1 "$SHA1_DB" "$dump_file"

@@ -18,9 +18,8 @@ function __default_make_and_deploy__() {
     # 71: Compilation error
     # 72: Deployment error
 
-    make -j8 || return 71
-    make_install_autotools_sha1_dump
-    return $?
+    make -j8 || exit 71
+    make_install_sha1_dump || exit 72
 }
 
 function __git_version_deployed__() {
