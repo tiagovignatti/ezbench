@@ -2,10 +2,8 @@
 
 == Description ==
 
-This library is meant to be used in conjunction with LD_PRELOAD to dump all
-the shared-object dependencies of the binary you are trying to analyze. It also
-shows which fd received ioctls which is very handy to know which GPU got used
-for the rendering.
+This library is meant to be used in conjunction with LD_PRELOAD to dump as much
+information as possible about the machine, the run, the libraries used, etc...
 
 The output of the library is saved in a file. You can select the filename using
 the environment variable ENV_DUMP_FILE. If the file is already present, the pid
@@ -19,51 +17,197 @@ README. You should get a env_dump.so.
 
 == Usage ==
 
-$ LD_PRELOAD=$PWD/env_dump.so ENV_DUMP_FILE=report glxgears
-[...]
+=== Running the application ===
+
+There are two possible ways:
+
+ - $ LD_PRELOAD=$PWD/env_dump.so ENV_DUMP_FILE=report xonotic-glx # either this way
+ - $ env_dump.sh report xonotic-glx # or this way, your call!
+
+=== Adding data to the report and viewing ===
+
+$ env_dump_extend.sh ../../SHA1_DB/ report
+
 $ cat report
--- Env dump loaded successfully! --
-EXE,/usr/bin/glxgears,'glxgears',947487c10657d2f84c0aaf8f60602a6077f1784e
-BOOTLINK,/home/mupuf/install/lib/valgrind/vgpreload_core-amd64-linux.so,a9831875028f1f9cb64b03e26668ca26c8fae054
-BOOTLINK,/home/mupuf/install/lib/valgrind/vgpreload_memcheck-amd64-linux.so,9a895908ab632583db29153fa927dc7a260ab4c5
-BOOTLINK,/home/mupuf/Programmation/ezbench/utils/env_dump/env_dump.so,c27f1df084f01b32d15549898ab0b9223add64b3
-BOOTLINK,/home/mupuf/install/lib/libGL.so.1,5a8975bae55c1e1b4b4ff12e5652e2e0ea35279b
-BOOTLINK,/usr/lib/libm.so.6,b7cf4803a0a49905d990adfcc56989721b156e71
-BOOTLINK,/usr/lib/libX11.so.6,70b697ed434727e99bbd3b8f2f486c9267690a56
-BOOTLINK,/usr/lib/libc.so.6,e3e01c77ab3d4d73ff3f969948465debaffa2b61
-BOOTLINK,/usr/lib/libdl.so.2,3e032a705b7724f27e78d4f078d7c6961ffd54e0
-BOOTLINK,/usr/lib/libpthread.so.0,54f2d4f765876c54194bed2964bdd1a0cdde03db
-BOOTLINK,/usr/lib/libcrypto.so.1.0.0,211d0b48fb40546c8524303e67493819d531aea8
-BOOTLINK,/usr/lib/libexpat.so.1,084d5f181adc197d5cf12ba1e576b82ce9aa865e
-BOOTLINK,/home/mupuf/install/lib/libglapi.so.0,e96bb64809428331719ed837f279adfb7ae68ead
-BOOTLINK,/usr/lib/libXext.so.6,3359d6805126c28630c922219a6daaf9a5836f42
-BOOTLINK,/usr/lib/libXdamage.so.1,5628004f4fe77abeca831a8ead1c24e54ed3890a
-BOOTLINK,/usr/lib/libXfixes.so.3,c116fb23a09d318ea0d32012374a0b4819529c8d
-BOOTLINK,/usr/lib/libX11-xcb.so.1,a5cce5a5e2d6a6c3f8e4d9a31c9ef0445f63b4b3
-BOOTLINK,/usr/lib/libxcb-glx.so.0,ea5dc27e4bae75cdff70216ebeaffccfc22ce1bb
-BOOTLINK,/usr/lib/libxcb-dri2.so.0,24ff4164929f13a15ec65336a836739f6f557d55
-BOOTLINK,/usr/lib/libxcb.so.1,25ec0f295c31eebb496ba429d038348719724b35
-BOOTLINK,/usr/lib/libXxf86vm.so.1,4a916951fe388431de5448d9818e293b73191d32
-BOOTLINK,/usr/lib/libdrm.so.2,f7c856982b794ff1f93d0465ae5b58bdc93ca964
-BOOTLINK,/lib64/ld-linux-x86-64.so.2,7911a1b3866a389fa9ad46a08432b7efe2639478
-BOOTLINK,/usr/lib/libz.so.1,a2f2ed3e528cee1527cf30a14f01ca246bf530b5
-BOOTLINK,/usr/lib/libXau.so.6,df47f8963111fa3850a26fa61f0b4c137433a745
-BOOTLINK,/usr/lib/libXdmcp.so.6,28cced3ef7d1994417672308aee548be47a6deaa
-IOCTL,8,/dev/dri/card0
-DYNLINK,/usr/lib/libudev.so.1.6.4,6587c22b9f0ba359d68a6315cc7f24284664f52f
-DYNLINK,/usr/lib/libudev.so.1,6587c22b9f0ba359d68a6315cc7f24284664f52f
-DYNLINK,/usr/lib/librt.so.1,93294cf925d436e5167e0777ca875d7ca14647a8
-DYNLINK,/usr/lib/libresolv.so.2,a31a77f08069f211113d3aafb3d422c11694dd97
-DYNLINK,/usr/lib/libcap.so.2,0e11f218f90843afb6359c1d1856d974a1d9fe58
-DYNLINK,/usr/lib/libattr.so.1,f0cdbed41dcfb9772873406569fac2e155abd222
-DYNLINK,/home/mupuf/install/lib/libGL.so.1.2.0,5a8975bae55c1e1b4b4ff12e5652e2e0ea35279b
-DYNLINK,/home/mupuf/install/lib/dri/i965_dri.so,928a06da26383285ebac02387029e5d687968486
-DYNLINK,/usr/lib/libnettle.so.6,141b6bf17aa0176724a3b913150db7b566e75674
-DYNLINK,/usr/lib/libdrm_intel.so.1,5ed4c11d8f726ce08406cdd72d8c4e3ce1538e9f
-DYNLINK,/usr/lib/libstdc++.so.6,5153a9f4f464116cc8fcff7f285fc215a5cefba0
-DYNLINK,/usr/lib/libgcc_s.so.1,e7650e7ef499ba6afcce6be4012931747ce20991
-DYNLINK,/usr/lib/libpciaccess.so.0,035c8ad06e10405e5b850af23f98ff6eff03c96c
-DYNLINK,/usr/lib/libtxc_dxtn.so,61959dd2bc5b130891e44c780d9a2d0ce74b6b3c
--- Env dump fini, closing the file! --
+-- Env dump start (version 1) --
+MOTHERBOARD,ASUSTeK COMPUTER INC.,Z97-A,Rev 1.xx
+BIOS,American Megatrends Inc.,1204,06/20/2014
+PROCESSOR,1,Intel,C3 06 03 00 FF FB EB BF,Intel(R) Core(TM) i7-4790 CPU @ 3.60GHz,4,8,256 kB,1024 kB,8192 kB,3800 MHz
+RAM_STICK,1,DDR3,1315,BLS4G3D1609DS1S00.,A90D6072,4096 MB,1600 MHz
+RAM_STICK,2,DDR3,Kingston,KHX1600C9D3/4GX,6E2A1C4B,4096 MB,1600 MHz
+RAM_STICK,3,DDR3,1315,BLS4G3D1609DS1S00.,A90D6071,4096 MB,1600 MHz
+RAM_STICK,4,DDR3,Kingston,KHX1600C9D3/4GX,6B2A204B,4096 MB,1600 MHz
+EXE,/usr/bin/xonotic-glx,'xonotic-glx',3d1e4934b68d33f967796d662ca150829cbb6393,Arch-xonotic-0.8.1-1.x86_64
+ENV,LD_PRELOAD=/home/mupuf/benchmarks/ezbench/utils/env_dump/env_dump.so
+ENV,ENV_DUMP_FILE=report
+ENV,XDG_VTNR=1
+ENV,KDE_MULTIHEAD=false
+ENV,XDG_SESSION_ID=c1
+ENV,TERM=xterm
+ENV,SHELL=/bin/bash
+ENV,KONSOLE_DBUS_SERVICE=:1.32
+ENV,GTK2_RC_FILES=/etc/gtk-2.0/gtkrc:/home/mupuf/.gtkrc-2.0:/home/mupuf/.config/gtkrc-2.0
+ENV,KONSOLE_PROFILE_NAME=Shell
+ENV,ACLOCAL=aclocal -I /home/mupuf/install/share/aclocal
+ENV,GTK_RC_FILES=/etc/gtk/gtkrc:/home/mupuf/.gtkrc:/home/mupuf/.config/gtkrc
+ENV,MESA_DEBUG=1
+ENV,GS_LIB=/home/mupuf/.fonts
+ENV,WINDOWID=71303198
+ENV,SHELL_SESSION_ID=7cd19f2c4e054000a020612a6f00374a
+ENV,GTK_MODULES=canberra-gtk-module
+ENV,KDE_FULL_SESSION=true
+ENV,NVD=/home/mupuf/install
+ENV,USER=mupuf
+ENV,LD_LIBRARY_PATH=/home/mupuf/install/lib
+ENV,XCURSOR_SIZE=24
+ENV,SSH_AUTH_SOCK=/tmp/ssh-f7fMDVJ2Hzsf/agent.864
+ENV,SESSION_MANAGER=local/beast:@/tmp/.ICE-unix/21516,unix/beast:/tmp/.ICE-unix/21516
+ENV,MOZ_PLUGIN_PATH=/usr/lib/mozilla/plugins
+ENV,PATH=/home/mupuf/install/bin/:/home/mupuf/install/bin/:/usr/local/sbin:/usr/local/bin:/usr/bin:/usr/lib/jvm/default/bin:/usr/bin/site_perl:/usr/bin/vendor_perl:/usr/bin/core_perl:/opt/vogl
+ENV,MAIL=/var/spool/mail/mupuf
+ENV,PWD=/home/mupuf/benchmarks/ezbench/utils/env_dump
+ENV,EDITOR=nano
+ENV,LANG=en_GB.UTF-8
+ENV,KDE_SESSION_UID=1000
+ENV,KONSOLE_DBUS_SESSION=/Sessions/2
+ENV,SSH_ASKPASS=/usr/bin/ksshaskpass
+ENV,SHLVL=5
+ENV,XDG_SEAT=seat0
+ENV,COLORFGBG=15;0
+ENV,HOME=/home/mupuf
+ENV,LANGUAGE=
+ENV,KDE_SESSION_VERSION=5
+ENV,XCURSOR_THEME=Breeze_Snow
+ENV,LOGNAME=mupuf
+ENV,DBUS_SESSION_BUS_ADDRESS=unix:abstract=/tmp/dbus-UUXbqWS2HW,guid=da94550fcaef7911bb07f9e45640cbe2
+ENV,XDG_DATA_DIRS=/usr/share:/usr/share:/usr/local/share
+ENV,PKG_CONFIG_PATH=/home/mupuf/install/lib/pkgconfig/:/home/mupuf/install/share/pkgconfig/
+ENV,WINDOWPATH=1
+ENV,DISPLAY=:0
+ENV,XDG_RUNTIME_DIR=/run/user/1000
+ENV,PROFILEHOME=
+ENV,XDG_CURRENT_DESKTOP=KDE
+ENV,XAUTHORITY=/tmp/xauth-1000-_0
+ENV,_=/usr/bin/xonotic-glx
+KERNEL,Linux,beast,4.2.5-1-ARCH,#1 SMP PREEMPT Tue Oct 27 08:13:28 CET 2015,x86_64,(none)
+SCHED,SCHED_OTHER,8,8,255,0
+CPU_FREQ,8,800000,4000000,800000,4000000,800000,4000000,800000,4000000,800000,4000000,800000,4000000,800000,4000000,800000,4000000
+THROTTLING,8,0,0,0,0,0,0,0,0,0
+INTEL_PSTATE,33,13,0,20,100
+BOOTLINK,linux-vdso.so.1,UNK,UNKNOWN_VERSION
+BOOTLINK,/home/mupuf/benchmarks/ezbench/utils/env_dump/env_dump.so,b53d74f5e0bf38f02ed0135489a7552857c78e3b,UNKNOWN_VERSION
+BOOTLINK,/usr/lib/libm.so.6,b7cf4803a0a49905d990adfcc56989721b156e71,Arch-glibc-2.22-3.x86_64
+BOOTLINK,/usr/lib/libz.so.1,a2f2ed3e528cee1527cf30a14f01ca246bf530b5,Arch-zlib-1.2.8-4.x86_64
+BOOTLINK,/usr/lib/libjpeg.so.8,12f18a159967f13e108fbba1fe2a5b95b59389e0,Arch-libjpeg-turbo-1.4.2-1.x86_64
+BOOTLINK,/usr/lib/librt.so.1,93294cf925d436e5167e0777ca875d7ca14647a8,Arch-glibc-2.22-3.x86_64
+BOOTLINK,/usr/lib/libdl.so.2,3e032a705b7724f27e78d4f078d7c6961ffd54e0,Arch-glibc-2.22-3.x86_64
+BOOTLINK,/usr/lib/libX11.so.6,70b697ed434727e99bbd3b8f2f486c9267690a56,Arch-libx11-1.6.3-1.x86_64
+BOOTLINK,/usr/lib/libXpm.so.4,fbbd6634d7edf3070bcd9b742e74a9a2d75e99b6,Arch-libxpm-3.5.11-1.x86_64
+BOOTLINK,/usr/lib/libXext.so.6,3359d6805126c28630c922219a6daaf9a5836f42,Arch-libxext-1.3.3-1.x86_64
+BOOTLINK,/usr/lib/libXxf86vm.so.1,4a916951fe388431de5448d9818e293b73191d32,Arch-libxxf86vm-1.1.4-1.x86_64
+BOOTLINK,/usr/lib/libasound.so.2,3791381047b0f3c25b9a808f8feeb0765ff07051,Arch-alsa-lib-1.0.29-1.x86_64
+BOOTLINK,/usr/lib/libpthread.so.0,54f2d4f765876c54194bed2964bdd1a0cdde03db,Arch-glibc-2.22-3.x86_64
+BOOTLINK,/usr/lib/libc.so.6,e3e01c77ab3d4d73ff3f969948465debaffa2b61,Arch-glibc-2.22-3.x86_64
+BOOTLINK,/lib64/ld-linux-x86-64.so.2,7911a1b3866a389fa9ad46a08432b7efe2639478,UNKNOWN_VERSION
+BOOTLINK,/usr/lib/libxcb.so.1,25ec0f295c31eebb496ba429d038348719724b35,Arch-libxcb-1.11.1-1.x86_64
+BOOTLINK,/usr/lib/libXau.so.6,df47f8963111fa3850a26fa61f0b4c137433a745,Arch-libxau-1.0.8-2.x86_64
+BOOTLINK,/home/mupuf/install/lib/libXdmcp.so.6,ba5e8960254ccfc4122af1fc1844e4c28b3efbab,git://anongit.freedesktop.org/xorg/lib/libXdmcp/master-b10f382
+BOOTLINK,/usr/lib/libbsd.so.0,599ee6ed3c735d0518829b3547cf9c45f344331e,Arch-libbsd-0.7.0-1.x86_64
+BOOTLINK,/usr/lib/libcrypto.so,211d0b48fb40546c8524303e67493819d531aea8,Arch-openssl-1.0.2.d-1.x86_64
+DYNLINK,/usr/lib/libd0_blind_id.so.0.0.0,99d9ef467ffce9a45fe80450daa7a17f674f96d2,Arch-xonotic-0.8.1-1.x86_64
+DYNLINK,/usr/lib/libd0_blind_id.so.0,99d9ef467ffce9a45fe80450daa7a17f674f96d2,Arch-xonotic-0.8.1-1.x86_64
+DYNLINK,/usr/lib/libgmp.so.10,d87b6bbdbc2fcbe4acd30dc2ef7a19a347147a4e,Arch-gmp-6.0.0-2.x86_64
+DYNLINK,/usr/lib/libcurl.so.4.4.0,1e13f692bda6d5905d1320e6d4b840edd3d0ba3b,Arch-curl-7.45.0-1.x86_64
+DYNLINK,/usr/lib/libcurl.so.4,1e13f692bda6d5905d1320e6d4b840edd3d0ba3b,Arch-curl-7.45.0-1.x86_64
+DYNLINK,/usr/lib/libidn.so.11,5a08d437b09087ada4f1b83168a1d87a5fac101b,Arch-libidn-1.32-1.x86_64
+DYNLINK,/usr/lib/libssh2.so.1,7d6f5792c906b3d83424d4f1d09ce8f00c5fa366,Arch-libssh2-1.6.0-1.x86_64
+DYNLINK,/usr/lib/libssl.so.1.0.0,8e4090c0889f6f75a896fafa3ec5d78052d032c3,Arch-openssl-1.0.2.d-1.x86_64
+DYNLINK,/usr/lib/libgssapi_krb5.so.2,503b9db4d5e1deabdcda54326d1e59785f10a703,Arch-krb5-1.13.2-1.x86_64
+DYNLINK,/usr/lib/libkrb5.so.3,3a5aa48c1bad6e58e3c7141abb655e4fa1691130,Arch-krb5-1.13.2-1.x86_64
+DYNLINK,/usr/lib/libk5crypto.so.3,cc9bee4d4e58ba0d54166f0407f3fcb00edb681e,Arch-krb5-1.13.2-1.x86_64
+DYNLINK,/usr/lib/libcom_err.so.2,0a5123fcad89311eba22dbc6cc5a5d1c8ce2f1da,Arch-e2fsprogs-1.42.13-1.x86_64
+DYNLINK,/usr/lib/libkrb5support.so.0,8c89d9855e5571df27350ed04448a2fadf3693d5,Arch-krb5-1.13.2-1.x86_64
+DYNLINK,/usr/lib/libkeyutils.so.1,a0fb75e3bb8a46c9c42aa2d370be99440470d550,Arch-keyutils-1.5.9-1.x86_64
+DYNLINK,/usr/lib/libresolv.so.2,a31a77f08069f211113d3aafb3d422c11694dd97,Arch-glibc-2.22-3.x86_64
+DYNLINK,/usr/lib/libvorbis.so.0.4.8,7fdd26b3895c1c8a1cdb0fc8d4523d6cb84beeff,Arch-libvorbis-1.3.5-1.x86_64
+DYNLINK,/usr/lib/libvorbis.so.0,7fdd26b3895c1c8a1cdb0fc8d4523d6cb84beeff,Arch-libvorbis-1.3.5-1.x86_64
+DYNLINK,/usr/lib/libogg.so.0,a58a93ec9181e3682b9bfdaa9041cf68d06bb9dd,Arch-libogg-1.3.2-1.x86_64
+DYNLINK,/usr/lib/libvorbisfile.so.3.3.7,ff1089401173f89b0d40aea11dfef9bbc151705c,Arch-libvorbis-1.3.5-1.x86_64
+DYNLINK,/usr/lib/libvorbisfile.so.3,ff1089401173f89b0d40aea11dfef9bbc151705c,Arch-libvorbis-1.3.5-1.x86_64
+DYNLINK,/usr/lib/libogg.so.0.8.2,a58a93ec9181e3682b9bfdaa9041cf68d06bb9dd,Arch-libogg-1.3.2-1.x86_64
+DYNLINK,/usr/lib/libtheora.so.0.3.10,20e4c310ee24d055476bc64f60a4c5d94b64070b,Arch-libtheora-1.1.1-3.x86_64
+DYNLINK,/usr/lib/libtheora.so.0,20e4c310ee24d055476bc64f60a4c5d94b64070b,Arch-libtheora-1.1.1-3.x86_64
+DYNLINK,/usr/lib/libvorbisenc.so.2.0.11,94c4a7c1a204be09463acefd151d9f1bc5665937,Arch-libvorbis-1.3.5-1.x86_64
+DYNLINK,/usr/lib/libvorbisenc.so.2,94c4a7c1a204be09463acefd151d9f1bc5665937,Arch-libvorbis-1.3.5-1.x86_64
+DYNLINK,/home/mupuf/install/lib/libGL.so.1.2.0,7cffd8343a755ac5cf93d9cf2cb2ee4c0ec9cbb8,ssh://mperes@people.freedesktop.org/~mperes/mesa.git/egl_dri3-a6f2d32
+DYNLINK,/home/mupuf/install/lib/libGL.so.1,7cffd8343a755ac5cf93d9cf2cb2ee4c0ec9cbb8,ssh://mperes@people.freedesktop.org/~mperes/mesa.git/egl_dri3-a6f2d32
+DYNLINK,/usr/lib/libexpat.so.1,084d5f181adc197d5cf12ba1e576b82ce9aa865e,Arch-expat-2.1.0-4.x86_64
+DYNLINK,/usr/lib/libxcb-dri3.so.0,1624047c67518e052720261f844562d82f9ead96,Arch-libxcb-1.11.1-1.x86_64
+DYNLINK,/usr/lib/libxcb-present.so.0,c430a8ae6fdef25763419d8c872e4e9694a9fd8c,Arch-libxcb-1.11.1-1.x86_64
+DYNLINK,/usr/lib/libxcb-randr.so.0,7105e21c07aaf7ab5ce9f919ceb966d64ea3c278,Arch-libxcb-1.11.1-1.x86_64
+DYNLINK,/usr/lib/libxcb-xfixes.so.0,192e198c8e5bbc73264b1072305c7a8a19c17ea6,Arch-libxcb-1.11.1-1.x86_64
+DYNLINK,/usr/lib/libxcb-render.so.0,8a3a44d2ddb3ee7bb729d086b4017caf454faa3b,Arch-libxcb-1.11.1-1.x86_64
+DYNLINK,/usr/lib/libxcb-shape.so.0,468d3168d4cea5fc68a7ad5f6ce0145f08cb7919,Arch-libxcb-1.11.1-1.x86_64
+DYNLINK,/usr/lib/libxcb-sync.so.1,1b65ffe57b8f7bd2b233f9f44a6dcaa4acba644b,Arch-libxcb-1.11.1-1.x86_64
+DYNLINK,/usr/lib/libxshmfence.so.1,a2a173f77eb3c34e6022780a3ca2ea778472be54,Arch-libxshmfence-1.2-1.x86_64
+DYNLINK,/home/mupuf/install/lib/libglapi.so.0,d52b4ce373af37e32a52c48aca47c4a4a873edd1,ssh://mperes@people.freedesktop.org/~mperes/mesa.git/egl_dri3-a6f2d32
+DYNLINK,/usr/lib/libXdamage.so.1,5628004f4fe77abeca831a8ead1c24e54ed3890a,Arch-libxdamage-1.1.4-2.x86_64
+DYNLINK,/usr/lib/libXfixes.so.3,c116fb23a09d318ea0d32012374a0b4819529c8d,Arch-libxfixes-5.0.1-1.x86_64
+DYNLINK,/usr/lib/libX11-xcb.so.1,a5cce5a5e2d6a6c3f8e4d9a31c9ef0445f63b4b3,Arch-libx11-1.6.3-1.x86_64
+DYNLINK,/usr/lib/libxcb-glx.so.0,ea5dc27e4bae75cdff70216ebeaffccfc22ce1bb,Arch-libxcb-1.11.1-1.x86_64
+DYNLINK,/usr/lib/libxcb-dri2.so.0,24ff4164929f13a15ec65336a836739f6f557d55,Arch-libxcb-1.11.1-1.x86_64
+DYNLINK,/home/mupuf/install/lib/libdrm.so.2,e26b62afaa450ad5b9c9d606e4603d51bea7cc71,ssh://mperes@people.freedesktop.org/~mperes/drm/master: ahead 226-3045523
+SOCKET_UNIX_CONNECT,/tmp/.X11-unix/X0,/home/mupuf/install/lib/xorg-server/Xorg,'/home/mupuf/install/lib/xorg-server/Xorg' '-nolisten' 'tcp' ':0' 'vt1' '-auth' '/tmp/serverauth.9qXVoDcHr7',a3e0e9075ef5f32991e2b9890d60c6d102d5faa6,ssh://mperes@people.freedesktop.org/~mperes/xserver/master: ahead 270, behind 3-c99fb55
+XORG_SESSION_OPENED,(null)
+XORG_DISPLAY,0,KWin,3120,1920,24
+DYNLINK,/usr/lib/libudev.so.1.6.4,6587c22b9f0ba359d68a6315cc7f24284664f52f,Arch-libsystemd-227-1.x86_64
+DYNLINK,/usr/lib/libudev.so.1,6587c22b9f0ba359d68a6315cc7f24284664f52f,Arch-libsystemd-227-1.x86_64
+DYNLINK,/usr/lib/libcap.so.2,0e11f218f90843afb6359c1d1856d974a1d9fe58,Arch-libcap-2.24-2.x86_64
+DYNLINK,/usr/lib/libattr.so.1,f0cdbed41dcfb9772873406569fac2e155abd222,Arch-attr-2.4.47-1.x86_64
+DYNLINK,/home/mupuf/install/lib/dri/i965_dri.so,7f46e221c0eae5219f642e9e7e98507ad9928fc4,ssh://mperes@people.freedesktop.org/~mperes/mesa.git/egl_dri3-a6f2d32
+DYNLINK,/home/mupuf/install/lib/dri//i965_dri.so,7f46e221c0eae5219f642e9e7e98507ad9928fc4,ssh://mperes@people.freedesktop.org/~mperes/mesa.git/egl_dri3-a6f2d32
+DYNLINK,/usr/lib/libnettle.so.6,141b6bf17aa0176724a3b913150db7b566e75674,Arch-nettle-3.1.1-1.x86_64
+DYNLINK,/home/mupuf/install/lib/libdrm_intel.so.1,d2ba16b233cf260e12977b71358266c6e306e058,ssh://mperes@people.freedesktop.org/~mperes/drm/master: ahead 226-3045523
+DYNLINK,/usr/lib/libpciaccess.so.0,035c8ad06e10405e5b850af23f98ff6eff03c96c,Arch-libpciaccess-0.13.4-1.x86_64
+DYNLINK,/usr/lib/libstdc++.so.6,130106e6ae93ddb4796ea583e1cdddfaf5257b35,Arch-gcc-libs-multilib-5.2.0-2.x86_64
+DYNLINK,/usr/lib/libgcc_s.so.1,36183ac5fa1774a8591c6bbb473d959077f3bb6e,Arch-gcc-libs-multilib-5.2.0-2.x86_64
+IOCTL,/dev/dri/renderD128
+XORG_WINDOW_CREATE,215,4194306,3120,1920,24
+DYNLINK,/usr/lib/libXcursor.so.1.0.2,c5cf29c97803bef02c8845fe83646b9d25ade4ee,Arch-libxcursor-1.1.14-2.x86_64
+DYNLINK,/usr/lib/libXcursor.so.1,c5cf29c97803bef02c8845fe83646b9d25ade4ee,Arch-libxcursor-1.1.14-2.x86_64
+DYNLINK,/usr/lib/libXrender.so.1,0ae36e0af4c2385084bc7b6cfd77289bb2a0b746,Arch-libxrender-0.9.9-1.x86_64
+DYNLINK,/usr/lib/libtxc_dxtn.so,61959dd2bc5b130891e44c780d9a2d0ce74b6b3c,Arch-libtxc_dxtn-1.0.1-6.x86_64
+DYNLINK,/usr/lib/libpng16.so.16.18.0,6b0396a700ac3de412f727f9ca2755654275fe3d,Arch-libpng-1.6.18-1.x86_64
+DYNLINK,/usr/lib/libpng16.so.16,6b0396a700ac3de412f727f9ca2755654275fe3d,Arch-libpng-1.6.18-1.x86_64
+DYNLINK,/usr/lib/libfreetype.so.6.12.1,fcd097713f4ffb9250791ea46728240a5bd807ab,Arch-freetype2-2.6.1-1.x86_64
+DYNLINK,/usr/lib/libfreetype.so.6,fcd097713f4ffb9250791ea46728240a5bd807ab,Arch-freetype2-2.6.1-1.x86_64
+DYNLINK,/usr/lib/libbz2.so.1.0,a1f1a03092277b1a9033bdde5b891e0c93367372,Arch-bzip2-1.0.6-5.x86_64
+DYNLINK,/usr/lib/libharfbuzz.so.0,8a36a67c2dc4956756296836957885815576d9bf,Arch-harfbuzz-1.0.6-2.x86_64
+DYNLINK,/usr/lib/libglib-2.0.so.0,2d4db66da30dca7d000053f67659081b7ed41ff1,Arch-glib2-2.46.1-1.x86_64
+DYNLINK,/usr/lib/libgraphite2.so.3,dfd45840fa8b87be8b8dfba5ac049e3a349198a5,Arch-graphite-1:1.3.3-1.x86_64
+DYNLINK,/usr/lib/libpcre.so.1,5cbf4c5a40574ed70aff464dbf590a981eba40b9,Arch-pcre-8.37-4.x86_64
+DYNLINK,/usr/lib/libasound.so.2.0.0,3791381047b0f3c25b9a808f8feeb0765ff07051,Arch-alsa-lib-1.0.29-1.x86_64
+DYNLINK,/usr/lib/alsa-lib/libasound_module_pcm_pulse.so,b876d8ed3ff4afe990f5010bded42bc155f43d8e,Arch-alsa-plugins-1.0.29-2.x86_64
+DYNLINK,/usr/lib/libpulse.so.0,c353a67917100f0dbe298a16f6a9a31dc9a218ea,Arch-libpulse-7.1-1.x86_64
+DYNLINK,/usr/lib/pulseaudio/libpulsecommon-7.1.so,e6017b3fedf6c2eb9a00924ad49063715d1975a3,Arch-libpulse-7.1-1.x86_64
+DYNLINK,/usr/lib/libjson-c.so.2,c3067219d38425f9694574175bb8cb76cb291439,Arch-json-c-0.12-2.x86_64
+DYNLINK,/usr/lib/libdbus-1.so.3,57557f9ce8961062342bd15363a55890c7646f91,Arch-libdbus-1.10.2-1.x86_64
+DYNLINK,/usr/lib/libsystemd.so.0,2805f47aa8a276f5232469836286162e26de04c1,Arch-libsystemd-227-1.x86_64
+DYNLINK,/usr/lib/libsndfile.so.1,15ac12c40a9a8eba4557ded4816b4b115440cb14,Arch-libsndfile-1.0.25-3.x86_64
+DYNLINK,/usr/lib/libasyncns.so.0,5898825647e02c6a4713b0c84d51540f3398d7f3,Arch-libasyncns-0.8-5.x86_64
+DYNLINK,/usr/lib/liblzma.so.5,5f0042e5eeb74a2cde80160b5dc469a5b1879123,Arch-xz-5.2.2-1.x86_64
+DYNLINK,/usr/lib/liblz4.so.1,044a31894df0f640c1280dc0bca6da5c287a6ff4,Arch-lz4-131-1.x86_64
+DYNLINK,/usr/lib/libgcrypt.so.20,a5961be4e46cbfc71417e24d7848cccb2d6eea29,Arch-libgcrypt-1.6.4-1.x86_64
+DYNLINK,/usr/lib/libgpg-error.so.0,4db3e11bf9cab86fdb60024be8d71fbc94ce0edf,Arch-libgpg-error-1.20-1.x86_64
+DYNLINK,/usr/lib/libFLAC.so.8,6f712553fc15a0ffd9517abe8568cfeb708561b9,Arch-flac-1.3.1-1.x86_64
+DYNLINK,/usr/lib/libnsl.so.1,f6fe7165c7ca1a143583ec61de4523048ee3b31b,Arch-glibc-2.22-3.x86_64
+SOCKET_UNIX_CONNECT,/tmp/.X11-unix/X0,/home/mupuf/install/lib/xorg-server/Xorg,'/home/mupuf/install/lib/xorg-server/Xorg' '-nolisten' 'tcp' ':0' 'vt1' '-auth' '/tmp/serverauth.9qXVoDcHr7',a3e0e9075ef5f32991e2b9890d60c6d102d5faa6,ssh://mperes@people.freedesktop.org/~mperes/xserver/master: ahead 270, behind 3-c99fb55
+SOCKET_UNIX_CONNECT,/run/user/1000/pulse/native,/usr/lib/systemd/systemd,'/usr/lib/systemd/systemd' '--user',68cbcef676aff69e9e72697c30e9f3af0012a663,Arch-systemd-227-1.x86_64
+IOCTL,/dev/sr0
+IOCTL,socket:[642525]
+IOCTL,socket:[640914]
+XORG_CLOSE,:0
+THROTTLING,8,0,0,0,0,0,0,0,0,0
+-- Env dump end --
 
 That's it for now, folks!
