@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# Requires pkcon from packagekit and the file /etc/lsb-release
+
+if [[ $# -ne 2 ]]
+then
+	echo "Usage: $0 SHA1_DB env_dump_file"
+fi
+
 SHA1_DB="$1"
 dump_file="$2"
 
