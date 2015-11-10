@@ -101,19 +101,22 @@ function add_dmidecode_info() {
 
 	# CPU information
 	cpu_count=$(echo "$dimdecode" | grep "Processor Information" | wc -l)
+	cpu_max=$((cpu_count - 1))
 	cpu_info=""
-	for i in $(seq 1 $cpu_count)
+	for i in $(seq 0 $cpu_max)
 	do
-		manufacturer=$(echo "$dimdecode" | grep -m $i -A 24 "Processor Information$" | grep "Manufacturer:" | tail -n 1 | cut -d ':' -f 2- | xargs)
-		id=$(echo "$dimdecode" | grep -m $i -A 24 "Processor Information$" | grep "ID:" | tail -n 1 | cut -d ':' -f 2- | xargs)
-		version=$(echo "$dimdecode" | grep -m $i -A 24 "Processor Information$" | grep "Version:" | tail -n 1 | cut -d ':' -f 2- | xargs)
-		max_speed=$(echo "$dimdecode" | grep -m $i -A 24 "Processor Information$" | grep "Max Speed:" | tail -n 1 | cut -d ':' -f 2- | xargs)
-		core_count=$(echo "$dimdecode" | grep -m $i -A 24 "Processor Information$" | grep "Core Count" | tail -n 1 | cut -d ':' -f 2- | xargs)
-		thread_count=$(echo "$dimdecode" | grep -m $i -A 24 "Processor Information$" | grep "Thread Count:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		e=$(($i + 1))
 
-		l1_handle=$(echo "$dimdecode" | grep -m $i -A 24 "Processor Information$" | grep "L1 Cache Handle:" | tail -n 1 | cut -d ':' -f 2- | xargs)
-		l2_handle=$(echo "$dimdecode" | grep -m $i -A 24 "Processor Information$" | grep "L2 Cache Handle:" | tail -n 1 | cut -d ':' -f 2- | xargs)
-		l3_handle=$(echo "$dimdecode" | grep -m $i -A 24 "Processor Information$" | grep "L3 Cache Handle:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		manufacturer=$(echo "$dimdecode" | grep -m $e -A 24 "Processor Information$" | grep "Manufacturer:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		id=$(echo "$dimdecode" | grep -m $e -A 24 "Processor Information$" | grep "ID:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		version=$(echo "$dimdecode" | grep -m $e -A 24 "Processor Information$" | grep "Version:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		max_speed=$(echo "$dimdecode" | grep -m $e -A 24 "Processor Information$" | grep "Max Speed:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		core_count=$(echo "$dimdecode" | grep -m $e -A 24 "Processor Information$" | grep "Core Count" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		thread_count=$(echo "$dimdecode" | grep -m $e -A 24 "Processor Information$" | grep "Thread Count:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+
+		l1_handle=$(echo "$dimdecode" | grep -m $e -A 24 "Processor Information$" | grep "L1 Cache Handle:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		l2_handle=$(echo "$dimdecode" | grep -m $e -A 24 "Processor Information$" | grep "L2 Cache Handle:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		l3_handle=$(echo "$dimdecode" | grep -m $e -A 24 "Processor Information$" | grep "L3 Cache Handle:" | tail -n 1 | cut -d ':' -f 2- | xargs)
 
 		l1_size=$(echo "$dimdecode" | grep -A 15 "Handle $l1_handle" | grep "Installed Size:" | tail -n 1 | cut -d ':' -f 2- | xargs)
 		l2_size=$(echo "$dimdecode" | grep -A 15 "Handle $l2_handle" | grep "Installed Size:" | tail -n 1 | cut -d ':' -f 2- | xargs)
@@ -124,15 +127,18 @@ function add_dmidecode_info() {
 
 	# RAM information
 	stick_count=$(echo "$dimdecode" | grep "Memory Device$" | wc -l)
+	stick_max=$((stick_count - 1))
 	ram_info=""
-	for i in $(seq 1 $stick_count)
+	for i in $(seq 0 $stick_max)
 	do
-		manufacturer=$(echo "$dimdecode" | grep -m $i -A 21 "Memory Device$" | grep "Manufacturer:" | tail -n 1 | cut -d ':' -f 2- | xargs)
-		part_number=$(echo "$dimdecode" | grep -m $i -A 21 "Memory Device$" | grep "Part Number:" | tail -n 1 | cut -d ':' -f 2- | xargs)
-		serial=$(echo "$dimdecode" | grep -m $i -A 21 "Memory Device$" | grep "Serial Number:" | tail -n 1 | cut -d ':' -f 2- | xargs)
-		type=$(echo "$dimdecode" | grep -m $i -A 21 "Memory Device$" | grep "Type:" | tail -n 1 | cut -d ':' -f 2- | xargs)
-		size=$(echo "$dimdecode" | grep -m $i -A 21 "Memory Device$" | grep "Size:" | tail -n 1 | cut -d ':' -f 2- | xargs)
-		clock=$(echo "$dimdecode" | grep -m $i -A 21 "Memory Device$" | grep "Configured Clock Speed:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		e=$(($i + 1))
+
+		manufacturer=$(echo "$dimdecode" | grep -m $e -A 21 "Memory Device$" | grep "Manufacturer:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		part_number=$(echo "$dimdecode" | grep -m $e -A 21 "Memory Device$" | grep "Part Number:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		serial=$(echo "$dimdecode" | grep -m $e -A 21 "Memory Device$" | grep "Serial Number:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		type=$(echo "$dimdecode" | grep -m $e -A 21 "Memory Device$" | grep "Type:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		size=$(echo "$dimdecode" | grep -m $e -A 21 "Memory Device$" | grep "Size:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		clock=$(echo "$dimdecode" | grep -m $e -A 21 "Memory Device$" | grep "Configured Clock Speed:" | tail -n 1 | cut -d ':' -f 2- | xargs)
 
 		ram_info=$(echo "${ram_info}RAM_STICK,$i,$type,$manufacturer,$part_number,$serial,$size,$clock\n")
 	done
