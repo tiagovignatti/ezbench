@@ -122,7 +122,15 @@ function add_dmidecode_info() {
 		l2_size=$(echo "$dimdecode" | grep -A 15 "Handle $l2_handle" | grep "Installed Size:" | tail -n 1 | cut -d ':' -f 2- | xargs)
 		l3_size=$(echo "$dimdecode" | grep -A 15 "Handle $l3_handle" | grep "Installed Size:" | tail -n 1 | cut -d ':' -f 2- | xargs)
 
-		cpu_info=$(echo "${cpu_info}PROCESSOR,$i,$manufacturer,$id,$version,$core_count,$thread_count,$l1_size,$l2_size,$l3_size,$max_speed\n")
+		if [ "$msr_loaded" -eq 1 ] && [[ "$manufacturer" == "Intel" ]]
+		then
+			# See table 35-2 of the IA-32
+			virt_enabled=$((($(sudo -n rdmsr -p $i 0x3A) & 0x4) != 0))
+		else
+			virt_enabled="-1"
+		fi
+
+		cpu_info=$(echo "${cpu_info}PROCESSOR,$i,$manufacturer,$id,$version,$core_count,$thread_count,$l1_size,$l2_size,$l3_size,$max_speed,$virt_enabled\n")
 	done
 
 	# RAM information
@@ -145,6 +153,10 @@ function add_dmidecode_info() {
 
 	sed -i "s\`^EXE,\`${mobo_info}${bios_info}${cpu_info}${ram_info}EXE,\`g" $dump_file
 }
+
+# Try to load the MSR module to query MSRs
+sudo -n modprobe msr
+msr_loaded=$(test -z "$(grep ^msr /proc/modules)" ; echo $?)
 
 resolve_SHA1 "$SHA1_DB" "$dump_file"
 add_dmidecode_info "$dump_file"
