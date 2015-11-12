@@ -60,12 +60,6 @@ eglSwapBuffers(EGLDisplay display, EGLSurface surface)
 }
 #endif
 
-static pthread_mutex_t dumped_contexts_mp = PTHREAD_MUTEX_INITIALIZER;
-size_t dumped_glxcontexts_count = 0;
-GLXContext *dumped_glxcontexts;
-size_t dumped_eglcontexts_count = 0;
-EGLContext *dumped_eglcontexts;
-
 static void
 dump_gl_info()
 {
@@ -83,9 +77,13 @@ dump_gl_info()
 Bool
 glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext ctx)
 {
+	static pthread_mutex_t dumped_contexts_mp = PTHREAD_MUTEX_INITIALIZER;
+	static size_t dumped_glxcontexts_count = 0;
+	static GLXContext *dumped_glxcontexts;
+
 	static Bool (*orig_glXMakeCurrent)(Display *, GLXDrawable, GLXContext);
 	Bool ret = False;
-	int i;
+	int entry_count, i;
 
 	pthread_mutex_lock(&dumped_contexts_mp);
 
@@ -106,8 +104,9 @@ glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext ctx)
 	 * informations. Allocate 10 contexts at a time to avoid copying every
 	 * time.
 	 */
+	entry_count = (((dumped_glxcontexts_count + 1) / 10) + 1) * 10;
 	dumped_glxcontexts = realloc(dumped_glxcontexts,
-				     (((dumped_glxcontexts_count + 1) / 10) + 1) * 10);
+				     entry_count * sizeof(GLXContext));
 	dumped_glxcontexts[dumped_glxcontexts_count] = ctx;
 	dumped_glxcontexts_count++;
 
@@ -129,11 +128,14 @@ EGLBoolean
 eglMakeCurrent(EGLDisplay display, EGLSurface draw, EGLSurface read,
 	       EGLContext context)
 {
+	static pthread_mutex_t dumped_contexts_mp = PTHREAD_MUTEX_INITIALIZER;
+	static size_t dumped_eglcontexts_count = 0;
+	static EGLContext *dumped_eglcontexts;
 	static EGLBoolean (*orig_eglMakeCurrent)(Display *, EGLSurface,
 						 EGLSurface, EGLContext);
 	EGLBoolean ret = False;
 	EGLenum api;
-	int i;
+	int entry_count, i;
 
 	pthread_mutex_lock(&dumped_contexts_mp);
 
@@ -154,8 +156,9 @@ eglMakeCurrent(EGLDisplay display, EGLSurface draw, EGLSurface read,
 	 * informations. Allocate 10 contexts at a time to avoid copying every
 	 * time.
 	 */
+	entry_count = (((dumped_eglcontexts_count + 1) / 10) + 1) * 10;
 	dumped_eglcontexts = realloc(dumped_eglcontexts,
-				     (((dumped_eglcontexts_count + 1) / 10) + 1) * 10);
+				     entry_count * sizeof(EGLContext));
 	dumped_eglcontexts[dumped_eglcontexts_count] = context;
 	dumped_eglcontexts_count++;
 
