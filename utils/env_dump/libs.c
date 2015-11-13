@@ -48,14 +48,48 @@ struct shared_object {
 void *handle_libcrypto = NULL;
 unsigned char *(*SHA1_local)(const unsigned char *d, size_t n, unsigned char *md);
 
+
+struct fll_data {
+	const char *name;
+	size_t len_name;
+	char *ret;
+};
+
+static int
+find_Linked_library_callback(struct dl_phdr_info *info, size_t size, void *data)
+{
+	struct fll_data *p = (struct fll_data *) data;
+	size_t len = strlen(info->dlpi_name);
+	size_t offset = len - p->len_name;
+
+	if (len < p->len_name)
+		return 0;
+
+	if (strcmp(info->dlpi_name + offset, p->name) == 0) {
+		p->ret = strdup(info->dlpi_name);
+		return 1;
+	}
+
+	return 0;
+}
+
+static char *
+find_Linked_library(const char *name)
+{
+	struct fll_data data = {name, strlen(name), NULL};
+
+	dl_iterate_phdr(find_Linked_library_callback, &data);
+
+	return data.ret;
+}
+
 static int
 libcrypto_resolve_symbols()
 {
-	static void *(*orig_dlopen)(const char *, int);
+	void *(*orig_dlopen)(const char *, int);
 
 	if (handle_libcrypto == NULL) {
-		if (orig_dlopen == NULL)
-			orig_dlopen = dlsym(RTLD_NEXT, "dlopen");
+		orig_dlopen = _env_dump_resolve_symbol_by_name("dlopen");
 
 		/* Open a local version of the libcrypto */
 		handle_libcrypto = orig_dlopen("libcrypto.so",
@@ -178,11 +212,10 @@ _dlopen_check_result(void *handle, const char *filename, int flag)
 void *
 dlopen(const char *filename, int flags)
 {
-	static void *(*orig_dlopen)(const char *, int);
+	void *(*orig_dlopen)(const char *, int);
 	void *handle = NULL;
 
-	if (orig_dlopen == NULL)
-		orig_dlopen = dlsym(RTLD_NEXT, "dlopen");
+	orig_dlopen = _env_dump_resolve_symbol_by_name("dlopen");
 
 	handle = orig_dlopen(filename, flags);
 	_dlopen_check_result(handle, filename, flags);
@@ -191,13 +224,12 @@ dlopen(const char *filename, int flags)
 }
 
 void *
-dlmopen (Lmid_t lmid, const char *filename, int flags)
+dlmopen(Lmid_t lmid, const char *filename, int flags)
 {
-	static void *(*orig_dlmopen)(Lmid_t, const char *, int);
+	void *(*orig_dlmopen)(Lmid_t, const char *, int);
 	void *handle;
 
-	if (orig_dlmopen == NULL)
-		orig_dlmopen = dlsym(RTLD_NEXT, "dlmopen");
+	orig_dlmopen = _env_dump_resolve_symbol_by_name("dlmopen");
 
 	handle = orig_dlmopen(lmid, filename, flags);
 	_dlopen_check_result(handle, filename, flags);
@@ -205,11 +237,174 @@ dlmopen (Lmid_t lmid, const char *filename, int flags)
 	return handle;
 }
 
+static pthread_mutex_t symbols_mp = PTHREAD_MUTEX_INITIALIZER;
+size_t symbols_count = 0;
+size_t symbols_len = 0;
+struct symbol_t {
+	const char *name;
+	void *ptr;
+} *symbols;
+
+const char *symbol_key_str[SYMB_END] = {
+	"ioctl",
+	"glXSwapBuffers",
+	"eglSwapBuffers",
+	"glXMakeCurrent",
+	"eglMakeCurrent",
+};
+
+extern void *_dl_sym(void *, const char *, void *);
+void *
+_env_dump_resolve_symbol_by_name(const char *symbol)
+{
+	void *ret = NULL;
+	int i;
+
+	pthread_mutex_lock(&symbols_mp);
+
+	/* first check in our internal DB */
+	for (i = 0; i < symbols_count; i++) {
+		if (symbols[i].name && strcmp(symbols[i].name, symbol) == 0) {
+			ret = symbols[i].ptr;
+			break;
+		}
+	}
+
+	pthread_mutex_unlock(&symbols_mp);
+
+	/* Then try to see if there is another version somewhere else */
+	if (ret == NULL)
+		ret = _dl_sym(RTLD_NEXT, symbol, _env_dump_resolve_symbol_by_name);
+
+	return ret;
+}
+
+void *
+_env_dump_resolve_symbol_by_id(enum symbol_key_t symbol)
+{
+	void *ret = NULL;
+
+	pthread_mutex_lock(&symbols_mp);
+	if (symbol < SYMB_END && symbols_len > symbol && symbols[symbol].name)
+		ret = symbols[symbol].ptr;
+	pthread_mutex_unlock(&symbols_mp);
+
+	/* Then try to see if there is another version somewhere else */
+	if (ret == NULL) {
+		ret = _dl_sym(RTLD_NEXT, symbol_key_str[symbol], _env_dump_resolve_symbol_by_name);
+		_env_dump_replace_symbol(symbol_key_str[symbol], ret);
+	}
+
+	return ret;
+}
+
+void
+_env_dump_replace_symbol(const char *symbol, void *ptr)
+{
+	int size, offset = -1, i;
+
+	pthread_mutex_lock(&symbols_mp);
+
+	/* first check if the symbol is known */
+	for (i = 0; i < SYMB_END; i++) {
+		if (strcmp(symbol_key_str[i], symbol) == 0) {
+			offset = i;
+			goto write_offset;
+		}
+	}
+
+	/* check if the symbol is already in the list */
+	for (i = SYMB_END; i < symbols_count; i++) {
+		if (strcmp(symbols[i].name, symbol) == 0) {
+			offset = i;
+			goto write_offset;
+		}
+	}
+
+	/* we need to add the symbol, compute its offset */
+	offset = (symbols_count < SYMB_END) ? SYMB_END : symbols_count;
+
+write_offset:
+	/* make sure we have enough space allocated */
+	if (offset >= symbols_len) {
+		void *prev = symbols;
+		size_t start, len;
+		int bs = 100;
+
+		if (symbols_len == 0)
+			size = SYMB_END + bs;
+		else
+			size = symbols_len + bs;
+
+		symbols = realloc(symbols, size * sizeof(struct symbol_t));
+		symbols_len = size;
+
+		if (!prev) {
+			start = 0;
+			len = size;
+		} else {
+			start = size - bs;
+			len = bs;
+		}
+
+		memset(symbols + start, '\0', len * sizeof(struct symbol_t));
+
+	}
+
+	/* if we are not merely updating an entry */
+	if (!symbols[offset].name)
+		symbols[offset].name = strdup(symbol);
+	symbols[offset].ptr = ptr;
+
+	/* increase the symbol count after adding an entry */
+	if (offset >= symbols_count)
+		symbols_count = offset + 1;
+
+	pthread_mutex_unlock(&symbols_mp);
+}
+
+/* check which symbols the program looks up */
+void *
+dlsym(void *handle, const char *symbol)
+{
+	static void *(*orig_dlsym)(void *, const char *);
+	static void *handle_env_dump;
+	void *orig_ptr, *ptr;
+
+	if (orig_dlsym == NULL)
+		orig_dlsym = _dl_sym(RTLD_NEXT, "dlsym", dlsym);
+
+	if (handle_env_dump == NULL ) {
+		void *(*orig_dlopen)(const char *, int);
+		char *fullpath = find_Linked_library("env_dump.so");
+		orig_dlopen = _dl_sym(RTLD_NEXT, "dlopen", dlsym);
+		handle_env_dump = orig_dlopen(fullpath, RTLD_LAZY);
+		free(fullpath);
+	}
+
+	/* try to resolve the symbol to an internal one first to avoid issues
+	 * with dlerror().
+	 */
+	ptr = orig_dlsym(handle_env_dump, symbol);
+
+	/* resolve the symbol as expected by the client */
+	orig_ptr = orig_dlsym(handle, symbol);
+	if (!orig_ptr)
+		return orig_ptr;
+
+	/* add the symbol to our DB */
+	_env_dump_replace_symbol(symbol, orig_ptr);
+
+	if (ptr)
+		return ptr;
+	else
+		return orig_ptr;
+}
+
 /*int dlclose(void *handle)
 {
-	static int(*orig_dlclose)(void *);
-	if (orig_dlclose == NULL)
-		orig_dlclose = dlsym(RTLD_NEXT, "dlclose");
+	int(*orig_dlclose)(void *);
+	orig_dlclose = _env_dump_resolve_symbol_by_name("dlclose");
 
 	return orig_dlclose(handle);
 }*/
@@ -217,7 +412,7 @@ dlmopen (Lmid_t lmid, const char *filename, int flags)
 void
 _env_dump_libs_init()
 {
-	/* Show what we are currently linking with */
+	/* Show what we are currently linking against */
 	dl_iterate_phdr(ldd_callback, NULL);
 }
 
@@ -233,6 +428,12 @@ _env_dump_libs_fini()
 	shared_object_count = 0;
 	free(found_so_list);
 	pthread_mutex_unlock(&found_so_list_mp);
+
+	/* free the symbols */
+	pthread_mutex_lock(&symbols_mp);
+	symbols_count = 0;
+	free(symbols);
+	pthread_mutex_unlock(&symbols_mp);
 
 	if (handle_libcrypto)
 		dlclose(handle_libcrypto);

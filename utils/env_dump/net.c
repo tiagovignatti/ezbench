@@ -37,13 +37,12 @@
 int
 connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
 {
-	static int(*orig_connect)(int, const struct sockaddr *, socklen_t);
+	int(*orig_connect)(int, const struct sockaddr *, socklen_t);
 	struct sockaddr_un *addr_unix;
 	socklen_t len;
 	int ret;
 
-	if (orig_connect == NULL)
-		orig_connect = dlsym(RTLD_NEXT, "connect");
+	orig_connect = _env_dump_resolve_symbol_by_name("connect");
 
 	ret = orig_connect(sockfd, addr, addrlen);
 	if (!ret && addr->sa_family == AF_UNIX) {

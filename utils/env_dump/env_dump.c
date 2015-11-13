@@ -45,7 +45,7 @@ static void fini();
  */
 void _exit(int status)
 {
-	void (*const orig__exit)(int) = dlsym(RTLD_NEXT, "_exit");
+	void (*const orig__exit)(int) = _env_dump_resolve_symbol_by_name("_exit");
 	fini();
 	orig__exit(status);
 }

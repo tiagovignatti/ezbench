@@ -84,7 +84,7 @@ get_path_from_fd(int fd, char *buf, size_t bufsiz)
 int
 ioctl(int fd, unsigned long int request, ...)
 {
-	static int (*orig_ioctl)(int, unsigned long int, ...);
+	int (*orig_ioctl)(int, unsigned long int, ...);
 	void *arg;
 	va_list ap;
 
@@ -94,8 +94,7 @@ ioctl(int fd, unsigned long int request, ...)
 	/* If it is the first time we see an ioctl on this fd */
 	pthread_mutex_lock(&fd_mp);
 
-	if (orig_ioctl == NULL)
-		orig_ioctl = dlsym(RTLD_NEXT,"ioctl");
+	orig_ioctl = _env_dump_resolve_symbol_by_id(SYMB_IOCTL);
 
 	if (!bit_read(fd)) {
 		char path[101];
@@ -112,9 +111,9 @@ ioctl(int fd, unsigned long int request, ...)
 int
 close(int fd)
 {
-	static int (*orig_close)(int);
-	if (orig_close == NULL)
-		orig_close = dlsym(RTLD_NEXT, "close");
+	int (*orig_close)(int);
+
+	orig_close = _env_dump_resolve_symbol_by_name("close");
 
 	pthread_mutex_lock(&fd_mp);
 	bit_write(fd, 0);

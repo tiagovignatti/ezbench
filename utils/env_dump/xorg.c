@@ -46,24 +46,34 @@ _env_dump_xlib_compositor(Display *dpy, int screen)
 	char *result = NULL;
 	int format;
 
-	wmCheckAtom = XInternAtom(dpy, "_NET_SUPPORTING_WM_CHECK", True);
-	wmName = XInternAtom(dpy, "_NET_WM_NAME", True);
-	stringType = XInternAtom(dpy, "UTF8_STRING", True);
+	/* Retrieve the pointers to x-related functions */
+	Atom (*orig_xinternatom)(Display *, char *, Bool);
+	int (*orig_xgetwindowproperty)(Display *, Window, Atom, long, long, Bool,
+				       Atom, Atom *, int *, unsigned long *,
+				       unsigned long *, unsigned char **);
+	int (*orig_xfree)(void *);
+	orig_xinternatom = _env_dump_resolve_symbol_by_name("XInternAtom");
+	orig_xgetwindowproperty = _env_dump_resolve_symbol_by_name("XGetWindowProperty");
+	orig_xfree = _env_dump_resolve_symbol_by_name("XFree");
+
+	wmCheckAtom = orig_xinternatom(dpy, "_NET_SUPPORTING_WM_CHECK", True);
+	wmName = orig_xinternatom(dpy, "_NET_WM_NAME", True);
+	stringType = orig_xinternatom(dpy, "UTF8_STRING", True);
 
 	if (wmCheckAtom == None || wmName == None || stringType == None)
 		return strdup("UNKOWN");
 
 	root = RootWindow(dpy, screen);
-	if (!(XGetWindowProperty(dpy, root, wmCheckAtom, 0, 1024, False,
+	if (!(orig_xgetwindowproperty(dpy, root, wmCheckAtom, 0, 1024, False,
 		XA_WINDOW, &typeRet, &format, &nitems, &after,
 		(unsigned char **) &wm_window)))
 	{
-		if (!(XGetWindowProperty(dpy, *wm_window, wmName, 0, 1024,
+		if (!(orig_xgetwindowproperty(dpy, *wm_window, wmName, 0, 1024,
 			False, stringType, &typeRet, &format, &nitems, &after,
 			(unsigned char **) &name)))
 		{
 			result = strdup((char *)name);
-			XFree(name);
+			orig_xfree(name);
 		}
 	}
 
@@ -73,13 +83,11 @@ _env_dump_xlib_compositor(Display *dpy, int screen)
 Display *
 XOpenDisplay(const char *display_name)
 {
-	static Display *(*orig_xopendisplay)(const char *);
+	Display *(*orig_xopendisplay)(const char *);
 	Display *dpy;
 	int i;
 
-	if (orig_xopendisplay == NULL)
-		orig_xopendisplay = dlsym(RTLD_NEXT, "XOpenDisplay");
-
+	orig_xopendisplay = _env_dump_resolve_symbol_by_name("XOpenDisplay");
 	dpy = orig_xopendisplay(display_name);
 	if (dpy) {
 		fprintf(env_file, "XORG_SESSION_OPENED,%s\n", display_name);
@@ -100,11 +108,10 @@ XOpenDisplay(const char *display_name)
 int
 XCloseDisplay(Display *display)
 {
-	static int (*orig_xclosedisplay)(Display *);
+	int (*orig_xclosedisplay)(Display *);
 	int ret;
 
-	if (orig_xclosedisplay == NULL)
-		orig_xclosedisplay = dlsym(RTLD_NEXT, "XCloseDisplay");
+	orig_xclosedisplay = _env_dump_resolve_symbol_by_name("XCloseDisplay");
 
 	fprintf(env_file, "XORG_CLOSE,%s\n", DisplayString(display));
 	ret = orig_xclosedisplay(display);
@@ -118,14 +125,13 @@ XCreateSimpleWindow(Display* display, Window parent, int x, int y,
 		    unsigned int border_width, unsigned long border,
 		    unsigned long background)
 {
-	static int (*orig_xcreatesimplewindow)(Display *, Window, int, int,
+	int (*orig_xcreatesimplewindow)(Display *, Window, int, int,
 					       unsigned int, unsigned int,
 					       unsigned int, unsigned long,
 					       unsigned long);
 	Window ret;
 
-	if (orig_xcreatesimplewindow == NULL)
-		orig_xcreatesimplewindow = dlsym(RTLD_NEXT, "XCreateSimpleWindow");
+	orig_xcreatesimplewindow = _env_dump_resolve_symbol_by_name("XCreateSimpleWindow");
 
 	ret = orig_xcreatesimplewindow(display, parent, x, y, width, height,
 				       border_width, border, background);
@@ -142,15 +148,14 @@ XCreateWindow(Display* display, Window parent, int x, int y,
 	      Visual* visual, unsigned long valuemask,
 	      XSetWindowAttributes *attributes)
 {
-	static int (*orig_xcreatewindow)(Display *, Window, int, int,
+	int (*orig_xcreatewindow)(Display *, Window, int, int,
 					 unsigned int, unsigned int,
 					 unsigned int, int, unsigned int,
 					 Visual *, unsigned long,
 					 XSetWindowAttributes *);
 	Window ret;
 
-	if (orig_xcreatewindow == NULL)
-		orig_xcreatewindow = dlsym(RTLD_NEXT, "XCreateWindow");
+	orig_xcreatewindow = _env_dump_resolve_symbol_by_name("XCreateWindow");
 
 	ret = orig_xcreatewindow(display, parent, x, y, width, height,
 				 border_width, depth, class, visual,
@@ -165,12 +170,11 @@ int
 XMoveResizeWindow(Display *display, Window w, int x, int y, unsigned int width,
 		  unsigned int height)
 {
-	static int (*orig_xmoveresizewindow)(Display *, Window, int, int,
+	int (*orig_xmoveresizewindow)(Display *, Window, int, int,
 					     unsigned int, unsigned int);
 	int ret;
 
-	if (orig_xmoveresizewindow == NULL)
-		orig_xmoveresizewindow = dlsym(RTLD_NEXT, "XMoveResizeWindow");
+	orig_xmoveresizewindow = _env_dump_resolve_symbol_by_name("XMoveResizeWindow");
 
 	ret = orig_xmoveresizewindow(display, w, x, y, width, height);
 	fprintf(env_file, "XORG_WINDOW_RESIZE,%lu,%i,%i\n", w, width, height);
@@ -181,12 +185,11 @@ XMoveResizeWindow(Display *display, Window w, int x, int y, unsigned int width,
 int
 XResizeWindow(Display *display, Window w, unsigned int width, unsigned int height)
 {
-	static int (*orig_xresizewindow)(Display *, Window, unsigned int,
+	int (*orig_xresizewindow)(Display *, Window, unsigned int,
 					 unsigned int);
 	int ret;
 
-	if (orig_xresizewindow == NULL)
-		orig_xresizewindow = dlsym(RTLD_NEXT, "XResizeWindow");
+	orig_xresizewindow = _env_dump_resolve_symbol_by_name("XResizeWindow");
 
 	ret = orig_xresizewindow(display, w, width, height);
 	fprintf(env_file, "XORG_WINDOW_RESIZE,%lu,%i,%i\n", w, width, height);

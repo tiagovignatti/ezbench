@@ -110,11 +110,10 @@ dump_env_vars()
 int
 putenv(char *string)
 {
-	static int(*orig_putenv)(char *);
+	int(*orig_putenv)(char *);
 	int ret;
 
-	if (orig_putenv == NULL)
-		orig_putenv = dlsym(RTLD_NEXT, "putenv");
+	orig_putenv = _env_dump_resolve_symbol_by_name("putenv");
 
 	ret = orig_putenv(string);
 	if (!ret)
@@ -126,11 +125,10 @@ putenv(char *string)
 int
 setenv(const char *name, const char *value, int replace)
 {
-	static int(*orig_setenv)(const char *, const char *, int);
+	int(*orig_setenv)(const char *, const char *, int);
 	int ret;
 
-	if (orig_setenv == NULL)
-		orig_setenv = dlsym(RTLD_NEXT, "setenv");
+	orig_setenv = _env_dump_resolve_symbol_by_name("setenv");
 
 	ret = orig_setenv(name, value, replace);
 	if (!ret)
@@ -142,11 +140,10 @@ setenv(const char *name, const char *value, int replace)
 int
 unsetenv(const char *name)
 {
-	static int(*orig_unsetenv)(const char *);
+	int(*orig_unsetenv)(const char *);
 	int ret;
 
-	if (orig_unsetenv == NULL)
-		orig_unsetenv = dlsym(RTLD_NEXT, "unsetenv");
+	orig_unsetenv = _env_dump_resolve_symbol_by_name("unsetenv");
 
 	ret = orig_unsetenv(name);
 	if (!ret)
@@ -158,11 +155,10 @@ unsetenv(const char *name)
 int
 clearenv(void)
 {
-	static int(*orig_clearenv)(void);
+	int(*orig_clearenv)(void);
 	int ret;
 
-	if (orig_clearenv == NULL)
-		orig_clearenv = dlsym(RTLD_NEXT, "clearenv");
+	orig_clearenv = _env_dump_resolve_symbol_by_name("clearenv");
 
 	ret = orig_clearenv();
 	if (!ret)

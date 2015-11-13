@@ -24,6 +24,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef _ENV_DUMP_H_
+#define _ENV_DUMP_H_
+
+#include <GL/glx.h>
 #include <stdio.h>
 
 extern FILE *env_file;
@@ -54,3 +58,19 @@ void _env_dump_posix_env_fini();
 
 void _env_dump_compute_and_print_sha1(const char *full_path);
 void env_var_dump_binary_information(int pid);
+
+/* internal pointer-tracking mechanism */
+enum symbol_key_t {
+	SYMB_IOCTL = 0,
+	SYMB_GLXSWAPBUFFERS,
+	SYMB_EGLSWAPBUFFERS,
+	SYMB_GLXMAKECURRENT,
+	SYMB_EGLMAKECURRENT,
+	SYMB_END
+}; /* do not forget to duplicate the name in libs.c's symbol_key_str */
+
+void *_env_dump_resolve_symbol_by_name(const char *symbol);
+void *_env_dump_resolve_symbol_by_id(enum symbol_key_t symbol);
+void _env_dump_replace_symbol(const char *symbol, void *ptr);
+
+#endif

@@ -28,37 +28,115 @@
 
 #include "env_dump.h"
 
+#include <sys/time.h>
 #include <pthread.h>
 #include <EGL/egl.h>
+#include <stdlib.h>
 #include <GL/glx.h>
 #include <stdlib.h>
+#include <string.h>
 #include <link.h>
 
-#if 0
+static uint64_t print_period_ms = -1;
+
+static uint64_t
+get_time_us()
+{
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	return tv.tv_sec * 1e6 + tv.tv_usec;
+}
+
+static float
+fps_clamp(uint64_t frametime_us)
+{
+	if (frametime_us > 0)
+		return 1.0e6 / ((float)frametime_us);
+	else
+		return 0.0;
+}
+
+void
+swap_buffer_stopwatch()
+{
+	static uint64_t first_frame, last_update, last_print;
+	static uint64_t min = -1, max, count;
+	uint64_t cur_time = get_time_us();
+
+	if (first_frame == 0)
+		first_frame = cur_time;
+
+	if (last_update > 0) {
+		uint64_t diff = cur_time - last_update;
+		count++;
+		if (diff > max)
+			max = diff;
+		if (diff < min)
+			min = diff;
+	}
+
+	if (last_print == 0)
+		last_print = cur_time;
+	else if (cur_time - last_print > print_period_ms * 1000) {
+		uint64_t diff = cur_time - last_print;
+		uint64_t frametime_avg = diff / count;
+		fprintf(stderr, "FPS,%lu,%.3f,%.3f,%.3f\n", cur_time - first_frame,
+			fps_clamp(frametime_avg), fps_clamp(max),
+			fps_clamp(min));
+
+		/* reset the state */
+		last_print = cur_time;
+		count = 0;
+		min = -1;
+		max = 0;
+	}
+
+	last_update = cur_time;
+}
+
 void
 glXSwapBuffers(Display *dpy, GLXDrawable drawable)
 {
-	static void (*orig_glXSwapBuffers)(Display *, GLXDrawable);
-	if (orig_glXSwapBuffers == NULL)
-		orig_glXSwapBuffers = dlsym(RTLD_NEXT, "glXSwapBuffers");
+	void (*orig_glXSwapBuffers)(Display *, GLXDrawable);
 
-	fprintf(stderr, "glXSwapBuffers'\n");
+	orig_glXSwapBuffers = _env_dump_resolve_symbol_by_id(SYMB_GLXSWAPBUFFERS);
+
+	if (print_period_ms != -1)
+		swap_buffer_stopwatch();
 
 	orig_glXSwapBuffers(dpy, drawable);
-}*/
+}
 
-EGLBoolean *
+__GLXextFuncPtr glXGetProcAddressARB(const GLubyte *procName)
+{
+	__GLXextFuncPtr (*orig_glXGetProcAddressARB)(const GLubyte *);
+	void *ret;
+
+	orig_glXGetProcAddressARB = _env_dump_resolve_symbol_by_name("glXGetProcAddressARB");
+
+	/* First look up the right symbol */
+	ret = orig_glXGetProcAddressARB(procName);
+	if (ret) {
+		_env_dump_replace_symbol(procName, ret);
+		if (strcmp("glXSwapBuffers", (const char *)procName) == 0)
+			return (__GLXextFuncPtr) glXSwapBuffers;
+	}
+
+	return ret;
+}
+
+EGLBoolean
 eglSwapBuffers(EGLDisplay display, EGLSurface surface)
 {
-	static EGLBoolean (*orig_eglSwapBuffers)(EGLDisplay, EGLSurface);
-	if (orig_eglSwapBuffers == NULL)
-		orig_eglSwapBuffers = dlsym(RTLD_NEXT, "eglSwapBuffers");
+	EGLBoolean (*orig_eglSwapBuffers)(EGLDisplay, EGLSurface);
 
-	//fprintf(stderr, "eglSwapBuffers'\n");
+	orig_eglSwapBuffers = _env_dump_resolve_symbol_by_id(SYMB_EGLSWAPBUFFERS);
+
+	if (print_period_ms != -1)
+		swap_buffer_stopwatch();
 
 	return orig_eglSwapBuffers(display, surface);
 }
-#endif
 
 static void
 dump_gl_info()
@@ -81,15 +159,13 @@ glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext ctx)
 	static size_t dumped_glxcontexts_count = 0;
 	static GLXContext *dumped_glxcontexts;
 
-	static Bool (*orig_glXMakeCurrent)(Display *, GLXDrawable, GLXContext);
+	Bool (*orig_glXMakeCurrent)(Display *, GLXDrawable, GLXContext);
 	Bool ret = False;
 	int entry_count, i;
 
 	pthread_mutex_lock(&dumped_contexts_mp);
 
-	if (orig_glXMakeCurrent == NULL)
-		orig_glXMakeCurrent = dlsym(RTLD_NEXT, "glXMakeCurrent");
-
+	orig_glXMakeCurrent = _env_dump_resolve_symbol_by_id(SYMB_GLXMAKECURRENT);
 	ret = orig_glXMakeCurrent(dpy, drawable, ctx);
 	if (ret == False)
 		goto done;
@@ -131,16 +207,15 @@ eglMakeCurrent(EGLDisplay display, EGLSurface draw, EGLSurface read,
 	static pthread_mutex_t dumped_contexts_mp = PTHREAD_MUTEX_INITIALIZER;
 	static size_t dumped_eglcontexts_count = 0;
 	static EGLContext *dumped_eglcontexts;
-	static EGLBoolean (*orig_eglMakeCurrent)(Display *, EGLSurface,
-						 EGLSurface, EGLContext);
+	EGLBoolean (*orig_eglMakeCurrent)(Display *, EGLSurface,
+					  EGLSurface, EGLContext);
 	EGLBoolean ret = False;
 	EGLenum api;
 	int entry_count, i;
 
 	pthread_mutex_lock(&dumped_contexts_mp);
 
-	if (orig_eglMakeCurrent == NULL)
-		orig_eglMakeCurrent = dlsym(RTLD_NEXT, "eglMakeCurrent");
+	orig_eglMakeCurrent = _env_dump_resolve_symbol_by_id(SYMB_EGLMAKECURRENT);
 
 	ret = orig_eglMakeCurrent(display, draw, read, context);
 	if (ret == False)
@@ -182,7 +257,9 @@ done:
 void
 _env_dump_gl_init()
 {
-
+	const char *frametime_period = getenv("ENV_DUMP_FPS_PRINT_PERIOD_MS");
+	if (frametime_period != NULL)
+		print_period_ms = strtoll(frametime_period, NULL, 10);
 }
 
 void
