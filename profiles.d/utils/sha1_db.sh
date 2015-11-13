@@ -26,7 +26,16 @@ function make_install_sha1_dump() {
         tracked_branch=$(git branch -vv --no-color | grep --color=never "^*" | cut -d '[' -f 2 | cut -d ']' -f 1)
         remote=$(echo "$tracked_branch" | cut -d '/' -f 1)
         branch=$(echo "$tracked_branch" | cut -d '/' -f 2)
-        fetch_url=$(git remote show -n origin | grep "Fetch URL:" | cut -d ':' -f 2- | cut -d ' ' -f 2-)
+
+         # handle local branches by just using the local
+        if [ -n "$(echo "$branch" | grep " ")" ]
+        then
+            # Local branch detected
+            fetch_url="$USER@$(hostname):$(pwd)"
+            branch=$(git rev-parse --abbrev-ref HEAD)
+        else
+            fetch_url=$(git remote show -n origin | grep "Fetch URL:" | cut -d ':' -f 2- | cut -d ' ' -f 2-)
+        fi
         sha1=$(sha1sum $binary | cut -d ' ' -f 1)
 
         echo "SHA1_DB: $binary ($sha1) added with git SHA1 $git_sha1"
