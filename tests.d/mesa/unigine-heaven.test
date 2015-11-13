@@ -1,17 +1,10 @@
-# WARNING: Requires libframetime: https://github.com/clbr/libframetime
-
 test -e "$UNIGINE_HEAVEN_FOLDER/bin/heaven_x64" || return 1
-test -e "$LIBFRAMETIME64_SO" || return 1
 
 unigine:heaven_run() {
     cd "$UNIGINE_HEAVEN_FOLDER" # Set this variable in test_options.sh
 
-    rm -f /tmp/frametime.log
-
-    LIBFRAMETIME_FILE=/tmp/frametime.log LD_PRELOAD=$LIBFRAMETIME64_SO \
     LD_LIBRARY_PATH=bin:bin/x64:$LD_LIBRARY_PATH \
-    run_bench 0 \
-    ./bin/heaven_x64 \
+    run_bench 0 ./bin/heaven_x64 \
         -video_app opengl \
         -data_path ../ \
         -sound_app null \
@@ -19,10 +12,7 @@ unigine:heaven_run() {
         -system_script heaven/unigine.cpp \
         -extern_define PHORONIX,RELEASE \
         -video_mode -1 \
-        -video_fullscreen 1 >/dev/null
-
-        # read back the result, skip the first frames since they are the loading frames
-        cat /tmp/frametime.log | awk '{if (++n > 100) {print 1000000/$2}}'
+        -video_fullscreen 1 | grep FPS: | xargs | cut -d ' ' -f 2
 }
 
 unigine:heaven:cpu_run() { INTEL_NO_HW=1 unigine:heaven_run; }

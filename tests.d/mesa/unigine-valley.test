@@ -1,14 +1,8 @@
-# WARNING: Requires libframetime: https://github.com/clbr/libframetime
-
 test -e "$UNIGINE_VALLEY_FOLDER/bin/valley_x64" || return 1
-test -e "$LIBFRAMETIME64_SO" || return 1
 
 unigine:valley_run() {
     cd "$UNIGINE_VALLEY_FOLDER" # Set this variable in test_options.sh
 
-    rm -f /tmp/frametime.log
-
-    LIBFRAMETIME_FILE=/tmp/frametime.log LD_PRELOAD=$LIBFRAMETIME64_SO \
     LD_LIBRARY_PATH=bin:bin/x64:$LD_LIBRARY_PATH \
     MESA_EXTENSION_OVERRIDE="-GL_ARB_sample_shading -GL_ARB_blend_func_extended" \
     MESA_GL_VERSION_OVERRIDE="3.2" \
@@ -20,10 +14,7 @@ unigine:valley_run() {
         -system_script valley/unigine.cpp \
         -extern_define PHORONIX,RELEASE \
         -video_mode -1 \
-        -video_fullscreen 1 >/dev/null
-
-    # read back the result, skip the first frames since they are the loading frames
-    cat /tmp/frametime.log | awk '{if (++n > 100) {print 1000000/$2}}'
+        -video_fullscreen 1 | grep FPS: | xargs | cut -d ' ' -f 2
 }
 
 unigine:valley:cpu_run() { INTEL_NO_HW=1 unigine:valley_run; }
