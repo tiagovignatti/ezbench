@@ -7,7 +7,7 @@ __ue4__() {
     benchmark=$(find "$benchmark" -type f -executable ! -name CrashReportClient)
 
     ENV_DUMP_FPS_PRINT_PERIOD_MS=1000 \
-        run_bench 15 \"$benchmark\" -NOSOUND -BENCHMARK $2 2>&1 | grep "FPS," | cut -d ',' -f 3
+        run_bench 60 \"$benchmark\" -NOSOUND -BENCHMARK $2 2>&1 | grep "FPS," | cut -d ',' -f 3
 }
 
 # 1 argument: $benchmark
