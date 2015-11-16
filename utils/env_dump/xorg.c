@@ -68,9 +68,9 @@ _env_dump_xlib_compositor(Display *dpy, int screen)
 		XA_WINDOW, &typeRet, &format, &nitems, &after,
 		(unsigned char **) &wm_window)))
 	{
-		if (!(orig_xgetwindowproperty(dpy, *wm_window, wmName, 0, 1024,
-			False, stringType, &typeRet, &format, &nitems, &after,
-			(unsigned char **) &name)))
+		if (wm_window && !(orig_xgetwindowproperty(dpy, *wm_window,
+			wmName, 0, 1024, False, stringType, &typeRet, &format,
+			&nitems, &after, (unsigned char **) &name)))
 		{
 			result = strdup((char *)name);
 			orig_xfree(name);
