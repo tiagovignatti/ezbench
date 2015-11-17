@@ -704,9 +704,9 @@ def genPerformanceReport(log_folder, wantFrametime = False, silentMode = False):
                 benchmark.unit_str = result.unit_str
 
             # Look for the runs
-            runsFiles = glob.glob("^{benchFile}#[0-9]+".format(benchFile=benchFile));
+            runsFiles = [f for f in os.listdir() if re.search(r'^{benchFile}#[0-9]+$'.format(benchFile=benchFile), f)]
             for runFile in runsFiles:
-                data = readCsv(runFile, wantFrametime)
+                data, unit = readCsv(runFile, wantFrametime)
                 if len(data) > 0:
                     result.runs.append(data)
 
