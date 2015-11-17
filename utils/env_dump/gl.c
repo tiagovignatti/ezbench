@@ -110,19 +110,25 @@ glXSwapBuffers(Display *dpy, GLXDrawable drawable)
 __GLXextFuncPtr glXGetProcAddressARB(const GLubyte *procName)
 {
 	__GLXextFuncPtr (*orig_glXGetProcAddressARB)(const GLubyte *);
-	void *ret;
+	void *external, *internal;
 
 	orig_glXGetProcAddressARB = _env_dump_resolve_symbol_by_name("glXGetProcAddressARB");
 
 	/* First look up the right symbol */
-	ret = orig_glXGetProcAddressARB(procName);
-	if (ret) {
-		_env_dump_replace_symbol(procName, ret);
-		if (strcmp("glXSwapBuffers", (const char *)procName) == 0)
-			return (__GLXextFuncPtr) glXSwapBuffers;
-	}
+	external = orig_glXGetProcAddressARB(procName);
+	if (!external)
+		return external;
 
-	return ret;
+	/* check if we have an internal version of it! */
+	internal = _env_dump_resolve_local_symbol_by_name((const char*)procName);
+	if (!internal)
+		return external;
+
+	/* add the right symbol to the list of known symbols */
+	_env_dump_replace_symbol((const char*)procName, external);
+
+	/* return the internal address */
+	return internal;
 }
 
 EGLBoolean
@@ -192,7 +198,6 @@ glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext ctx)
 		glXGetClientString(dpy, GLX_VERSION),
 		glXGetClientString(dpy, GLX_EXTENSIONS));
 
-	/* dump the gl-related informations */
 	dump_gl_info();
 
 done:

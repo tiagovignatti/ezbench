@@ -363,13 +363,11 @@ write_offset:
 	pthread_mutex_unlock(&symbols_mp);
 }
 
-/* check which symbols the program looks up */
 void *
-dlsym(void *handle, const char *symbol)
+_env_dump_resolve_local_symbol_by_name(const char *symbol)
 {
 	static void *(*orig_dlsym)(void *, const char *);
 	static void *handle_env_dump;
-	void *orig_ptr, *ptr;
 
 	if (orig_dlsym == NULL)
 		orig_dlsym = _dl_sym(RTLD_NEXT, "dlsym", dlsym);
@@ -382,10 +380,23 @@ dlsym(void *handle, const char *symbol)
 		free(fullpath);
 	}
 
+	return orig_dlsym(handle_env_dump, symbol);
+}
+
+/* check which symbols the program looks up */
+void *
+dlsym(void *handle, const char *symbol)
+{
+	static void *(*orig_dlsym)(void *, const char *);
+	void *orig_ptr, *ptr;
+
+	if (orig_dlsym == NULL)
+		orig_dlsym = _dl_sym(RTLD_NEXT, "dlsym", dlsym);
+
 	/* try to resolve the symbol to an internal one first to avoid issues
 	 * with dlerror().
 	 */
-	ptr = orig_dlsym(handle_env_dump, symbol);
+	ptr = _env_dump_resolve_local_symbol_by_name(symbol);
 
 	/* resolve the symbol as expected by the client */
 	orig_ptr = orig_dlsym(handle, symbol);
