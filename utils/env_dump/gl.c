@@ -147,15 +147,36 @@ eglSwapBuffers(EGLDisplay display, EGLSurface surface)
 static void
 dump_gl_info()
 {
-	GLint num_extension;
+	void (*orig_glGetIntegerv)(GLenum, GLint *);
+	const GLubyte* (*orig_glGetString)(GLenum);
+	const GLubyte* (*orig_glGetStringi)(GLenum, GLuint);
+	GLint num_extension = 0, major, minor, i;
+
+	/* get the pointers to the functions we will use */
+	orig_glGetIntegerv = _env_dump_resolve_symbol_by_name("glGetIntegerv");
+	orig_glGetString = _env_dump_resolve_symbol_by_name("glGetString");
+	orig_glGetStringi = _env_dump_resolve_symbol_by_name("glGetStringi");
+
+	/* exit early if the context is invalid */
+	if (orig_glGetString(GL_VENDOR) == NULL)
+		return;
 
 	/* give informations about the context */
-	glGetIntegerv(GL_NUM_EXTENSIONS, &num_extension);
-	fprintf(env_file, "GL_NEWCONTEXTUSED,%s,%s,%s,%s,%i,%s\n",
-		glGetString(GL_VENDOR), glGetString(GL_RENDERER),
-		glGetString(GL_VERSION),
-		glGetString(GL_SHADING_LANGUAGE_VERSION), num_extension,
-		glGetString(GL_EXTENSIONS));
+	orig_glGetIntegerv(GL_NUM_EXTENSIONS, &num_extension);
+	orig_glGetIntegerv(GL_MAJOR_VERSION, &major);
+	orig_glGetIntegerv(GL_MINOR_VERSION, &minor);
+
+	fprintf(env_file, "GL_NEWCONTEXTUSED,%s,%s,%i.%i,%s,%s,%i,",
+		orig_glGetString(GL_VENDOR), orig_glGetString(GL_RENDERER),
+		major,minor, glGetString(GL_VERSION),
+		orig_glGetString(GL_SHADING_LANGUAGE_VERSION), num_extension);
+
+	if (major > 3 || (major == 3 && minor >= 1)) {
+		for (i = 0; i < num_extension && orig_glGetStringi; i++)
+			fprintf(env_file, "%s ", orig_glGetStringi(GL_EXTENSIONS, i));
+		fprintf(env_file, "\n");
+	} else
+		fprintf(env_file, "%s\n", glGetString(GL_EXTENSIONS));
 }
 
 Bool
@@ -166,12 +187,15 @@ glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext ctx)
 	static GLXContext *dumped_glxcontexts;
 
 	Bool (*orig_glXMakeCurrent)(Display *, GLXDrawable, GLXContext);
+	const char *(*orig_glXGetClientString)(Display *, int);
 	Bool ret = False;
 	int entry_count, i;
 
 	pthread_mutex_lock(&dumped_contexts_mp);
 
 	orig_glXMakeCurrent = _env_dump_resolve_symbol_by_id(SYMB_GLXMAKECURRENT);
+	orig_glXGetClientString = _env_dump_resolve_symbol_by_name("glXGetClientString");
+
 	ret = orig_glXMakeCurrent(dpy, drawable, ctx);
 	if (ret == False)
 		goto done;
@@ -193,10 +217,12 @@ glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext ctx)
 	dumped_glxcontexts_count++;
 
 	/* dump the egl-related informations */
-	fprintf(env_file, "GLX_NEWCONTEXTUSED,%s,%s,%s\n",
-		glXGetClientString(dpy, GLX_VENDOR),
-		glXGetClientString(dpy, GLX_VERSION),
-		glXGetClientString(dpy, GLX_EXTENSIONS));
+	if (orig_glXGetClientString) {
+		fprintf(env_file, "GLX_NEWCONTEXTUSED,%s,%s,%s\n",
+			orig_glXGetClientString(dpy, GLX_VENDOR),
+			orig_glXGetClientString(dpy, GLX_VERSION),
+			orig_glXGetClientString(dpy, GLX_EXTENSIONS));
+	}
 
 	dump_gl_info();
 
@@ -214,6 +240,7 @@ eglMakeCurrent(EGLDisplay display, EGLSurface draw, EGLSurface read,
 	static EGLContext *dumped_eglcontexts;
 	EGLBoolean (*orig_eglMakeCurrent)(Display *, EGLSurface,
 					  EGLSurface, EGLContext);
+	char const *(*orig_eglQueryString)(EGLDisplay, EGLint);
 	EGLBoolean ret = False;
 	EGLenum api;
 	int entry_count, i;
@@ -221,6 +248,7 @@ eglMakeCurrent(EGLDisplay display, EGLSurface draw, EGLSurface read,
 	pthread_mutex_lock(&dumped_contexts_mp);
 
 	orig_eglMakeCurrent = _env_dump_resolve_symbol_by_id(SYMB_EGLMAKECURRENT);
+	orig_eglQueryString = _env_dump_resolve_symbol_by_name("eglQueryString");
 
 	ret = orig_eglMakeCurrent(display, draw, read, context);
 	if (ret == False)
@@ -244,10 +272,10 @@ eglMakeCurrent(EGLDisplay display, EGLSurface draw, EGLSurface read,
 
 	/* dump the egl-related informations */
 	fprintf(env_file, "EGL_NEWCONTEXTUSED,%s,%s,%s,%s\n",
-		eglQueryString(display, EGL_VENDOR),
-		eglQueryString(display, EGL_VERSION),
-		eglQueryString(display, EGL_CLIENT_APIS),
-		eglQueryString(display, EGL_EXTENSIONS));
+		orig_eglQueryString(display, EGL_VENDOR),
+		orig_eglQueryString(display, EGL_VERSION),
+		orig_eglQueryString(display, EGL_CLIENT_APIS),
+		orig_eglQueryString(display, EGL_EXTENSIONS));
 
 	/* dump the gl-related informations */
 	api = eglQueryAPI();
