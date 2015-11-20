@@ -2,6 +2,8 @@ CC = gcc
 CFLAGS = -c -Wall -fPIC -g
 LDFLAGS = -shared -g
 
+SHA1_DB ?= ../../SHA1_DB
+
 SOURCES = env_dump.c cpu.c fd.c gl.c libs.c linux.c net.c posix_env.c xorg.c
 OBJECTS = $(SOURCES:.c=.o)
 
@@ -21,6 +23,11 @@ all: $(SOURCES) $(EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECTS)
 	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
+	@if [ -e "${SHA1_DB}/sha1_db" ]; then \
+		${SHA1_DB}/sha1_db ${SHA1_DB} - add_git . $(EXECUTABLE); \
+	else \
+		echo "Warning: SHA1_DB is not defined, cannot add the version to the SHA1_DB."; \
+	fi
 
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
