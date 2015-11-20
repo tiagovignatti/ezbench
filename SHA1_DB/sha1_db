@@ -26,9 +26,14 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 function usage() {
-    echo "Usage: $0 SHA1_DB sha1 (add version path upstream | read_attr (version | path | upstream | \$attr) | write_attr \$attr \$value)"
+    echo "Usage: $0 SHA1_DB sha1 (add version path upstream | add_git git_repo binary_path | read_attr (version | path | upstream | \$attr) | write_attr \$attr \$value)"
 
     exit $1
+}
+
+function exit_error() {
+    echo $@
+    exit 1
 }
 
 function db_get_file() {
@@ -46,7 +51,12 @@ function db_add() {
     upstream=$5
 
     sha1_db_file=$(db_get_file $sha1_db $sha1)
-    [ -f $sha1_db_file ] && exit 0 # the sha1 already exists
+    if [ -f $sha1_db_file ]
+    then
+        orig_path=$(db_read $sha1_db $sha1 path)
+        echo "SHA1_DB: The SHA1 $sha1 already exists (orig=$orig_path vs new=$path), exit..."
+        exit 0
+    fi
 
     mkdir -p $(dirname $sha1_db_file) 2> /dev/null
 
@@ -55,7 +65,43 @@ function db_add() {
     echo "path=$path" >> $sha1_db_file
     echo "upstream=$upstream" >> $sha1_db_file
 
+    echo "SHA1_DB: '$path' ($sha1) add under version=$version, upstream=$upstream"
+
     exit 0
+}
+
+function db_add_git() {
+    sha1_db=$1
+    sha1=$2
+    git_repo=$3
+    binary=$4
+
+    if [ "$sha1" == "-" ]
+    then
+        sha1=$(sha1sum $binary | cut -d ' ' -f 1)
+    fi
+
+    pwd=$(pwd)
+    cd $git_repo 2> /dev/null || exit_error "Error: cannot open the folder '$git_repo'."
+    git status > /dev/null 2>&1 || exit_error "Error: the folder '$git_repo' is not a git repo."
+
+    git_sha1=$(git rev-parse --short HEAD)
+    tracked_branch=$(git branch -vv --no-color | grep --color=never "^*" | cut -d '[' -f 2 | cut -d ']' -f 1)
+    remote=$(echo "$tracked_branch" | cut -d '/' -f 1)
+    branch=$(echo "$tracked_branch" | cut -d '/' -f 2)
+
+    # handle local branches by just using the local
+    if [ -n "$(echo "$branch" | grep " ")" ]
+    then
+        # Local branch detected
+        fetch_url="$USER@$(hostname):$(pwd)"
+        branch=$(git rev-parse --abbrev-ref HEAD)
+    else
+        fetch_url=$(git remote show -n origin | grep "Fetch URL:" | cut -d ':' -f 2- | cut -d ' ' -f 2-)
+    fi
+    cd $pwd
+
+    db_add "$sha1_db" "$sha1" "$git_sha1" "$binary" "$fetch_url/$branch"
 }
 
 function db_read() {
@@ -114,6 +160,16 @@ case "$action" in
        upstream=$6
        db_add "$sha1_db" "$sha1" "$version" "$path" "$upstream"
        ;;
+
+    add_git)
+        if [[ $# -ne 5 ]]
+        then
+            usage 1
+        fi
+        git_repo=$4
+        binary=$5
+        db_add_git "$sha1_db" "$sha1" "$git_repo" "$binary"
+        ;;
     read_attr)
        attribute=$4
        db_read "$sha1_db" "$sha1" "$attribute"
