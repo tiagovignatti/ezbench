@@ -121,7 +121,10 @@ for c in range (0, len(report.commits)):
             gs = gridspec.GridSpec(2, 2, width_ratios=[4, 1])
             x = array(result.data)
             ax1 = plt.subplot(gs[0])
-            plt.title("Time series across all the runs")
+            unit_dir = "more is better"
+            if result.more_is_better:
+                unit_dir = "less is better"
+            plt.title("Time series across all the runs ({0})".format(unit_dir))
             plt.xlabel('Run #')
             plt.ylabel(result.unit_str)
 
@@ -145,7 +148,6 @@ for c in range (0, len(report.commits)):
             ax2.hist(x, 100, fc='gray', histtype='stepfilled', alpha=0.3, normed=True, label='histogram')
 
             ax3 = plt.subplot(gs[2])
-            plt.title("Time series of the runs")
             plt.xlabel('Sample #')
             plt.ylabel(result.unit_str)
 

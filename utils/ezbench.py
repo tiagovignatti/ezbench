@@ -555,6 +555,7 @@ def readCsv(filepath):
     with open(filepath, 'rt') as f:
         reader = csv.reader(f)
         unit = None
+        more_is_better = True
         try:
             for row in reader:
                 if row is None or len(row) == 0:
@@ -566,9 +567,10 @@ def readCsv(filepath):
                 if m2 is not None:
                     # groups: unit type, more|less qualifier, benchmark, commit_sha1
                     unit = m2.groups()[0]
+                    more_is_better = lower(m2.groups()[1]) == "more"
                 elif m1 is not None:
                     # groups: unit type, benchmark, commit_sha1
-                    unit = unit = m1.groups()[0]
+                    unit = m1.groups()[0]
 
                 # Read the actual data
                 if len(row) > 0 and not row[0].startswith("# "):
@@ -580,7 +582,7 @@ def readCsv(filepath):
             sys.stderr.write('file %s, line %d: %s\n' % (filepath, reader.line_num, e))
             return [], "none"
 
-    return data, unit
+    return data, unit, more_is_better
 
 def readCommitLabels():
     labels = dict()
@@ -678,7 +680,7 @@ def genPerformanceReport(log_folder, silentMode = False):
             result = BenchResult(commit, benchmark, benchFile)
 
             # Read the data and abort if there is no data
-            result.data, result.unit_str = readCsv(benchFile)
+            result.data, result.unit_str, result.more_is_better = readCsv(benchFile)
             if len(result.data) == 0:
                 continue
 
@@ -695,7 +697,7 @@ def genPerformanceReport(log_folder, silentMode = False):
             # Look for the runs
             runsFiles = [f for f in os.listdir() if re.search(r'^{benchFile}#[0-9]+$'.format(benchFile=benchFile), f)]
             for runFile in runsFiles:
-                data, unit = readCsv(runFile)
+                data, unit, more_is_better = readCsv(runFile)
                 if len(data) > 0:
                     result.runs.append(data)
 
