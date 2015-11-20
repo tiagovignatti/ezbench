@@ -567,7 +567,7 @@ def readCsv(filepath):
                 if m2 is not None:
                     # groups: unit type, more|less qualifier, benchmark, commit_sha1
                     unit = m2.groups()[0]
-                    more_is_better = lower(m2.groups()[1]) == "more"
+                    more_is_better = m2.groups()[1].lower() == "more"
                 elif m1 is not None:
                     # groups: unit type, benchmark, commit_sha1
                     unit = m1.groups()[0]
