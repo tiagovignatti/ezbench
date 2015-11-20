@@ -128,7 +128,7 @@ for c in range (0, len(report.commits)):
             if args.frametime:
                 plt.ylabel('Frametime (ms)')
             else:
-                plt.ylabel('FPS')
+                plt.ylabel(result.unit_str)
 
             YAvg = mean(x)
             boxYMin = YAvg * 0.99
@@ -140,12 +140,13 @@ for c in range (0, len(report.commits)):
             plt.legend()
 
             ax2 = plt.subplot(gs[1])
+            plt.title("Run histogram")
+            plt.ylabel("Occurrence count")
             if args.frametime:
                 plt.title("Frametime distribution (ms)")
-                plt.ylabel('Frametime (ms)')
+                plt.xlabel('Frametime (ms)')
             else:
-                plt.title("FPS distribution")
-                plt.ylabel('FPS')
+                plt.xlabel(result.unit_str)
             x_grid = linspace(amin(x) * 0.95, amax(x) * 1.05, 1000)
             for bandwidth in [0.2]:
                 ax2.plot(x_grid, kde_scipy(x, x_grid, bandwidth=bandwidth),
@@ -154,17 +155,32 @@ for c in range (0, len(report.commits)):
 
             ax3 = plt.subplot(gs[2])
             plt.title("Time series of the runs")
+            plt.xlabel('Sample #')
             if args.frametime:
-                plt.xlabel('Frametime sample')
                 plt.ylabel('Frametime (ms)')
             else:
-                plt.xlabel('FPS sample')
-                plt.ylabel('FPS')
+                plt.ylabel(result.unit_str)
 
+            samples_total = []
             for i in range(0, len(result.runs)):
+                samples_total.extend(result.runs[i])
                 ax3.plot(result.runs[i], label="{0}".format(i))
                 if len(result.runs) <= 40:
                     plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=20, mode="expand", borderaxespad=0.)
+
+            ax4 = plt.subplot(gs[3])
+            plt.title("Sample Histogram")
+            plt.ylabel("Occurrence count")
+            if args.frametime:
+                plt.title("Frametime distribution (ms)")
+                plt.xlabel('Frametime (ms)')
+            else:
+                plt.xlabel(result.unit_str)
+            x_grid = linspace(amin(samples_total) * 0.95, amax(samples_total) * 1.05, 1000)
+            for bandwidth in [0.2]:
+                ax4.plot(x_grid, kde_scipy(samples_total, x_grid, bandwidth=bandwidth),
+                        label='bw={0}'.format(bandwidth), linewidth=1, alpha=1)
+            ax4.hist(samples_total, 100, fc='gray', histtype='stepfilled', alpha=0.3, normed=True, label='histogram')
 
             plt.tight_layout()
             plt.savefig(img_src_name, bbox_inches='tight')
