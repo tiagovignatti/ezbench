@@ -52,8 +52,6 @@ def genFileNameSparkline(report_folder, data_raw_file):
 
 # parse the options
 parser = argparse.ArgumentParser()
-parser.add_argument("--frametime", help="Use frame times instead of FPS",
-                    action="store_true")
 parser.add_argument("--fast", help="Fast mode, do not regenerate images if they exist",
                     action="store_true")
 parser.add_argument("--title", help="Set the title for the report")
@@ -61,7 +59,7 @@ parser.add_argument("log_folder")
 args = parser.parse_args()
 
 # Parse the report
-report = genPerformanceReport(args.log_folder, args.frametime)
+report = genPerformanceReport(args.log_folder)
 
 # Generate the labels for the commits
 commitsLabels = []
@@ -125,10 +123,7 @@ for c in range (0, len(report.commits)):
             ax1 = plt.subplot(gs[0])
             plt.title("Time series across all the runs")
             plt.xlabel('Run #')
-            if args.frametime:
-                plt.ylabel('Frametime (ms)')
-            else:
-                plt.ylabel(result.unit_str)
+            plt.ylabel(result.unit_str)
 
             YAvg = mean(x)
             boxYMin = YAvg * 0.99
@@ -142,11 +137,7 @@ for c in range (0, len(report.commits)):
             ax2 = plt.subplot(gs[1])
             plt.title("Run histogram")
             plt.ylabel("Occurrence count")
-            if args.frametime:
-                plt.title("Frametime distribution (ms)")
-                plt.xlabel('Frametime (ms)')
-            else:
-                plt.xlabel(result.unit_str)
+            plt.xlabel(result.unit_str)
             x_grid = linspace(amin(x) * 0.95, amax(x) * 1.05, 1000)
             for bandwidth in [0.2]:
                 ax2.plot(x_grid, kde_scipy(x, x_grid, bandwidth=bandwidth),
@@ -156,10 +147,7 @@ for c in range (0, len(report.commits)):
             ax3 = plt.subplot(gs[2])
             plt.title("Time series of the runs")
             plt.xlabel('Sample #')
-            if args.frametime:
-                plt.ylabel('Frametime (ms)')
-            else:
-                plt.ylabel(result.unit_str)
+            plt.ylabel(result.unit_str)
 
             samples_total = []
             for i in range(0, len(result.runs)):
@@ -171,11 +159,7 @@ for c in range (0, len(report.commits)):
             ax4 = plt.subplot(gs[3])
             plt.title("Sample Histogram")
             plt.ylabel("Occurrence count")
-            if args.frametime:
-                plt.title("Frametime distribution (ms)")
-                plt.xlabel('Frametime (ms)')
-            else:
-                plt.xlabel(result.unit_str)
+            plt.xlabel(result.unit_str)
             x_grid = linspace(amin(samples_total) * 0.95, amax(samples_total) * 1.05, 1000)
             for bandwidth in [0.2]:
                 ax4.plot(x_grid, kde_scipy(samples_total, x_grid, bandwidth=bandwidth),
@@ -436,10 +420,7 @@ html_template="""
 
 def computeDiffAndColor(prev, new):
     if prev > 0:
-        if args.frametime:
-            diff = (prev * 100.0 / new) - 100.0
-        else:
-            diff = (new * 100.0 / prev) - 100.0
+        diff = (new * 100.0 / prev) - 100.0
     else:
         diff = 0
 

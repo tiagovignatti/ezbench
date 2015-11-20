@@ -546,7 +546,7 @@ class Report:
         self.commits = commits
         self.notes = notes
 
-def readCsv(filepath, wantFrametime = False):
+def readCsv(filepath):
     data = []
 
     h1 = re.compile('^# (.*) of \'(.*)\' using commit (.*)$')
@@ -580,12 +580,6 @@ def readCsv(filepath, wantFrametime = False):
             sys.stderr.write('file %s, line %d: %s\n' % (filepath, reader.line_num, e))
             return [], "none"
 
-    # Convert to frametime if needed
-    if wantFrametime and unit == "FPS":
-        unit = "ms"
-        for i in range(0, len(data)):
-            data[i] = 1000.0 / data[i]
-
     return data, unit
 
 def readCommitLabels():
@@ -614,7 +608,7 @@ def readNotes():
     except:
         return []
 
-def genPerformanceReport(log_folder, wantFrametime = False, silentMode = False):
+def genPerformanceReport(log_folder, silentMode = False):
     benchmarks = []
     commits = []
     labels = dict()
@@ -680,16 +674,11 @@ def genPerformanceReport(log_folder, wantFrametime = False, silentMode = False):
                 benchmark = Benchmark(bench_name)
                 benchmarks.append(benchmark)
 
-            if wantFrametime:
-                unit = "ms"
-            else:
-                unit = "FPS"
-
             # Create the result object
             result = BenchResult(commit, benchmark, benchFile)
 
             # Read the data and abort if there is no data
-            result.data, result.unit_str = readCsv(benchFile, wantFrametime)
+            result.data, result.unit_str = readCsv(benchFile)
             if len(result.data) == 0:
                 continue
 
@@ -699,14 +688,14 @@ def genPerformanceReport(log_folder, wantFrametime = False, silentMode = False):
                     msg = "The unit used by the benchmark '{bench}' changed from '{unit_old}' to '{unit_new}' in commit {commit}"
                     print(msg.format(bench=bench_name,
                                      unit_old=benchmark.unit_str,
-                                     unit_new=unit,
+                                     unit_new=result.unit_str,
                                      commit=commit.sha1))
                 benchmark.unit_str = result.unit_str
 
             # Look for the runs
             runsFiles = [f for f in os.listdir() if re.search(r'^{benchFile}#[0-9]+$'.format(benchFile=benchFile), f)]
             for runFile in runsFiles:
-                data, unit = readCsv(runFile, wantFrametime)
+                data, unit = readCsv(runFile)
                 if len(data) > 0:
                     result.runs.append(data)
 
@@ -728,7 +717,7 @@ def genPerformanceReport(log_folder, wantFrametime = False, silentMode = False):
 
     return Report(benchmarks, commits, notes)
 
-def getPerformanceResultsCommitBenchmark(commit, benchmark, wantFrametime = False):
+def getPerformanceResultsCommitBenchmark(commit, benchmark):
     for result in commit.results:
         if result.benchmark != benchmark:
             continue
@@ -737,7 +726,7 @@ def getPerformanceResultsCommitBenchmark(commit, benchmark, wantFrametime = Fals
 
     return array([])
 
-def getResultsBenchmarkDiffs(commits, benchmark, wantFrametime = False):
+def getResultsBenchmarkDiffs(commits, benchmark):
     results = []
 
     # Compute a report per application
@@ -751,10 +740,7 @@ def getResultsBenchmarkDiffs(commits, benchmark, wantFrametime = False):
 
             value = array(result.data).mean()
             if origValue > -1:
-                if wantFrametime:
-                    diff = (origValue * 100.0 / value) - 100.0
-                else:
-                    diff = (value * 100.0 / origValue) - 100.0
+                diff = (value * 100.0 / origValue) - 100.0
             else:
                 origValue = value
                 diff = 0
@@ -768,7 +754,7 @@ def getResultsBenchmarkDiffs(commits, benchmark, wantFrametime = False):
 
     return results
 
-def getResultsGeomDiffs(commits, wantFrametime = False):
+def getResultsGeomDiffs(commits):
     results = []
 
     # Compute a report per application
@@ -777,10 +763,7 @@ def getResultsGeomDiffs(commits, wantFrametime = False):
     for commit in commits:
         value = commit.geom_mean()
         if origValue > -1:
-            if wantFrametime:
-                diff = (origValue * 100.0 / value) - 100.0
-            else:
-                diff = (value * 100.0 / origValue) - 100.0
+            diff = (value * 100.0 / origValue) - 100.0
         else:
             origValue = value
             diff = 0

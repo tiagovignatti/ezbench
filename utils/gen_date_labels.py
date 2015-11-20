@@ -51,7 +51,7 @@ if os.path.exists(labels_path):
     print()
 f = open(labels_path, 'w')
 
-report = genPerformanceReport(args.log_folder, False)
+report = genPerformanceReport(args.log_folder)
 
 # Move to the repo's list
 os.chdir(args.path)
