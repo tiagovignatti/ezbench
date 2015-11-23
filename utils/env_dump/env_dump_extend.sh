@@ -154,11 +154,29 @@ function add_dmidecode_info() {
 	sed -i "s\`^EXE,\`${mobo_info}${bios_info}${cpu_info}${ram_info}EXE,\`g" $dump_file
 }
 
+function resolve_gpu_name() {
+	dump_file="$1"
+
+	drm_gpu=$(grep -e '^DRM,' $dump_file)
+	vendor=$(echo $drm_gpu | cut -d ',' -f 8)
+	devid=$(echo $drm_gpu | cut -d ',' -f 9)
+
+	case "$vendor" in
+		0x8086)
+			chipset=$(scripts/intel-gpu-search-pci-id.sh "$devid")
+			name=$(echo "$chipset" | cut -d , -f 2 | xargs)
+			general_name=$(echo "$chipset" | cut -d , -f 3 | xargs | rev | cut -d \) -f 2- | rev)
+			sed -i "s\`$drm_gpu\`$drm_gpu,$name,$general_name\`g" $dump_file
+			;;
+	esac
+}
+
 # Try to load the MSR module to query MSRs
 sudo -n modprobe msr
 msr_loaded=$(test -z "$(grep ^msr /proc/modules)" ; echo $?)
 
 resolve_SHA1 "$SHA1_DB" "$dump_file"
 add_dmidecode_info "$dump_file"
+resolve_gpu_name "$dump_file"
 
 exit 0
