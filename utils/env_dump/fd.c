@@ -102,8 +102,12 @@ ioctl(int fd, unsigned long int request, ...)
 		path[len] = '\0';
 		fprintf(env_file, "IOCTL,%s\n", path);
 		bit_write(fd, 1);
-	}
-	pthread_mutex_unlock(&fd_mp);
+
+		pthread_mutex_unlock(&fd_mp);
+
+		_env_dump_drm_dump_info(path, fd);
+	} else
+		pthread_mutex_unlock(&fd_mp);
 
 	return orig_ioctl(fd, request, arg);
 }

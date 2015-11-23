@@ -41,6 +41,8 @@ void _env_dump_libs_fini();
 void _env_dump_cpu_init();
 void _env_dump_cpu_fini();
 
+void _env_dump_drm_dump_info(const char *path, int fd);
+
 void _env_dump_fd_init();
 void _env_dump_fd_fini();
 
@@ -58,6 +60,8 @@ void _env_dump_posix_env_fini();
 
 void _env_dump_compute_and_print_sha1(const char *full_path);
 void env_var_dump_binary_information(int pid);
+
+char *_env_dump_read_file(const char *path, size_t len_max);
 
 /* internal pointer-tracking mechanism */
 enum symbol_key_t {

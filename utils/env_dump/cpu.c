@@ -37,8 +37,8 @@
 #include <sched.h>
 
 
-static char *
-read_file(const char *path, size_t len_max)
+char *
+_env_dump_read_file(const char *path, size_t len_max)
 {
 	size_t len;
 	char *buf;
@@ -74,12 +74,12 @@ dump_cpu_common()
 		snprintf(path, 255,
 			 "/sys/devices/system/cpu/cpu%i/cpufreq/scaling_min_freq",
 			 i);
-		min = read_file(path, 20);
+		min = _env_dump_read_file(path, 20);
 
 		snprintf(path, 255,
 			 "/sys/devices/system/cpu/cpu%i/cpufreq/scaling_max_freq",
 			 i);
-		max = read_file(path, 20);
+		max = _env_dump_read_file(path, 20);
 
 		fprintf(env_file, ",%s,%s", min, max);
 		free(min);
@@ -141,7 +141,7 @@ dump_throttling_common()
 	char *package, *path = malloc(255);
 	int i;
 
-	package = read_file("/sys/devices/system/cpu/cpu0/thermal_throttle/package_throttle_count", 20);
+	package = _env_dump_read_file("/sys/devices/system/cpu/cpu0/thermal_throttle/package_throttle_count", 20);
 
 	fprintf(env_file, "THROTTLING,%i,%s", get_nprocs_conf(), package);
 	for (i = 0; i < get_nprocs_conf(); i++) {
@@ -149,7 +149,7 @@ dump_throttling_common()
 		snprintf(path, 255,
 			 "/sys/devices/system/cpu/cpu%i/thermal_throttle/core_throttle_count",
 			 i);
-		core = read_file(path, 20);
+		core = _env_dump_read_file(path, 20);
 		fprintf(env_file, ",%s", core);
 		free(core);
 	}
@@ -169,11 +169,11 @@ dump_intel_pstate()
 		return;
 
 	/* read the different values */
-	num_pstates = read_file("/sys/devices/system/cpu/intel_pstate/num_pstates", 10);
-	turbo_pct = read_file("/sys/devices/system/cpu/intel_pstate/turbo_pct", 10);
-	min = read_file("/sys/devices/system/cpu/intel_pstate/min_perf_pct", 4);
-	max = read_file("/sys/devices/system/cpu/intel_pstate/max_perf_pct", 4);
-	turbo = read_file("/sys/devices/system/cpu/intel_pstate/no_turbo", 2);
+	num_pstates = _env_dump_read_file("/sys/devices/system/cpu/intel_pstate/num_pstates", 10);
+	turbo_pct = _env_dump_read_file("/sys/devices/system/cpu/intel_pstate/turbo_pct", 10);
+	min = _env_dump_read_file("/sys/devices/system/cpu/intel_pstate/min_perf_pct", 4);
+	max = _env_dump_read_file("/sys/devices/system/cpu/intel_pstate/max_perf_pct", 4);
+	turbo = _env_dump_read_file("/sys/devices/system/cpu/intel_pstate/no_turbo", 2);
 
 	fprintf(env_file, "INTEL_PSTATE,%s,%s,%s,%s,%s\n", num_pstates,
 		turbo_pct, turbo, min, max);

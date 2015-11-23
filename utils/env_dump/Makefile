@@ -4,7 +4,7 @@ LDFLAGS = -shared -g
 
 SHA1_DB ?= ../../SHA1_DB
 
-SOURCES = env_dump.c cpu.c fd.c gl.c libs.c linux.c net.c posix_env.c xorg.c
+SOURCES = env_dump.c cpu.c drm.c fd.c gl.c libs.c linux.c net.c posix_env.c xorg.c
 OBJECTS = $(SOURCES:.c=.o)
 
 # Name of executable target:
@@ -15,6 +15,9 @@ CFLAGS += `pkg-config --cflags libcrypto`
 
 # libxrandr
 CFLAGS += `pkg-config --cflags xrandr`
+
+# libxrandr
+CFLAGS += `pkg-config --cflags libdrm`
 
 # other libs
 LDFLAGS += -lpthread -ldl
