@@ -10,6 +10,8 @@ fi
 SHA1_DB="$1"
 dump_file="$2"
 
+root_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
 function get_binary_version() {
 	filename=$1
 	sha1=$2
@@ -163,7 +165,7 @@ function resolve_gpu_name() {
 
 	case "$vendor" in
 		0x8086)
-			chipset=$(scripts/intel-gpu-search-pci-id.sh "$devid")
+			chipset=$($root_dir/scripts/intel-gpu-search-pci-id.sh "$devid")
 			name=$(echo "$chipset" | cut -d , -f 2 | xargs)
 			general_name=$(echo "$chipset" | cut -d , -f 3 | xargs | rev | cut -d \) -f 2- | rev)
 			sed -i "s\`$drm_gpu\`$drm_gpu,$name,$general_name\`g" $dump_file
