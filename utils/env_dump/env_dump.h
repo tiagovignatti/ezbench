@@ -35,6 +35,8 @@ extern FILE *env_file;
 #define likely(x)       __builtin_expect(!!(x), 1)
 #define unlikely(x)     __builtin_expect(!!(x), 0)
 
+typedef void (*fd_callback)(int fd, void *user);
+
 void _env_dump_libs_init();
 void _env_dump_libs_fini();
 
@@ -45,6 +47,7 @@ void _env_dump_drm_dump_info(const char *path, int fd);
 
 void _env_dump_fd_init();
 void _env_dump_fd_fini();
+void _env_dump_close_callback(int fd, fd_callback cb, void *user);
 
 void _env_dump_gl_init();
 void _env_dump_gl_fini();

@@ -32,6 +32,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <stdarg.h>
+#include <stdlib.h>
 #include <dlfcn.h>
 #include <link.h>
 
@@ -41,6 +42,14 @@
  */
 static pthread_mutex_t fd_mp = PTHREAD_MUTEX_INITIALIZER;
 static unsigned long fds[64] = { 0 };
+
+/* get the possibility to call hooks when closing an fd */
+static struct fd_close_cb_t {
+	fd_callback cb;
+	int fd;
+	void *user;
+} *fd_close_cb;
+static size_t fd_close_cb_len;
 
 static inline int
 bit_read(int bit)
@@ -112,12 +121,67 @@ ioctl(int fd, unsigned long int request, ...)
 	return orig_ioctl(fd, request, arg);
 }
 
+void
+_env_dump_close_callback(int fd, fd_callback cb, void *user)
+{
+	int idx = -1, i;
+
+	pthread_mutex_lock(&fd_mp);
+	for (i = 0; i < fd_close_cb_len; i++) {
+		/* re-use a slot if available */
+		if (fd_close_cb[i].cb == NULL)
+			idx = i;
+	}
+
+	if (idx < 0) {
+		fd_close_cb = realloc(fd_close_cb, sizeof(struct fd_close_cb_t) * (fd_close_cb_len + 1));
+		/* XXX: just crash if we do not have enough RAM ... */
+		idx = fd_close_cb_len;
+		fd_close_cb_len++;
+	}
+
+	fd_close_cb[idx].fd = fd;
+	fd_close_cb[idx].cb = cb;
+	fd_close_cb[idx].user = user;
+
+	pthread_mutex_unlock(&fd_mp);
+}
+
+static void
+call_fd_close_callbacks(int fd)
+{
+	int i;
+
+	pthread_mutex_lock(&fd_mp);
+
+	/* call the callbacks */
+	for (i = 0; i < fd_close_cb_len; i++) {
+		/* re-use a slot if available */
+		if (fd < 0 || fd_close_cb[i].fd == fd) {
+			fd_callback cb = fd_close_cb[i].cb;
+			int cb_fd = fd_close_cb[i].fd;
+			void *cb_user = fd_close_cb[i].user;
+			fd_close_cb[i].fd = -1;
+			fd_close_cb[i].cb = NULL;
+			fd_close_cb[i].user = NULL;
+			pthread_mutex_unlock(&fd_mp);
+			cb(cb_fd, cb_user);
+			pthread_mutex_lock(&fd_mp);
+		}
+	}
+
+	pthread_mutex_unlock(&fd_mp);
+}
+
 int
 close(int fd)
 {
 	int (*orig_close)(int);
 
 	orig_close = _env_dump_resolve_symbol_by_name("close");
+
+	/* call the callbacks */
+	call_fd_close_callbacks(fd);
 
 	pthread_mutex_lock(&fd_mp);
 	bit_write(fd, 0);
@@ -135,5 +199,6 @@ _env_dump_fd_init()
 void
 _env_dump_fd_fini()
 {
-
+	/* call the callbacks */
+	call_fd_close_callbacks(-1);
 }
