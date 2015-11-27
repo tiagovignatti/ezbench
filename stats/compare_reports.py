@@ -145,10 +145,10 @@ html_template="""
                 % for commit in db["commits"]:
                     ['${commit}'\\
                         % for report in db["reports"]:
-                            % if db["commits"][commit][report] != None:
+                            % if report in db["commits"][commit]:
 , ${db["commits"][commit][report]["average"]}\\
                             % else:
-,
+, null\\
                             % endif
                         % endfor
 ],
@@ -184,7 +184,6 @@ html_template="""
                 google.visualization.events.addListener(chart, 'select', function () {
                     var sel = chart.getSelection();
                     // See https://developers.google.com/chart/interactive/docs/reference#visgetselection
-
                     if (sel.length > 0 && typeof sel[0].row === 'object') {
                         var col = sel[0].column;
 
@@ -238,7 +237,7 @@ html_template="""
                 });
             }
 
-            function drawDetails() {
+           function drawDetails() {
                 var dataTable = new google.visualization.DataTable();
                 dataTable.addColumn('string', 'Report');
                 dataTable.addColumn('number', 'Average');
@@ -252,45 +251,51 @@ html_template="""
                 if (currentCommit == "${commit}") {
                     dataTable.addRows([
                     % for report in db["reports"]:
-                        ["${report}"\\
-                        % if db["commits"][commit][report] != None:
-, ${db["commits"][commit][report]["average"]}, "<h3>${report} - ${benchmark}</h3><p>\\
-% for r in db["reports"]:
+                        % if report in db["commits"][commit]:
+                             ["${report}", ${db["commits"][commit][report]["average"]}, "<h3>${report} - ${benchmark}</h3><p>\\
+                             % for r in db["reports"]:
 <%
-diff = db["commits"][commit][r]["average"] / db["commits"][commit][report]["average"] * 100
-diff = float("{0:.2f}".format(diff))
-btag = btagend = ""
-if r == report:
-	btag="<b>"
-	btagend="</b>"
-%>\\
+                                     if not r in db["commits"][commit]:
+                                         continue
+                                     if db["commits"][commit][report]["average"] != 0:
+                                         diff = db["commits"][commit][r]["average"] / db["commits"][commit][report]["average"] * 100
+                                         diff = float("{0:.2f}".format(diff))
+                                     else:
+                                        diff = "ERR"
+                                     btag = btagend = ""
+                                     if r == report:
+                                         btag="<b>"
+                                         btagend="</b>"
+                                 %>\\
 ${btag}${r}: ${db["commits"][commit][r]["average"]} ${output_unit} (${diff}%)${btagend}<br/>\\
-% endfor
+                            % endfor
 </p>"\\
-                            % else:
-, ,
-                            % endif
-                        % for benchmark in db["benchmarks"]:
-                            % if db["commits"][commit][report][benchmark] != None:
-, ${db["commits"][commit][report][benchmark].average}\\
-                            % else:
-,
-                            % endif
-, "<h3>${report} - ${benchmark}</h3><p>\\
-% for r in db["reports"]:
+                            % for benchmark in db["benchmarks"]:
+                                % if benchmark in db["commits"][commit][report]:
+, ${db["commits"][commit][report][benchmark].average}, "<h3>${report} - ${benchmark}</h3><p>\\
+                                    % for r in db["reports"]:
 <%
-diff = db["commits"][commit][r][benchmark].average / db["commits"][commit][report][benchmark].average * 100
-diff = float("{0:.2f}".format(diff))
-btag = btagend = ""
-if r == report:
-	btag="<b>"
-	btagend="</b>"
-%>\\
+                                            if not r in db["commits"][commit] or benchmark not in db["commits"][commit][r]:
+                                                continue
+                                            if db["commits"][commit][report][benchmark].average != 0:
+                                                diff = db["commits"][commit][r][benchmark].average / db["commits"][commit][report][benchmark].average * 100
+                                                diff = float("{0:.2f}".format(diff))
+                                            else:
+                                                diff = "ERR"
+                                            btag = btagend = ""
+                                            if r == report:
+                                                btag="<b>"
+                                                btagend="</b>"
+                                        %>\\
 ${btag}${r}: ${db["commits"][commit][r][benchmark].average} ${output_unit} (${diff}%)${btagend}<br/>\\
-% endfor
+                                    % endfor
 </p>"\\
+                           % else:
+, null, "${benchmark}"\\
+                           % endif
                         % endfor
 ],
+                        % endif
                     % endfor
                     ]);
                 }
