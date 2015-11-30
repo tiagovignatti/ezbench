@@ -134,13 +134,43 @@ html_template="""
                 }
             }
 
+            function showColumnCombo(dataTable, chart, activColumns, series, col, show) {
+                seriesCol = Math.ceil((col - 1) / 2);
+                if (!show) {
+                    activColumns[col] = {
+                        label: dataTable.getColumnLabel(col),
+                        type: "number",
+                        calc: function () {
+                            return null;
+                        }
+                    };
+		//alert(dataTable.getColumnLabel(col) + " " + dataTable.getColumnType(col))
+                    series[seriesCol].color = '#CCCCCC';
+                }
+                else {
+                    activColumns[col] = col;
+                    series[seriesCol].color = null;
+                }
+            }
+
+            function showAllColumnsCombo(dataTable, chart, activColumns, series, show) {
+                for (var i = 1; i < dataTable.getNumberOfColumns(); i+=2) {
+                    showColumnCombo(dataTable, chart, activColumns, series, i, show)
+                }
+            }
+
+            function adjustChartSize(id_chart, reportsCount, benchmarkCount) {
+                var size = 75 + reportsCount * (25 + (benchmarkCount * 8));
+                id_chart.style.height = size + "px";
+                id_chart.style.width = "100%";
+            }
+
             function drawTrend() {
                 var dataTable = new google.visualization.DataTable();
                 dataTable.addColumn('string', 'Commit');
                 % for report in db["reports"]:
                 dataTable.addColumn('number', '${report}');
                 % endfor
-                //dataTable.addColumn({ type: "string", role: "tooltip", p: { html: true }});
                 dataTable.addRows([
                 % for commit in db["commits"]:
                     ['${commit}'\\
@@ -301,26 +331,86 @@ ${btag}${r}: ${db["commits"][commit][r][benchmark].average} ${output_unit} (${di
                 }
                 % endfor
 
-                // count the number of active rows and columns
-                var entries = dataTable.getNumberOfColumns() * dataTable.getNumberOfRows();
-                var size = (entries * 10);
-                if (size < 300)
-                    size = 300;
-                details_chart.style.height = size + "px";
-                details_chart.style.width = "100%";
+                // adjust the size of the chart to fit the data
+                adjustChartSize(details_chart, dataTable.getNumberOfRows(), Math.floor(dataTable.getNumberOfColumns() / 2));
+
+                var activColumns = [];
+                var series = {};
+                for (var i = 0; i < dataTable.getNumberOfColumns(); i++) {
+                    activColumns.push(i);
+                    if (i > 0) {
+                        series[i - 1] = {};
+                    }
+                }
+                series[0] = {type: 'line'};
+
 
                 var options = {
                     title : 'Performance of commit ' + currentCommit,
+                    legend: {textStyle: {fontSize: 12}},
                     tooltip: {trigger: 'focus', isHtml: true},
-                    vAxis: {title: 'Reports'},
-                    hAxis: {title: 'Average result (${output_unit})'},
+                    vAxis: {title: 'Reports', textStyle: {fontSize: 12}},
+                    hAxis: {title: 'Average result (${output_unit})', textStyle: {fontSize: 12}},
                     seriesType: 'bars',
                     orientation: 'vertical',
-                    series: {0: {type: 'line'}}
+                    series: series
                 };
 
                 var chart = new google.visualization.ComboChart(document.getElementById('details_chart'));
                 chart.draw(dataTable, options);
+
+                google.visualization.events.addListener(chart, 'select', function () {
+                    var sel = chart.getSelection();
+                    // See https://developers.google.com/chart/interactive/docs/reference#visgetselection
+                    if (sel.length > 0 && typeof sel[0].row === 'object') {
+                        var col = sel[0].column;
+
+                        var allActive = true;
+                        for (var i = 1; i < dataTable.getNumberOfColumns(); i+=2) {
+                            if (activColumns[i] != i) {
+                                allActive = false;
+                            }
+                        }
+                        if (activColumns[col] == col) {
+                            // The clicked column is active
+                            if (allActive) {
+                                showAllColumnsCombo(dataTable, chart, activColumns, series, false);
+                                showColumnCombo(dataTable, chart, activColumns, series, col, true);
+                            } else {
+                                showColumnCombo(dataTable, chart, activColumns, series, col, false);
+                            }
+                        }
+                        else {
+                            // The clicked columns is inactive, show it
+                            showColumnCombo(dataTable, chart, activColumns, series, col, true);
+                        }
+
+                        var allHidden = true;
+                        var activeCols = 0;
+                        for (var i = 1; i < dataTable.getNumberOfColumns(); i+=2) {
+                            if (activColumns[i] == i) {
+                                activeCols++;
+                                allHidden = false;
+                            }
+                        }
+                        if (allHidden) {
+                            showAllColumnsCombo(dataTable, chart, activColumns, series, true);
+                            activeCols = dataTable.getNumberOfColumns();
+                        }
+
+                        // reduce the size of the chart to fit the data
+                        adjustChartSize(details_chart, dataTable.getNumberOfRows(), activeCols);
+
+                        // Redraw the chart with the masked columns
+                        var view = new google.visualization.DataView(dataTable);
+                        view.setColumns(activColumns);
+                        chart.draw(view, options);
+                    }
+
+                    if (sel.length == 0) {
+                        chart.setSelection(null);
+                    }
+                });
             }
         </script>
     </head>
