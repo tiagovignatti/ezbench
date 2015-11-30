@@ -301,6 +301,14 @@ ${btag}${r}: ${db["commits"][commit][r][benchmark].average} ${output_unit} (${di
                 }
                 % endfor
 
+                // count the number of active rows and columns
+                var entries = dataTable.getNumberOfColumns() * dataTable.getNumberOfRows();
+                var size = (entries * 10);
+                if (size < 300)
+                    size = 300;
+                details_chart.style.height = size + "px";
+                details_chart.style.width = "100%";
+
                 var options = {
                     title : 'Performance of commit ' + currentCommit,
                     tooltip: {trigger: 'focus', isHtml: true},
