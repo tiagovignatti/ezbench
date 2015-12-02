@@ -4,7 +4,7 @@ source "profiles.d/utils/sha1_db.sh"
 function xserver_setup_start() {
     [[ $dry_run -eq 1 ]] && return
 
-    export EZBENCH_VT_ORIG=$(fgconsole)
+    export EZBENCH_VT_ORIG=$(sudo -n fgconsole)
 
     sudo chvt 5
     sleep 1 # Wait for the potential x-server running to release MASTER
