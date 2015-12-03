@@ -41,7 +41,7 @@ function __gl30run__ {
     cd ${GLBENCHMARK30_FOLDER}/build/linux/gfxbench_Release/mainapp/
 
     # set GL versions when needed
-    case "$2" in
+    case "$1" in
     gl_4*)
         export MESA_GL_VERSION_OVERRIDE=4.3
         export MESA_GLSL_VERSION_OVERRIDE=430
@@ -58,7 +58,7 @@ function __gl30run__ {
 
     LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${GLBENCHMARK30_FOLDER}/build/linux/poco_Release/lib/ \
     run_bench 0 ./mainapp -data ${GLB30_DATA} -w $W -h $H -ow $W -oh $H -t $1 -fullscreen $2 |\
-    grep score | cut -d : -f 2- | cut -d " " -f 2 | cut -d ',' -f 1
+    grep fps | cut -d : -f 2- | cut -d " " -f 2 | cut -d ',' -f 1
 
     unset MESA_GL_VERSION_OVERRIDE
     unset MESA_GLSL_VERSION_OVERRIDE
