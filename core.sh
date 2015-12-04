@@ -158,6 +158,7 @@ function show_help {
     echo "        -N <log folder's name> (default: current date and time)"
     echo "        -T <path> source the test definitions from this folder"
     echo "        -k dry run, do not compile any commit or execute any benchmark"
+    echo "        -c configuration shell script to be run after user_parameters.sh"
     echo ""
     echo "    Other actions:"
     echo "        -h/?: Show this help message"
@@ -168,7 +169,7 @@ function show_help {
 source "$ezBenchDir/user_parameters.sh"
 
 # First find the profile, if it is set
-optString="h?P:p:n:N:H:r:b:B:m:T:lk"
+optString="h?P:p:n:N:H:r:b:B:m:T:lkc:"
 profile="default"
 while getopts "$optString" opt; do
     case "$opt" in
@@ -227,6 +228,9 @@ while getopts "$optString" opt; do
         ;;
     k)
         dry_run=1
+        ;;
+    c)
+        source "$OPTARG"
         ;;
     :)
       echo "Option -$OPTARG requires an argument." >&2

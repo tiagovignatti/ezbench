@@ -74,13 +74,15 @@ class EzbenchRun:
 
 class Ezbench:
     def __init__(self, ezbench_path, profile = None, repo_path = None,
-                 make_command = None, report_name = None, tests_folder = None):
+                 make_command = None, report_name = None, tests_folder = None,
+                 run_config_script = None):
         self.ezbench_path = ezbench_path
         self.profile = profile
         self.repo_path = repo_path
         self.make_command = make_command
         self.report_name = report_name
         self.tests_folder = tests_folder
+        self.run_config_script = run_config_script
 
     def __ezbench_cmd_base(self, benchmarks, benchmark_excludes = [], rounds = None, dry_run = False):
         ezbench_cmd = []
@@ -107,6 +109,8 @@ class Ezbench:
             ezbench_cmd.append("-N"); ezbench_cmd.append(self.report_name)
         if self.tests_folder is not None:
             ezbench_cmd.append("-T"); ezbench_cmd.append(self.tests_folder)
+        if self.run_config_script is not None:
+            ezbench_cmd.append("-c"); ezbench_cmd.append(self.run_config_script)
 
         if dry_run:
             ezbench_cmd.append("-k")
@@ -332,7 +336,7 @@ class SmartEzbench:
 
     def set_profile(self, profile):
         self.__reload_state(keep_lock=True)
-        if 'profile' not in self.state:
+        if 'beenRunBefore' not in self.state or self.state['beenRunBefore'] == False:
             # Check that the profile exists!
             ezbench = self.__create_ezbench(profile = profile)
             run_info = ezbench.run_commits(["HEAD"], [], [], dry_run=True)
@@ -350,7 +354,27 @@ class SmartEzbench:
             self.__log(Criticality.II, "Ezbench profile set to '{profile}'".format(profile=profile))
             self.__save_state()
         else:
-            self.__log(Criticality.EE, "You cannot change the profile of a report. Start a new one.")
+            self.__log(Criticality.EE, "You cannot change the profile of a report that already has results. Start a new one.")
+        self.__release_lock()
+
+    def conf_script(self):
+        self.__reload_state(keep_lock=True)
+        if "conf_script" in self.state:
+            conf_script = self.state['conf_script']
+            self.__release_lock()
+            return conf_script
+        else:
+            self.__release_lock()
+            return None
+
+    def set_conf_script(self, conf_script):
+        self.__reload_state(keep_lock=True)
+        if 'beenRunBefore' not in self.state or self.state['beenRunBefore'] == False:
+            self.state['conf_script'] = conf_script
+            self.__log(Criticality.II, "Ezbench profile configuration script set to '{0}'".format(conf_script))
+            self.__save_state()
+        else:
+            self.__log(Criticality.EE, "You cannot change the configuration script of a report that already has results. Start a new one.")
         self.__release_lock()
 
     def add_benchmark(self, commit, benchmark, rounds = None):
