@@ -368,11 +368,12 @@ for test_dir in ${testsDir:-$ezBenchDir/tests.d}; do
 
             echo -n "${testNames[$total_tests]} "
 
-            total_round_time=$(( total_round_time + test_exec_time ))
+            total_round_time=$(dc <<<"$total_round_time $test_exec_time + p")
             total_tests=$(( total_tests + 1))
         done
     done
 done
+total_round_time=${total_round_time%.*}
 echo
 unset last_commit
 
