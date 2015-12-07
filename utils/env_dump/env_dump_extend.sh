@@ -25,7 +25,11 @@ function get_binary_version() {
 	else
 		# We did not find the file, add it to the sha1 DB. First check if it was
 		# provided by the distro
-		pkg=$(pkcon search file $filename 2> /dev/null | grep Installed | xargs | cut -d ' ' -f 2)
+		if [[ $distro =~ ^Ubuntu ]]; then
+			pkg=$(dpkg -S $filename 2> /dev/null | cut -d ':' -f 2 | xargs)
+		else
+			pkg=$(pkcon search file $filename 2> /dev/null | grep Installed | xargs | cut -d ' ' -f 2)
+		fi
 		[ -z "$pkg" ] && echo "UNKNOWN_VERSION" && return 1
 
 		# Now check that the SHA1 still matches the one used by the benchmark
@@ -47,10 +51,14 @@ function resolve_SHA1() {
 	# Try to get the name of the distro from lsb-release, revert to pkcon if not
 	# available
 	distro=$(grep DISTRIB_ID /etc/lsb-release 2> /dev/null | cut -d '=' -f2)
-	if [ -z "$distro" ];
+	distro_version=$(grep DISTRIB_RELEASE /etc/lsb-release 2> /dev/null | cut -d '=' -f2)
+	if [ -z "$distro" ]
 	then
 		distro=$(pkcon backend-details 2> /dev/null | grep Name | xargs | cut -d ' ' -f 2)
-		[ -z "$distro" ] && distro="UNK_DISTRO"
+		[ -z "$distro" ] && distro="UNK_DISTRO"]
+        elif [ -n "$distro_version" ] && [ "$distro_version" != "rolling" ]
+	then
+		distro="${distro}_${distro_version}"
 	fi
 
 	# resolve the SHA1 of the EXE
@@ -65,7 +73,8 @@ function resolve_SHA1() {
 	do
 		filename=$(echo "$line" | cut -d ',' -f 2)
 		sha1=$(echo "$line" | cut -d ',' -f 3)
-		version=$(get_binary_version $filename $sha1)
+		time version=$(get_binary_version $filename $sha1)
+		printf "$filename, $version\n"
 		sed -i "s\`$line\`$line,$version\`g" $dump_file
 	done
 
