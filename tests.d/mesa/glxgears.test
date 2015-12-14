@@ -4,10 +4,7 @@ test_exec_time=21
 which glxgears >/dev/null 2>&1 || return 1
 
 __glxgears__() {
-    local unbuf="stdbuf -oL"
-    local extract_fps="$unbuf cut -d ' '  -f7"
-
-    run_bench 21 glxgears $1 2> /dev/null | eval $extract_fps
+    run_bench 21 glxgears $1 2> /dev/null | grep 'frames in ' | cut -d ' ' -f7
 }
 
 glxgears:window_run() {
