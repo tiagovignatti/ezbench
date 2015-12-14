@@ -6,9 +6,9 @@ function xserver_setup_start() {
 
     export EZBENCH_VT_ORIG=$(sudo -n fgconsole)
 
-    sudo chvt 5
+    sudo -n chvt 5
     sleep 1 # Wait for the potential x-server running to release MASTER
-    x_pid=$(sudo $ezBenchDir/profiles.d/utils/_launch_background.sh Xorg -nolisten tcp -noreset :42 vt5 -auth /tmp/ezbench_XAuth 2> /dev/null) # TODO: Save the xorg logs
+    x_pid=$(sudo -n $ezBenchDir/profiles.d/utils/_launch_background.sh Xorg -nolisten tcp -noreset :42 vt5 -auth /tmp/ezbench_XAuth 2> /dev/null) # TODO: Save the xorg logs
     export EZBENCH_X_PID=$x_pid
 
     export DISPLAY=:42
@@ -21,11 +21,11 @@ function xserver_setup_start() {
 function xserver_setup_stop() {
     [[ $dry_run -eq 1 ]] && return
 
-    sudo kill $EZBENCH_X_PID
+    sudo -n kill $EZBENCH_X_PID
     wait_random_pid $EZBENCH_X_PID
     unset EZBENCH_X_PID
 
-    sudo chvt $EZBENCH_VT_ORIG
+    sudo -n chvt $EZBENCH_VT_ORIG
     unset EZBENCH_VT_ORIG
     sleep 1
 }
@@ -68,21 +68,21 @@ function cpu_id_max_get() {
 
 function cpu_reclocking_disable_start() {
     # Disable turbo (TODO: Fix it for other cpu schedulers)
-    sudo sh -c "echo 1 > /sys/devices/system/cpu/intel_pstate/no_turbo"
+    sudo -n sh -c "echo 1 > /sys/devices/system/cpu/intel_pstate/no_turbo"
 
     # Set the frequency to a fixed one
     [ -z "$WANTED_CPU_FREQ_kHZ" ] && return
     cpu_id_max=$(cpu_id_max_get)
     for (( i=0; i<=${cpu_id_max}; i++ )); do
-        sudo sh -c "echo $WANTED_CPU_FREQ_kHZ > /sys/devices/system/cpu/cpu${i}/cpufreq/scaling_max_freq"
-        sudo sh -c "echo $WANTED_CPU_FREQ_kHZ > /sys/devices/system/cpu/cpu${i}/cpufreq/scaling_min_freq"
+        sudo -n sh -c "echo $WANTED_CPU_FREQ_kHZ > /sys/devices/system/cpu/cpu${i}/cpufreq/scaling_max_freq"
+        sudo -n sh -c "echo $WANTED_CPU_FREQ_kHZ > /sys/devices/system/cpu/cpu${i}/cpufreq/scaling_min_freq"
     done
     export EZBENCH_CPU_RECLOCKED=1
 }
 
 function cpu_reclocking_disable_stop() {
     # Re-enable turbo (TODO: Fix it for other cpu schedulers)
-    sudo sh -c "echo 0 > /sys/devices/system/cpu/intel_pstate/no_turbo"
+    sudo -n sh -c "echo 0 > /sys/devices/system/cpu/intel_pstate/no_turbo"
 
     # Reset the scaling to the original values
     [ -z "EZBENCH_CPU_RECLOCKED" ] && return
@@ -90,29 +90,29 @@ function cpu_reclocking_disable_stop() {
     cwd=$(pwd)
     for (( i=0; i<=${cpu_id_max}; i++ )); do
         cd "/sys/devices/system/cpu/cpu${i}/cpufreq/"
-        sudo sh -c "cat cpuinfo_min_freq > scaling_min_freq"
-        sudo sh -c "cat cpuinfo_max_freq > scaling_max_freq"
+        sudo -n sh -c "cat cpuinfo_min_freq > scaling_min_freq"
+        sudo -n sh -c "cat cpuinfo_max_freq > scaling_max_freq"
     done
     cd $cwd
     unset EZBENCH_CPU_RECLOCKED
 }
 
 function aslr_disable_start() {
-    sudo sh -c "echo 0 > /proc/sys/kernel/randomize_va_space"
+    sudo -n sh -c "echo 0 > /proc/sys/kernel/randomize_va_space"
 }
 
 function aslr_disable_stop() {
-    sudo sh -c "echo 1 > /proc/sys/kernel/randomize_va_space"
+    sudo -n sh -c "echo 1 > /proc/sys/kernel/randomize_va_space"
 }
 
 function thp_disable_start() {
-    sudo sh -c "echo never > /sys/kernel/mm/transparent_hugepage/enabled"
-    sudo sh -c "echo never > /sys/kernel/mm/transparent_hugepage/defrag"
+    sudo -n sh -c "echo never > /sys/kernel/mm/transparent_hugepage/enabled"
+    sudo -n sh -c "echo never > /sys/kernel/mm/transparent_hugepage/defrag"
 }
 
 function thp_disable_stop() {
-    sudo sh -c "echo always > /sys/kernel/mm/transparent_hugepage/enabled"
-    sudo sh -c "echo always > /sys/kernel/mm/transparent_hugepage/defrag"
+    sudo -n sh -c "echo always > /sys/kernel/mm/transparent_hugepage/enabled"
+    sudo -n sh -c "echo always > /sys/kernel/mm/transparent_hugepage/defrag"
 }
 
 # function irq_remap_start() {
