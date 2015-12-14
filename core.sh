@@ -575,6 +575,7 @@ do
                 fps_avg=$(awk '{sum=sum+$1} END {print sum/NR}' $run_log_file)
                 echo "$fps_avg" >> "$fps_logs"
             else
+                echo "0" >> "$run_log_file"
                 echo "0" >> "$fps_logs"
             fi
         done
