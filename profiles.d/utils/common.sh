@@ -71,7 +71,7 @@ function cpu_reclocking_disable_start() {
     sudo sh -c "echo 1 > /sys/devices/system/cpu/intel_pstate/no_turbo"
 
     # Set the frequency to a fixed one
-    [ -z "WANTED_CPU_FREQ_kHZ" ] && return
+    [ -z "$WANTED_CPU_FREQ_kHZ" ] && return
     cpu_id_max=$(cpu_id_max_get)
     for (( i=0; i<=${cpu_id_max}; i++ )); do
         sudo sh -c "echo $WANTED_CPU_FREQ_kHZ > /sys/devices/system/cpu/cpu${i}/cpufreq/scaling_max_freq"
