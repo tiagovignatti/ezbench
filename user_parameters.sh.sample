@@ -4,7 +4,7 @@
 SHA1_DB=$ezBenchDir/SHA1_DB
 
 # Frequencies
-WANTED_CPU_FREQ_kHZ=2000000
+#WANTED_CPU_FREQ_kHZ=2000000
 
 # Repo addresses
 REPO_MESA=/opt/git/mesa
