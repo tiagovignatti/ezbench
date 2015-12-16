@@ -2,7 +2,7 @@
 # http://www.phoronix-test-suite.com/benchmark-files/cairo-demos-20120130.tar.bz2
 
 xdpyinfo >/dev/null 2>&1 || return 1
-[ -z "$CAIRO_DEMOS" ] && return 1
+[ ! -d "$CAIRO_DEMOS" ] && return 1
 
 # fish: 99.999 fps
 
