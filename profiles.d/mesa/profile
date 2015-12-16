@@ -23,7 +23,7 @@ function __default_make_and_deploy__() {
 }
 
 function __git_version_deployed__() {
-    glxinfo | sed -n 's/.*(git-\(.*\)).*/\1/p' | head -1
+    glxinfo 2> /dev/null | sed -n 's/.*(git-\(.*\)).*/\1/p' | head -1
 }
 
 rounds=3
