@@ -15,7 +15,7 @@ LIBFRAMETIME64_SO=/usr/lib/libframetime.so
 LIBFRAMETIME32_SO=/usr/lib32/libframetime.so
 
 # Benchmark parameters
-SYNMARK_FOLDER=/opt/SynMark2
+SYNMARK_FOLDER=/opt/benchmarks/SynMark2
 
 # UE4 parameters
 UE4_FOLDER="/opt/benchmarks/Unreal Engine 4"
@@ -23,20 +23,20 @@ UE4_WINDOW_SIZE_X=128
 UE4_WINDOW_SIZE_Y=80
 
 # Unigine settings
-UNIGINE_HEAVEN_FOLDER=/opt/benchmarks/Unigine_Heaven-4.0
-UNIGINE_VALLEY_FOLDER=/opt/benchmarks/Unigine_Valley-1.0
+UNIGINE_HEAVEN_FOLDER=/opt/benchmarks/unigine-heaven-4.0
+UNIGINE_VALLEY_FOLDER=/opt/benchmarks/unigine-valley-1.0
 
 # GpuTest settings
 GPUTEST_FOLDER=/opt/benchmarks/GpuTest_Linux_x64_0.7.0
 
 # Lightsmark settings
-LIGHTSMARK_FOLDER=/opt/benchmarks/Lightsmark2008.2.0
+LIGHTSMARK_FOLDER=/opt/benchmarks/lightsmark-1.2.0/Lightsmark2008.2.0
 
 # Citybench settings
 CITYBENCH_FOLDER=/opt/replay_hbas_citybench
 
 # GLBenchmark settings
-GLBENCHMARK27_FOLDER=/opt/benchmarks/glbenchmark2.7.0
+GLBENCHMARK27_FOLDER=/opt/benchmarks/glbenchmark2.7.0/
 #GLBENCHMARK27_WIDTH=1920
 #GLBENCHMARK27_HEIGHT=1080
 GLBENCHMARK30_FOLDER=/opt/benchmarks/gfxbench3_desktop/
