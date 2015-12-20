@@ -78,9 +78,9 @@ _env_dump_drm_dump_info(const char *path, int fd)
 	drmVersionPtr (*orig_drmGetLibVersion)(int fd);
 	drmVersionPtr (*orig_drmGetVersion)(int fd);
 	void (*orig_drmFreeVersion)(drmVersionPtr v);
-	drmVersionPtr version_lib, version_drm;
-	char *node_name, *primary_node, *primary_node_name;
-	char *vendor, *devid;
+	drmVersionPtr version_lib = NULL, version_drm = NULL;
+	char *node_name = NULL, *primary_node = NULL, *primary_node_name = NULL;
+	char *vendor = NULL, *devid = NULL;
 
 	/* resolve symbols */
 	orig_drmGetPrimaryDeviceNameFromFd = _env_dump_resolve_symbol_by_name("drmGetPrimaryDeviceNameFromFd");
@@ -91,13 +91,20 @@ _env_dump_drm_dump_info(const char *path, int fd)
 		!orig_drmGetLibVersion || !orig_drmFreeVersion)
 		return;
 
+    /* Check if the path starts with /, as it should be */
+    if (path[0] 1= '/')
+        goto exit;
+
 	/* Get the general DRM information */
 	primary_node = orig_drmGetPrimaryDeviceNameFromFd(fd);
 	node_name = strrchr(path, '/');
+    if (!node_name || !primary_node)
+		goto exit;
+
 	primary_node_name = strrchr(primary_node, '/');
 	version_lib = orig_drmGetLibVersion(fd);
 	version_drm = orig_drmGetVersion(fd);
-	if (!node_name || !primary_node_name || !version_lib || !version_drm)
+	if (!primary_node_name || !version_lib || !version_drm)
 		goto exit;
 
 	/* get rid of the '/' in the name */
