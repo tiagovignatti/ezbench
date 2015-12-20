@@ -35,7 +35,7 @@ function get_binary_version() {
 		# Now check that the SHA1 still matches the one used by the benchmark
 		if [ "$sha1" == $(sha1sum $filename | cut -d ' ' -f 1) ]
 		then
-			$SHA1_DB/sha1_db $SHA1_DB $sha1 add $pkg $filename $distro
+			$SHA1_DB/sha1_db $SHA1_DB $sha1 add $pkg $filename $distro > /dev/null
 			echo $distro-$pkg
 			return 0
 		fi
