@@ -73,8 +73,7 @@ function resolve_SHA1() {
 	do
 		filename=$(echo "$line" | cut -d ',' -f 2)
 		sha1=$(echo "$line" | cut -d ',' -f 3)
-		time version=$(get_binary_version $filename $sha1)
-		printf "$filename, $version\n"
+		version=$(get_binary_version $filename $sha1)
 		sed -i "s\`$line\`$line,$version\`g" $dump_file
 	done
 
