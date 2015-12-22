@@ -168,7 +168,7 @@ dump_gl_info()
 
 	fprintf(env_file, "GL_NEWCONTEXTUSED,%s,%s,%i.%i,%s,%s,%i,",
 		orig_glGetString(GL_VENDOR), orig_glGetString(GL_RENDERER),
-		major,minor, glGetString(GL_VERSION),
+		major, minor, orig_glGetString(GL_VERSION),
 		orig_glGetString(GL_SHADING_LANGUAGE_VERSION), num_extension);
 
 	if (major > 3 || (major == 3 && minor >= 1)) {
