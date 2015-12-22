@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Requires pkcon from packagekit and the file /etc/lsb-release
+# Requires pkcon from packagekit, the file /etc/lsb-release, dmidecode and msr-tools
 
 if [[ $# -ne 2 ]]
 then
@@ -111,22 +111,23 @@ function add_dmidecode_info() {
 
 	# CPU information
 	cpu_count=$(echo "$dimdecode" | grep "Processor Information" | wc -l)
+	grep_lines=$(echo "$dimdecode" | sed -n '/Processor Information/!b;:a;/Handle 0x/!{$!{N;ba}};{/Processor Information/p}' | wc -l)
 	cpu_max=$((cpu_count - 1))
 	cpu_info=""
 	for i in $(seq 0 $cpu_max)
 	do
 		e=$(($i + 1))
 
-		manufacturer=$(echo "$dimdecode" | grep -m $e -A 24 "Processor Information$" | grep "Manufacturer:" | tail -n 1 | cut -d ':' -f 2- | xargs)
-		id=$(echo "$dimdecode" | grep -m $e -A 24 "Processor Information$" | grep "ID:" | tail -n 1 | cut -d ':' -f 2- | xargs)
-		version=$(echo "$dimdecode" | grep -m $e -A 24 "Processor Information$" | grep "Version:" | tail -n 1 | cut -d ':' -f 2- | xargs)
-		max_speed=$(echo "$dimdecode" | grep -m $e -A 24 "Processor Information$" | grep "Max Speed:" | tail -n 1 | cut -d ':' -f 2- | xargs)
-		core_count=$(echo "$dimdecode" | grep -m $e -A 24 "Processor Information$" | grep "Core Count" | tail -n 1 | cut -d ':' -f 2- | xargs)
-		thread_count=$(echo "$dimdecode" | grep -m $e -A 24 "Processor Information$" | grep "Thread Count:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		manufacturer=$(echo "$dimdecode" | grep -m $e -A $grep_lines "Processor Information$" | grep "Manufacturer:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		id=$(echo "$dimdecode" | grep -m $e -A $grep_lines "Processor Information$" | grep "ID:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		version=$(echo "$dimdecode" | grep -m $e -A $grep_lines "Processor Information$" | grep "Version:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		max_speed=$(echo "$dimdecode" | grep -m $e -A $grep_lines "Processor Information$" | grep "Max Speed:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		core_count=$(echo "$dimdecode" | grep -m $e -A $grep_lines "Processor Information$" | grep "Core Count" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		thread_count=$(echo "$dimdecode" | grep -m $e -A $grep_lines "Processor Information$" | grep "Thread Count:" | tail -n 1 | cut -d ':' -f 2- | xargs)
 
-		l1_handle=$(echo "$dimdecode" | grep -m $e -A 24 "Processor Information$" | grep "L1 Cache Handle:" | tail -n 1 | cut -d ':' -f 2- | xargs)
-		l2_handle=$(echo "$dimdecode" | grep -m $e -A 24 "Processor Information$" | grep "L2 Cache Handle:" | tail -n 1 | cut -d ':' -f 2- | xargs)
-		l3_handle=$(echo "$dimdecode" | grep -m $e -A 24 "Processor Information$" | grep "L3 Cache Handle:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		l1_handle=$(echo "$dimdecode" | grep -m $e -A $grep_lines "Processor Information$" | grep "L1 Cache Handle:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		l2_handle=$(echo "$dimdecode" | grep -m $e -A $grep_lines "Processor Information$" | grep "L2 Cache Handle:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		l3_handle=$(echo "$dimdecode" | grep -m $e -A $grep_lines "Processor Information$" | grep "L3 Cache Handle:" | tail -n 1 | cut -d ':' -f 2- | xargs)
 
 		l1_size=$(echo "$dimdecode" | grep -A 15 "Handle $l1_handle" | grep "Installed Size:" | tail -n 1 | cut -d ':' -f 2- | xargs)
 		l2_size=$(echo "$dimdecode" | grep -A 15 "Handle $l2_handle" | grep "Installed Size:" | tail -n 1 | cut -d ':' -f 2- | xargs)
