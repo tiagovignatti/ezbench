@@ -27,6 +27,7 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS
 """
 
+import collections
 import re
 
 class EnvDumpReport:
@@ -62,6 +63,27 @@ class EnvDumpReport:
         ['XORG_WINDOW_CREATE', 'parent window id', 'window id', 'width', 'height', 'depth'],
         ['XORG_WINDOW_RESIZE', 'window id', 'width', 'height'],
     ]
+
+    keys = [
+        ['BOOTLINK', 'fullpath', '([^/]*)$'],
+        ['DYNLINK', 'fullpath', '([^/]*)$'],
+        ['ENV', 'value', '^([^=]*)'],
+        ['PROCESSOR', 'index', ''],
+        ['RAM_STICK', 'index', ''],
+    ]
+
+    def __createkey__(self, category, vals):
+        # Try to find a key
+        for key in self.keys:
+            if key[0] == category:
+                m = re.search(key[2], vals[key[1]])
+                if m is not None and len(m.groups()) > 0:
+                    return m.groups()[0]
+                else:
+                    return vals[key[1]]
+
+        # We failed, use a number instead
+        return "{0}".format(len(self.values[category]))
 
     def __init__(self, report_path):
         try:
@@ -99,12 +121,14 @@ class EnvDumpReport:
                                 vals[layout_line[f]] = fields[f]
 
                     # create the entry
-                    key = layout_line[0].lower()
-                    if key not in self.values:
-                        self.values[key] = vals
+                    cat = layout_line[0]
+                    if cat not in self.values:
+                        self.values[cat] = vals
                     else:
-                        if type(self.values[key]) is dict:
-                            orig = self.values[key]
-                            self.values[key] = list()
-                            self.values[key].append(orig)
-                        self.values[key].append(vals)
+                        if type(self.values[cat]) is dict:
+                            orig = self.values[cat]
+                            self.values[cat] = collections.OrderedDict()
+                            entry_key = self.__createkey__(cat, orig)
+                            self.values[cat][entry_key] = orig
+                        entry_key = self.__createkey__(cat, vals)
+                        self.values[cat][entry_key] = vals
