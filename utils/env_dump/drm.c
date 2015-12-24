@@ -92,7 +92,7 @@ _env_dump_drm_dump_info(const char *path, int fd)
 		return;
 
     /* Check if the path starts with /, as it should be */
-    if (path[0] 1= '/')
+    if (path[0] != '/')
         goto exit;
 
 	/* Get the general DRM information */
