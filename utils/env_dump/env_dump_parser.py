@@ -116,7 +116,7 @@ class EnvDumpReport:
                     for f in range(1, len(layout_line)):
                         if len(fields) > f:
                             if layout_line[f] == 'extensions':
-                                vals[layout_line[f]] = set(fields[f].split(' '))
+                                vals[layout_line[f]] = set(fields[f].strip().split(' '))
                             else:
                                 vals[layout_line[f]] = fields[f]
 
