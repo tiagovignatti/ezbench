@@ -34,6 +34,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <stdio.h>
+#include <time.h>
 #include <link.h>
 
 FILE *env_file = NULL;
@@ -68,6 +70,21 @@ register_signal_handler(int signal)
 	if (sigaction(signal, &act, NULL) < 0) {
 		perror ("sigaction");
 	}
+}
+
+static void
+print_date_and_time()
+{
+	struct tm* tm_info;
+	time_t timer;
+	char buf[51];
+
+	time(&timer);
+	tm_info = localtime(&timer);
+
+	strftime(buf, sizeof(buf), "%Y:%m:%d,%H:%M:%S,%Z(%z)", tm_info);
+
+	fprintf(env_file, "DATE,%s\n", buf);
 }
 
 __attribute__((constructor))
@@ -113,6 +130,8 @@ static void init() {
 	register_signal_handler(SIGTERM);
 
 	fprintf(env_file, "-- Env dump start (version 1) --\n");
+
+	print_date_and_time();
 
 	_env_dump_posix_env_init();
 	_env_dump_fd_init();
