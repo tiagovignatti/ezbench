@@ -18,8 +18,12 @@ function __default_make_and_deploy__() {
     # 71: Compilation error
     # 72: Deployment error
 
+    x_show_debug_info_start
+
     make -j8 || exit 71
     make_install_sha1_dump || exit 72
+
+    x_show_debug_info_stop
 }
 
 function __git_version_deployed__() {
