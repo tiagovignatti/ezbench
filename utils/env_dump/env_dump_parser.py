@@ -30,20 +30,6 @@ OF THIS
 import collections
 import re
 
-class EnvDumpEntry:
-    def __init__(self, key, value):
-        self.key = key
-        self.value = value
-
-    def __hash__(self):
-        return hash(self.key) ^ hash(self.value)
-
-    def __eq__(self, other):
-        return self.key == other.key and self.value == other.value
-
-    def __repr__(self):
-        return "{0} = {1}".format(self.key, self.value)
-
 class EnvDumpReport:
     csv_layout_v1 = [
         ['BIOS', 'vendor', 'version', 'date'],
@@ -149,7 +135,7 @@ class EnvDumpReport:
 
     def __toset__(self, head, key):
         if type(head) is str:
-            return set([EnvDumpEntry(key, head)])
+            return set([(key, head)])
 
         out = set()
         for entry in head:
@@ -160,7 +146,7 @@ class EnvDumpReport:
             if type(head) is not set:
                 out.update(self.__toset__(head[entry], entrykey))
             else:
-                out.update(set([EnvDumpEntry(entrykey, True)]))
+                out.update(set([(entrykey, True)]))
         return out
 
     def toset(self):
