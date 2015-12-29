@@ -4,6 +4,8 @@ unigine:heaven_run() {
     cd "$UNIGINE_HEAVEN_FOLDER" # Set this variable in test_options.sh
 
     LD_LIBRARY_PATH=bin:bin/x64:$LD_LIBRARY_PATH \
+    MESA_EXTENSION_OVERRIDE="-GL_ARB_sample_shading -GL_ARB_blend_func_extended" \
+    MESA_GL_VERSION_OVERRIDE="3.2" \
     run_bench 0 ./bin/heaven_x64 \
         -video_app opengl \
         -data_path ../ \
