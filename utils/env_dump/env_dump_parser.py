@@ -77,7 +77,7 @@ class EnvDumpReport:
         ['BIOS', 'BIOS', '${vendor} ${version} ${date}'],
         ['BOOTLINK', 'boot: ${fullpath}', '${provider}'],
         ['CPU_FREQ', 'CPU governor', 'freq. ranges (kHz): [${cpu#0 min}, ${cpu#0 max}], [${cpu#1 min}, ${cpu#1 max}], [${cpu#2 min}, ${cpu#2 max}], [${cpu#3 min}, ${cpu#3 max}], [${cpu#4 min}, ${cpu#4 max}], [${cpu#5 min}, ${cpu#5 max}], [${cpu#6 min}, ${cpu#6 max}], [${cpu#7 min}, ${cpu#7 max}], [${cpu#8 min}, ${cpu#8 max}], [${cpu#9 min}, ${cpu#9 max}], [${cpu#10 min}, ${cpu#10 max}], [${cpu#11 min}, ${cpu#11 max}]'],
-        ['DATE', '${day} ${time} ${timezone}'],
+        ['DATE', 'date', '${day} ${time} ${timezone}'],
         ['DRM', 'DRM driver', '${vendor}:${devid} : ${driver}(${major}.${minor}.${patchlevel})'],
         ['DYNLINK', 'dyn: ${fullpath}', '${provider}'],
         ['RAM_STICK', 'RAM${index}', '${type} ${size} @ ${actual clock}'],
