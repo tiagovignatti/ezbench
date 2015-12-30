@@ -72,6 +72,17 @@ class EnvDumpReport:
         ['RAM_STICK', 'index', ''],
     ]
 
+    # format: LINE_HEADER, Key template, value template
+    human_v1 = [
+        ['BIOS', 'BIOS', '${vendor} ${version} ${date}'],
+        ['BOOTLINK', 'boot: ${fullpath}', '${provider}'],
+        ['CPU_FREQ', 'CPU governor', 'freq. ranges (kHz): [${cpu#0 min}, ${cpu#0 max}], [${cpu#1 min}, ${cpu#1 max}], [${cpu#2 min}, ${cpu#2 max}], [${cpu#3 min}, ${cpu#3 max}], [${cpu#4 min}, ${cpu#4 max}], [${cpu#5 min}, ${cpu#5 max}], [${cpu#6 min}, ${cpu#6 max}], [${cpu#7 min}, ${cpu#7 max}], [${cpu#8 min}, ${cpu#8 max}], [${cpu#9 min}, ${cpu#9 max}], [${cpu#10 min}, ${cpu#10 max}], [${cpu#11 min}, ${cpu#11 max}]'],
+        ['DATE', '${day} ${time} ${timezone}'],
+        ['DRM', 'DRM driver', '${vendor}:${devid} : ${driver}(${major}.${minor}.${patchlevel})'],
+        ['DYNLINK', 'dyn: ${fullpath}', '${provider}'],
+        ['RAM_STICK', 'RAM${index}', '${type} ${size} @ ${actual clock}'],
+    ]
+
     def __createkey__(self, category, vals):
         # Try to find a key
         for key in self.keys:
@@ -85,7 +96,24 @@ class EnvDumpReport:
         # We failed, use a number instead
         return "{0}".format(len(self.values[category]))
 
-    def __init__(self, report_path):
+    def __patternresolve__(self, pattern, fields):
+        out = pattern
+        for key in fields:
+            out = out.replace("${" + key + "}", fields[key])
+        out = re.sub('\$\{[^}]*\}', '', out)
+        return out
+
+    def __humanoutput__(self, category, fields):
+        # look for a human entry for those fields
+        for human_line in self.human_v1:
+            if human_line[0] == category:
+                key = self.__patternresolve__(human_line[1], fields)
+                values = self.__patternresolve__(human_line[2], fields)
+                self.values[key] = values
+                return True
+        return False
+
+    def __init__(self, report_path, human=False):
         try:
             f = open(report_path)
         except Exception as e:
@@ -122,18 +150,21 @@ class EnvDumpReport:
 
                     # create the entry
                     cat = layout_line[0]
-                    if cat not in self.values:
-                        self.values[cat] = vals
+                    if human:
+                        self.__humanoutput__(cat, vals)
                     else:
-                        if type(self.values[cat]) is dict:
-                            orig = self.values[cat]
-                            self.values[cat] = collections.OrderedDict()
-                            entry_key = self.__createkey__(cat, orig)
-                            self.values[cat][entry_key] = orig
-                        entry_key = self.__createkey__(cat, vals)
-                        self.values[cat][entry_key] = vals
+                        if cat not in self.values:
+                            self.values[cat] = vals
+                        else:
+                            if type(self.values[cat]) is dict:
+                                orig = self.values[cat]
+                                self.values[cat] = collections.OrderedDict()
+                                entry_key = self.__createkey__(cat, orig)
+                                self.values[cat][entry_key] = orig
+                            entry_key = self.__createkey__(cat, vals)
+                            self.values[cat][entry_key] = vals
 
-    def __toset__(self, head, key):
+    def __to_set__(self, head, key, ignore_list):
         if type(head) is str:
             return set([(key, head)])
 
@@ -143,11 +174,13 @@ class EnvDumpReport:
                 entrykey = key + "." + entry
             else:
                 entrykey = entry
+            if entrykey in ignore_list:
+                continue
             if type(head) is not set:
-                out.update(self.__toset__(head[entry], entrykey))
+                out.update(self.__to_set__(head[entry], entrykey, ignore_list))
             else:
                 out.update(set([(entrykey, True)]))
         return out
 
-    def toset(self):
-        return self.__toset__(self.values, "")
+    def to_set(self, ignore_list=[]):
+        return self.__to_set__(self.values, "", ignore_list)
