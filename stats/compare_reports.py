@@ -83,7 +83,11 @@ for log_folder in args.log_folder:
 			score_sum += average
 			count += 1
 			result.average = float("{0:.2f}".format(average))
-		db["commits"][commit.sha1][log_folder]["average"] = float("{0:.2f}".format(score_sum / count))
+		if count > 0:
+			avg = score_sum / count
+		else:
+			avg = 0
+		db["commits"][commit.sha1][log_folder]["average"] = float("{0:.2f}".format(avg))
 		db["commits"][commit.sha1][log_folder]["average_unit"] = output_unit
 
 # Sort the benchmarks by name to avoid ever-changing layouts
