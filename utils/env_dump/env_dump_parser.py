@@ -56,7 +56,7 @@ class EnvDumpReport:
         ['RAM_STICK', 'index', 'type', 'manufacturer', 'part number', 'serial', 'size', 'actual clock'],
         ['SCHED', 'policy', 'cpu installed', 'cpu active', 'affinity', 'priority'],
         ['SOCKET_UNIX_CONNECT', 'fullpath', 'server fullpath', 'server cmdline', 'SHA1', 'provider'],
-        ['THROTTLING', 'cpu count', 'package', 'cpu list', 'cpu1', 'cpu2', 'cpu3', 'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'cpu10', 'cpu11'],
+        ['THROTTLING', 'cpu count', 'package', 'cpu list', 'cpu0', 'cpu1', 'cpu2', 'cpu3', 'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'cpu10', 'cpu11'],
         ['XORG_CLOSE', 'display'],
         ['XORG_DISPLAY', 'screen id', 'compositor', 'width', 'height', 'depth'],
         ['XORG_SESSION_OPENED', 'display name'],
