@@ -126,12 +126,16 @@ int
 setenv(const char *name, const char *value, int replace)
 {
 	int(*orig_setenv)(const char *, const char *, int);
+	char *orig_value = NULL;
 	int ret;
 
 	orig_setenv = _env_dump_resolve_symbol_by_name("setenv");
 
+	if (!replace)
+		orig_value = getenv(name);
+
 	ret = orig_setenv(name, value, replace);
-	if (!ret)
+	if (!ret && !(!replace && orig_value)) // do not print the message if nothing changed
 		fprintf(env_file, "ENV_SET,%s=%s\n", name, value);
 
 	return ret;
