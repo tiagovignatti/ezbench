@@ -97,12 +97,25 @@ env_var_dump_binary_information(int pid)
 }
 
 static void
+dump_env_var(const char *header, const char *string)
+{
+	char *key, *val, *pos = strstr(string, "=");
+	if (pos) {
+		key = strndup(string, pos - string);
+		val = strdup(pos + 1);
+		fprintf(env_file, "%s,%s,%s\n", header, key, val);
+		free(key); free(val);
+	} else
+		fprintf(env_file, "%s,%s,\n", header, string);
+}
+
+static void
 dump_env_vars()
 {
 	char **env = environ;
 
 	while (*env) {
-		fprintf(env_file, "ENV,%s\n", *env);
+		dump_env_var("ENV", *env);
 		env++;
 	}
 }
@@ -117,7 +130,7 @@ putenv(char *string)
 
 	ret = orig_putenv(string);
 	if (!ret)
-		fprintf(env_file, "ENV_UNSET,%s\n", string);
+		dump_env_var("ENV_SET", string);
 
 	return ret;
 }
@@ -136,7 +149,7 @@ setenv(const char *name, const char *value, int replace)
 
 	ret = orig_setenv(name, value, replace);
 	if (!ret && !(!replace && orig_value)) // do not print the message if nothing changed
-		fprintf(env_file, "ENV_SET,%s=%s\n", name, value);
+		fprintf(env_file, "ENV_SET,%s,%s\n", name, value);
 
 	return ret;
 }
