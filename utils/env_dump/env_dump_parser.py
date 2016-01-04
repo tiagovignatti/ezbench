@@ -74,18 +74,36 @@ class EnvDumpReport:
 
     # format: LINE_HEADER, Key template, value template
     human_v1 = [
-        ['BIOS', 'BIOS', '${vendor} ${version} ${date}'],
-        ['BOOTLINK', 'boot: ${fullpath}', '${provider}'],
-        ['CPU_FREQ', 'CPU governor', 'freq. ranges (kHz): [${cpu#0 min}, ${cpu#0 max}], [${cpu#1 min}, ${cpu#1 max}], [${cpu#2 min}, ${cpu#2 max}], [${cpu#3 min}, ${cpu#3 max}], [${cpu#4 min}, ${cpu#4 max}], [${cpu#5 min}, ${cpu#5 max}], [${cpu#6 min}, ${cpu#6 max}], [${cpu#7 min}, ${cpu#7 max}], [${cpu#8 min}, ${cpu#8 max}], [${cpu#9 min}, ${cpu#9 max}], [${cpu#10 min}, ${cpu#10 max}], [${cpu#11 min}, ${cpu#11 max}]'],
-        ['DATE', 'date', '${day} ${time} ${timezone}'],
-        ['DRM', 'DRM driver', '${vendor}:${devid} : ${driver}(${major}.${minor}.${patchlevel})'],
-        ['DYNLINK', 'dyn: ${fullpath}', '${provider}'],
-        ['ENV', 'env: ${key}', '${value}'],
-        ['ENV_SET', 'set env: ${key}', '${value}'],
-        ['ENV_UNSET', 'unset env: ${value}', ''],
-        ['ENV_CLEAR', 'clear all env', ''],
-        ['EXE', 'exe: ${fullpath}', '${cmdline} (${provider})'],
-        ['RAM_STICK', 'RAM${index}', '${type} ${size} @ ${actual clock}'],
+        ['BIOS', 'HW: BIOS', '${vendor} ${version} ${date}'],
+        ['BOOTLINK', 'SW: boot: ${fullpath}', '${provider}'],
+        ['CPU_FREQ', 'OS: CPU governor', 'freq. ranges (kHz): [${cpu#0 min}, ${cpu#0 max}], [${cpu#1 min}, ${cpu#1 max}], [${cpu#2 min}, ${cpu#2 max}], [${cpu#3 min}, ${cpu#3 max}], [${cpu#4 min}, ${cpu#4 max}], [${cpu#5 min}, ${cpu#5 max}], [${cpu#6 min}, ${cpu#6 max}], [${cpu#7 min}, ${cpu#7 max}], [${cpu#8 min}, ${cpu#8 max}], [${cpu#9 min}, ${cpu#9 max}], [${cpu#10 min}, ${cpu#10 max}], [${cpu#11 min}, ${cpu#11 max}]'],
+        ['DATE', 'OS: date', '${day} ${time} ${timezone}'],
+        ['DRM', 'SW: DRM driver', '${vendor}:${devid} : ${driver}(${major}.${minor}.${patchlevel})'],
+        ['DYNLINK', 'OS: dyn: ${fullpath}', '${provider}'],
+        ['EGL_NEWCONTEXTUSED', 'SW: EGL context', '${vendor}, version ${version}, APIs \'${client APIs}\', extensions: ${extensions}'],
+        ['ENV', 'OS: env: ${key}', '${value}'],
+        ['ENV_SET', 'OS: set env: ${key}', '${value}'],
+        ['ENV_UNSET', 'OS: unset env: ${value}', ''],
+        ['ENV_CLEAR', 'OS: clear all env', ''],
+        ['EXE', 'OS: exe: ${fullpath}', '${cmdline} (${provider})'],
+        ['GL_NEWCONTEXTUSED', 'SW: GL context ${version} GLSL ${GLSL version}', '${vendor}, ${renderer}, ${GL version}, extensions: ${extensions}'],
+        ['GLX_NEWCONTEXTUSED', 'SW: GLX context', '${vendor}, version ${version}, extensions: ${extensions}'],
+        ['INTEL_DRM', 'OS: GPU governor', 'freq. range (MHz) = [${freq min (MHz)}, ${freq max (MHz)}], RP0 = ${freq RP0 (MHz)}, RP1 = ${freq RP1 (MHz)}, RPn = ${freq RPn (MHz)}'],
+        ['INTEL_PSTATE', 'OS: CPU governor pstate', 'range = [${min (%)}%, ${max (%)}%], turbo disabled? ${turbo disabled}'],
+        ['IOCTL', 'OS: device', '${fullpath}'],
+        ['KERNEL', 'OS: kernel', '${name}, ${nodename}, ${release}, ${version}, ${achitecture}, ${domain name}'],
+        ['LIBDRM', 'SW: libdrm', 'exposed version ${major}.${minor}.${patchlevel}'],
+        ['MOTHERBOARD', 'HW: motherboard', '${manufacturer} ${product name} ${version}'],
+        ['PROCESSOR', 'HW: processor${index}', '${manufacturer} ${version} (${id}), max freq. ${max clock}, ${core count} cores ${thread count} threads, L1=${L1 size}, L2=${L2 size}, L3=${L3 size}, virt? ${virtualization enabled}'],
+        ['RAM_STICK', 'HW: RAM${index}', '${type} ${size} @ ${actual clock}'],
+        ['SCHED', 'OS: CPU sched.', '${policy}, CPUs=(installed=${cpu installed}, active=${cpu active}), affinity=${affinity} nice=${priority}'],
+        ['SOCKET_UNIX_CONNECT', 'OS: UNIX service ${fullpath}', 'exe_path=${server fullpath}, cmd=${server cmdline}, version=${provider}'],
+        ['THROTTLING', 'HW: throttling events', 'package=${package}, CPUs=[${cpu0}, ${cpu1}, ${cpu2}, ${cpu3}, ${cpu4}, ${cpu5}, ${cpu6}, ${cpu7}, ${cpu8}, ${cpu9}, ${cpu10}, ${cpu11}]'],
+        ['XORG_CLOSE', 'OS: X display closed', '${display}'],
+        ['XORG_DISPLAY', 'OS: X display', 'Screen id ${screen id} (${width}x${height}x${depth}) with compositor ${compositor}'],
+        ['XORG_SESSION_OPENED', 'OS: X display opened', '${display name}'],
+        ['XORG_WINDOW_CREATE', 'OS: X window created', '${width}x${height}x${depth}, id=${window id} (parent=${parent window id})'],
+        ['XORG_WINDOW_RESIZE', 'OS: X window resized', 'id=${window id} to ${width}x${height}'],
     ]
 
     def __createkey__(self, category, vals):
@@ -104,7 +122,11 @@ class EnvDumpReport:
     def __patternresolve__(self, pattern, fields):
         out = pattern
         for key in fields:
-            out = out.replace("${" + key + "}", fields[key])
+            if key == "extensions":
+                value = ' '.join(str(e) for e in fields[key])
+            else:
+                value = fields[key]
+            out = out.replace("${" + key + "}", value)
         out = re.sub('\$\{[^}]*\}', '', out)
         return out
 
