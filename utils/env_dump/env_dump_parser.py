@@ -136,6 +136,11 @@ class EnvDumpReport:
             if human_line[0] == category:
                 key = self.__patternresolve__(human_line[1], fields)
                 values = self.__patternresolve__(human_line[2], fields)
+                if key in self.values:
+                    index=1
+                    while "{}#{}".format(key, index) in self.values:
+                        index = index + 1
+                    key =  "{}#{}".format(key, index)
                 self.values[key] = values
                 return True
         return False
