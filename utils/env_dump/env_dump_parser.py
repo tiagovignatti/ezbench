@@ -84,6 +84,7 @@ class EnvDumpReport:
         ['ENV_SET', 'set env: ${key}', '${value}'],
         ['ENV_UNSET', 'unset env: ${value}', ''],
         ['ENV_CLEAR', 'clear all env', ''],
+        ['EXE', 'exe: ${fullpath}', '${cmdline} (${provider})'],
         ['RAM_STICK', 'RAM${index}', '${type} ${size} @ ${actual clock}'],
     ]
 
