@@ -80,6 +80,10 @@ class EnvDumpReport:
         ['DATE', 'date', '${day} ${time} ${timezone}'],
         ['DRM', 'DRM driver', '${vendor}:${devid} : ${driver}(${major}.${minor}.${patchlevel})'],
         ['DYNLINK', 'dyn: ${fullpath}', '${provider}'],
+        ['ENV', 'env: ${key}', '${value}'],
+        ['ENV_SET', 'set env: ${key}', '${value}'],
+        ['ENV_UNSET', 'unset env: ${value}', ''],
+        ['ENV_CLEAR', 'clear all env', ''],
         ['RAM_STICK', 'RAM${index}', '${type} ${size} @ ${actual clock}'],
     ]
 
