@@ -67,7 +67,7 @@ class EnvDumpReport:
     keys = [
         ['BOOTLINK', 'fullpath', '([^/]*)$'],
         ['DYNLINK', 'fullpath', '([^/]*)$'],
-        ['ENV', 'value', '^([^=]*)'],
+        ['ENV', 'key', ''],
         ['PROCESSOR', 'index', ''],
         ['RAM_STICK', 'index', ''],
     ]
