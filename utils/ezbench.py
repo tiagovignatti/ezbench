@@ -533,6 +533,7 @@ class BenchResult:
         self.data_raw_file = data_raw_file
         self.data = []
         self.runs = []
+        self.env_files = []
         self.unit_str = None
 
 class Commit:
@@ -723,7 +724,14 @@ def genPerformanceReport(log_folder, silentMode = False):
             for runFile in runsFiles:
                 data, unit, more_is_better = readCsv(runFile)
                 if len(data) > 0:
+                    # Add the FPS readings of the run
                     result.runs.append(data)
+
+                    # Add the environment file
+                    envFile = runFile + ".env_dump"
+                    if not os.path.isfile(envFile):
+                        envFile = None
+                    result.env_files.append(envFile)
 
             # Add the result to the commit's results
             commit.results.append(result)
