@@ -36,7 +36,9 @@ import os
 
 # Import ezbench from the utils/ folder
 sys.path.append(os.path.abspath(sys.path[0]+'/../utils/'))
+sys.path.append(os.path.abspath(sys.path[0]+'/../utils/env_dump'))
 from ezbench import *
+from env_dump_parser import *
 
 # constants
 html_name="index.html"
@@ -61,9 +63,16 @@ db = dict()
 db["commits"] = collections.OrderedDict()
 db["reports"] = args.log_folder
 db["benchmarks"] = list()
+db['env_sets'] = dict()
+db["envs"] = dict()
+human_envs = dict()
 for log_folder in args.log_folder:
 	print("{f}: ".format(f=log_folder), end="")
 	report = genPerformanceReport(log_folder)
+
+	# make sure all the benchmarks are listed in db["envs"]
+	for benchmark in report.benchmarks:
+		db["envs"][benchmark.full_name] = dict()
 
 	# add all the commits
 	for commit in report.commits:
@@ -83,12 +92,72 @@ for log_folder in args.log_folder:
 			score_sum += average
 			count += 1
 			result.average = float("{0:.2f}".format(average))
+
+			# Environment
+			if result.benchmark.full_name not in human_envs:
+				for envfile in result.env_files:
+					if envfile is not None:
+						human_envs[result.benchmark.full_name] = EnvDumpReport(log_folder + "/" + envfile, True)
+			if result.benchmark.full_name not in db['env_sets']:
+				db['env_sets'][result.benchmark.full_name] = list()
+			for e in range(0, len(result.env_files)):
+				# Create the per-run information
+				envfile = result.env_files[e]
+				r = EnvDumpReport(log_folder + "/" + envfile, False).to_set(['DATE',
+				                                                             'ENV.ENV_DUMP_FILE',
+				                                                             'ENV.EZBENCH_PERFMETER_PID',
+				                                                             'ENV.EZBENCH_X_PID'])
+				tup = dict()
+				tup['log_folder'] = log_folder
+				tup['commit'] = commit
+				tup['run'] = e
+
+				# Compare the set to existing ones
+				found = False
+				for report in db['env_sets'][result.benchmark.full_name]:
+					if r  == report['set']:
+						report['users'].append(tup)
+						found = True
+
+				# Add the report
+				if not found:
+					new_entry = dict()
+					new_entry['set'] = r
+					new_entry['users'] = list()
+					new_entry['users'].append(tup)
+					db['env_sets'][result.benchmark.full_name].append(new_entry)
+
 		if count > 0:
 			avg = score_sum / count
 		else:
 			avg = 0
 		db["commits"][commit.sha1][log_folder]["average"] = float("{0:.2f}".format(avg))
 		db["commits"][commit.sha1][log_folder]["average_unit"] = output_unit
+
+# Generate the environment
+for bench in human_envs:
+	env = human_envs[bench]
+	if env is not None:
+		for key in sorted(list(env.values)):
+			cur = db['envs'][bench]
+			fields = key.split(":")
+			for f in range(0, len(fields)):
+				field = fields[f].strip()
+				if f < len(fields) - 1:
+					if field not in cur:
+						cur[field] = dict()
+					cur = cur[field]
+				else:
+					cur[field] = env.values[key]
+
+# Generate the environment diffs
+db['env_diff_keys'] = dict()
+for bench in db['env_sets']:
+	final_union = set()
+	for report in db['env_sets'][bench]:
+		diff = db['env_sets'][bench][0]['set'] ^ report['set']
+		final_union = final_union | diff
+	db['env_diff_keys'][bench] = sorted(dict(final_union).keys())
 
 # Sort the benchmarks by name to avoid ever-changing layouts
 db["benchmarks"] = sort(db["benchmarks"])
@@ -100,12 +169,49 @@ html_template="""
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
 <html xmlns="http://www.w3.org/1999/xhtml">
-
     <head>
         <title>${title}</title>
         <meta http-equiv="content-type" content="text/html; charset=utf-8" />
         <style>
-            body {{ font-size: 10pt}}
+            body {{ font-size: 10pt; }}
+            table { font-size: 10pt; }
+
+            /* http://martinivanov.net/2011/09/26/css3-treevew-no-javascript/ */
+            .css-treeview input + label + ul
+            {
+                display: none;
+            }
+            .css-treeview input:checked + label + ul
+            {
+                display: block;
+            }
+            .css-treeview input
+            {
+                position: absolute;
+                opacity: 0;
+            }
+            .css-treeview label,
+            .css-treeview label::before
+            {
+                cursor: pointer;
+            }
+            .css-treeview input:disabled + label
+            {
+                cursor: default;
+                opacity: .6;
+            }
+            table{
+                border-collapse:collapse;
+            }
+            table td{
+                padding:5px; border:#4e95f4 1px solid;
+            }
+            table tr:nth-child(odd){
+                background: #b8d1f3;
+            }
+            table tr:nth-child(even){
+                background: #dae5f4;
+            }
         </style>
         <script type="text/javascript" src="https://www.google.com/jsapi"></script>
         <script type="text/javascript">
@@ -428,9 +534,64 @@ ${btag}${r}: ${db["commits"][commit][r][benchmark].average} ${output_unit} (${di
 
         <h2>Details</h2>
 
-        <!-- TODO: Height should be dependent on the number of results -->
         <center><div id="details_chart" style="width: 100%; height: 500px;"></div></center>
 
+        <h2>Benchmarks</h2>
+
+            % for benchmark in db["benchmarks"]:
+                <h3>${benchmark.capitalize()}</h3>
+
+                <div class="css-treeview">
+                    <%def name="outputtreenode(node, id, label, attr = '')">
+                        <li><input type="checkbox" id="${id}" ${attr}/><label for="${id}">+${label}</label><ul>
+                            <table>
+                            % for child in sorted(node):
+                                % if type(node[child]) is str:
+                                    <tr><td>${child}</td><td>${node[child]}</td></tr>
+                                % endif
+                            % endfor
+                            </table>
+                            % for child in sorted(node):
+                                % if type(node[child]) is not str:
+                                    ${outputtreenode(node[child], "{}.{}".format(id, child.replace(' ', '_')), child, '')}
+                                % endif
+                            % endfor
+                        </ul></li>
+                    </%def>
+
+                    <ul>
+                        ${outputtreenode(db["envs"][benchmark], benchmark + "_envroot", "Environment", 'checked="checked"')}
+                    </ul>
+                </div>
+
+                <table>
+                    <tr>
+                        <th>Key</th>
+                        % for env_set in db["env_sets"][benchmark]:
+                        <%
+                            users = ""
+                            for user in env_set['users']:
+                                if len(users) > 0:
+                                    users += "<br/>"
+                                users += "{}.{}#{}".format(user['log_folder'], user['commit'].sha1, user['run'])
+                        %>\\
+                        <th>${users}</th>
+                        % endfor
+                    </tr>
+                    % for key in db["env_diff_keys"][benchmark]:
+                    <tr>
+                        <td>${key}</td>
+                        % for env_set in db["env_sets"][benchmark]:
+                        % if key in dict(env_set['set']):
+                            <td>${dict(env_set['set'])[key]}</td>
+                        % else:
+                            <td>MISSING</td>
+                        % endif
+                        % endfor
+                    </tr>
+                    % endfor
+                </table>
+            % endfor
     </body>
 
 </html>
