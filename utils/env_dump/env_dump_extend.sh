@@ -158,8 +158,9 @@ function add_dmidecode_info() {
 		type=$(echo "$dimdecode" | grep -m $e -A 21 "Memory Device$" | grep "Type:" | tail -n 1 | cut -d ':' -f 2- | xargs)
 		size=$(echo "$dimdecode" | grep -m $e -A 21 "Memory Device$" | grep "Size:" | tail -n 1 | cut -d ':' -f 2- | xargs)
 		clock=$(echo "$dimdecode" | grep -m $e -A 21 "Memory Device$" | grep "Configured Clock Speed:" | tail -n 1 | cut -d ':' -f 2- | xargs)
+		locator=$(echo "$dimdecode" | grep -m $e -A 21 "Memory Device$" | grep "Locator:" | grep -v "Bank" | tail -n 1 | cut -d ':' -f 2- | xargs)
 
-		ram_info=$(echo "${ram_info}RAM_STICK,$i,$type,$manufacturer,$part_number,$serial,$size,$clock\n")
+		ram_info=$(echo "${ram_info}RAM_STICK,$i,$type,$manufacturer,$part_number,$serial,$size,$clock,$locator\n")
 	done
 
 	sed -i "s\`^EXE,\`${mobo_info}${bios_info}${cpu_info}${ram_info}EXE,\`g" $dump_file
