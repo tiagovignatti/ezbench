@@ -206,8 +206,14 @@ class EnvDumpReport:
                 entrykey = key + "." + entry
             else:
                 entrykey = entry
-            if entrykey in ignore_list:
+
+            ignore = False
+            for ignoreentry in ignore_list:
+                if re.search(ignoreentry, entrykey) is not None:
+                    ignore = True
+            if ignore == True:
                 continue
+
             if type(head) is not set:
                 out.update(self.__to_set__(head[entry], entrykey, ignore_list))
             else:

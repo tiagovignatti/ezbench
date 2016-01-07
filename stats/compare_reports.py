@@ -103,10 +103,13 @@ for log_folder in args.log_folder:
 			for e in range(0, len(result.env_files)):
 				# Create the per-run information
 				envfile = result.env_files[e]
-				r = EnvDumpReport(log_folder + "/" + envfile, False).to_set(['DATE',
-				                                                             'ENV.ENV_DUMP_FILE',
-				                                                             'ENV.EZBENCH_PERFMETER_PID',
-				                                                             'ENV.EZBENCH_X_PID'])
+				r = EnvDumpReport(log_folder + "/" + envfile, False).to_set(['^DATE',
+				                                                             '^ENV.ENV_DUMP_FILE',
+				                                                             '^ENV.EZBENCH_PERFMETER_PID',
+				                                                             '^ENV.EZBENCH_X_PID',
+				                                                             'SHA1$',
+				                                                             'extension count$',
+				                                                             'window id$'])
 				tup = dict()
 				tup['log_folder'] = log_folder
 				tup['commit'] = commit
