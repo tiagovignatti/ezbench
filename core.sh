@@ -388,7 +388,7 @@ done
 if [ -n "$missing_tests" ]; then
     echo "The tests \"${missing_tests:0:-1}\" do not exist"
     available_tests
-    exit 101
+    exit 100
 fi
 
 # Set the average compilation time to 0 when we are not compiling
