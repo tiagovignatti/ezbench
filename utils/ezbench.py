@@ -201,7 +201,7 @@ def list_smart_ezbench_report_names(ezbench_dir, updatedSince = 0):
 
     reports = []
     for state_file in state_files:
-        if os.path.getmtime(state_file) < updatedSince:
+        if updatedSince > 0 and os.path.getmtime(state_file) < updatedSince:
             continue
 
         start = len(log_dir) + 1
@@ -326,7 +326,7 @@ class SmartEzbench:
         if 'mode' not in self.state or self.state['mode'] != mode.value:
             self.state['mode'] = mode.value
             self.__log(Criticality.II, "Ezbench running mode set to '{mode}'".format(mode=mode.name))
-        self.__save_state()
+            self.__save_state()
         self.__release_lock()
 
     def profile(self):
