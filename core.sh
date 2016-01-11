@@ -271,7 +271,7 @@ then
     echo "ERROR: The path '$gitRepoDir' does not contain a valid git repository. Aborting..."
     exit 1
 fi
-printf "Original commit = $commit_head"
+printf "Repo = $gitRepoDir, HEAD = $commit_head"
 
 deployedVersion=$(read_git_version_deployed)
 [ $? -eq 0 ] && printf ", deployed version = $deployedVersion"
