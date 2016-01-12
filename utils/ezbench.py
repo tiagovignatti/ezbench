@@ -408,6 +408,7 @@ class SmartEzbench:
     def __prioritize_runs(self, task_tree, deployed_version):
         task_list = list()
 
+        # Schedule the tests using the already-deployed version
         if deployed_version is not None and deployed_version in task_tree:
             for benchmark in task_tree[deployed_version]["benchmarks"]:
                 rounds = task_tree[deployed_version]["benchmarks"][benchmark]["rounds"]
@@ -479,6 +480,14 @@ class SmartEzbench:
                 if len(task_tree[commit.sha1]["benchmarks"]) == 0:
                     del task_tree[commit.sha1]
 
+        # Delete the tests on commits that do not compile
+        for commit in report.commits:
+            if commit.compil_exit_code > 0:
+                self.__log(Criticality.II,
+                           "Cancelling the following runs because commit {} does not compile:".format(commit.sha1))
+                self.__log(Criticality.II, task_tree[commit.sha1])
+                del task_tree[commit.sha1]
+
         if len(task_tree) == 0:
             self.__log(Criticality.II, "Nothing left to do, exit")
             return
@@ -504,7 +513,6 @@ class SmartEzbench:
                        "make {count} runs for benchmark {benchmark} using commit {commit}".format(count=e.rounds,
                                                                                                   commit=e.commit,
                                                                                                   benchmark=e.benchmark))
-            # TODO: Separate the compilation and execution of tests to detect deployment errors
             run_info = ezbench.run_commits([e.commit], [e.benchmark + '$'], rounds=e.rounds)
             if run_info.success():
                 continue
@@ -547,6 +555,18 @@ class Commit:
         self.results = []
         self.geom_mean_cache = -1
         self.label = label
+
+        # Look for the exit code
+        self.compil_exit_code = -1
+        try:
+            with open(compile_log, 'r') as f:
+                for line in f:
+                    pass
+                # Line contains the last line of the report, parse it
+                if line.startswith("Exiting with error code "):
+                    self.compil_exit_code = int(line[24:])
+        except IOError:
+            pass
 
     def geom_mean(self):
         if self.geom_mean_cache >= 0:
@@ -738,6 +758,7 @@ def genPerformanceReport(log_folder, silentMode = False, commits_rev_order = dic
 
             # Add the result to the commit's results
             commit.results.append(result)
+            commit.compil_exit_code = 0 # The deployment must have been successful if there is data
 
         # Add the commit to the list of commits
         commit.results = sorted(commit.results, key=lambda res: res.benchmark.full_name)
