@@ -299,12 +299,18 @@ done
 
 # function to call on exit
 function finish {
+    exitcode=$?
+
     # to be executed on exit, possibly twice!
     git reset --hard "$commit_head" 2> /dev/null
     [ -n "$stash" ] && git stash apply "$stash" > /dev/null
 
     # Execute the user-defined post hook
     callIfDefined ezbench_post_hook
+
+    printf "Exiting with error code $exitcode\n"
+
+    exit $exitcode
 }
 trap finish EXIT
 trap finish INT # Needed for zsh
@@ -444,6 +450,7 @@ function compile {
     compile_start=$(date +%s)
     eval "$makeAndDeployCmd" > "$compile_logs" 2>&1
     local exit_code=$?
+    printf "Exiting with error code $exit_code\n" >> "$compile_logs"
     compile_end=$(date +%s)
     if [ "$exit_code" -ne '0' ]; then
         git reset --hard HEAD~ > /dev/null 2> /dev/null
