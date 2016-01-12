@@ -637,7 +637,7 @@ def readNotes():
     except:
         return []
 
-def genPerformanceReport(log_folder, silentMode = False):
+def genPerformanceReport(log_folder, silentMode = False, commits_rev_order = dict()):
     benchmarks = []
     commits = []
     labels = dict()
@@ -748,6 +748,19 @@ def genPerformanceReport(log_folder, silentMode = False):
 
     # Read the notes before going back to the original folder
     notes = readNotes()
+
+    # Sort the commits, if asked for
+    if len(commits_rev_order) > 0:
+        # Get rid of the commits that are not in the commits list
+        to_del = list()
+        for c in range(0, len(commits)):
+            if commits[c].sha1 not in commits_rev_order:
+                to_del.append(c)
+        for v in reversed(to_del):
+            del commits[v]
+
+        # Now we can sort the remaining commits
+        commits.sort(key=lambda commit: len(commits_rev_order) - commits_rev_order.index(commit.sha1))
 
     # Go back to the original folder
     os.chdir(cwd)
