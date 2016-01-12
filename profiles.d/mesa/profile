@@ -1,3 +1,5 @@
+source "$ezBenchDir/profiles.d/utils/common.sh"
+
 # Accessible variables
 # $ezBenchDir            [RO]: Directory of the ezbench
 # ------------------

@@ -1,4 +1,4 @@
-source "profiles.d/utils/sha1_db.sh"
+source "$ezBenchDir/profiles.d/utils/sha1_db.sh"
 
 # Requires xset, chvt,X
 function xserver_setup_start() {
