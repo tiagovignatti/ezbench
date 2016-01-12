@@ -555,6 +555,94 @@ class SmartEzbench:
 
         return True
 
+    def __get_git_history__(self):
+        git_history = list()
+
+        # Get the repo directory
+        ezbench = self.__create_ezbench()
+        run_info = ezbench.run_commits(["HEAD"], [], [], dry_run=True)
+
+        # Get the list of commits and store their position in the list in a dict
+        git_history = subprocess.check_output(["/usr/bin/git", "log", "--format=%h"],
+                                            cwd=run_info.repo_dir).decode().split()
+
+        return git_history
+
+    def report(self, reorder_commits = True):
+        git_history = dict()
+
+        if reorder_commits:
+            git_history = self.__get_git_history__()
+
+        # Generate the report, order commits based on the git history
+        r = genPerformanceReport(self.state['log_folder'], silentMode = True,
+                                 commits_rev_order=git_history)
+
+    def __find_middle_commit(self, git_history, old, new, msg):
+        old_idx = git_history.index(old)
+        new_idx = git_history.index(new)
+        middle_idx = int(old_idx - ((old_idx - new_idx) / 2))
+        if middle_idx != old_idx and middle_idx != new_idx:
+            middle = git_history[middle_idx]
+            log = "{} between commits {}({}) and {}({}), bisect using commit {}({})"
+            self.__log(Criticality.WW,
+                        log.format(msg, old, old_idx, new, new_idx, middle, middle_idx))
+            return middle
+        else:
+            self.__log(Criticality.WW,
+                       "{} due to commit '{}'".format(msg, new))
+            return None
+
+    def schedule_enhancements(self, perf_change_threshold=0.05):
+        # Generate the report, order commits based on the git history
+        git_history = self.__get_git_history__()
+        r = genPerformanceReport(self.state['log_folder'], silentMode = True,
+                                 commits_rev_order=git_history)
+
+        # Check all the commits
+        bench_prev = dict()
+        commit_prev = None
+        for commit in r.commits:
+            # Look for compilation errors
+            if ((commit.compil_exit_code > 0 and commit_prev is not None and
+                 commit_prev.compil_exit_code == 0) or
+               (commit.compil_exit_code == 0 and commit_prev is not None and
+                 commit_prev.compil_exit_code > 0)):
+                if commit.compil_exit_code > 0:
+                    msg = "The build got broken"
+                else:
+                    msg = "The build got fixed"
+                middle_commit = self.__find_middle_commit(git_history,
+                                                          commit_prev.sha1,
+                                                          commit.sha1, msg)
+                if middle_commit is not None:
+                    self.add_benchmark(middle_commit, "no-op", 1)
+
+            # Look for performance regressions
+            for result in commit.results:
+                perf = sum(result.data) / len(result.data)
+                bench = result.benchmark.full_name
+                bench_unit = result.benchmark.unit_str
+                if result.benchmark.full_name in bench_prev:
+                    # We got previous perf results, compare!
+                    old_commit = bench_prev[bench][0]
+                    old_perf = bench_prev[bench][1]
+                    diff = perf / old_perf
+
+                    if (diff > (1 + perf_change_threshold) or
+                        diff < (1 - perf_change_threshold)):
+                        msg = "Bench '{}' went from {} to {} {}".format(bench, old_perf,
+                                                                        perf, bench_unit)
+                        middle_commit = self.__find_middle_commit(git_history, old_commit,
+                                                                  commit.sha1, msg)
+                        if middle_commit is not None:
+                            # TODO: Just ensure the benchmark is run
+                            # TODO: Figure out how many runs we need based on the variance
+                            self.add_benchmark(middle_commit, bench, 3)
+
+                bench_prev[bench] = (commit.sha1, perf)
+            commit_prev = commit
+
 # Report parsing
 class Benchmark:
     def __init__(self, full_name, unit="undefined"):

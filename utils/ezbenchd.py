@@ -44,7 +44,9 @@ def stop_handler(signum, frame):
     return
 
 def reload_conf_handler(signum, frame):
+    # TODO
     return
+
 
 # parse the options
 parser = argparse.ArgumentParser()
@@ -65,6 +67,7 @@ while not stop_requested:
         sbench = SmartEzbench(ezbench_dir, report_name)
         if sbench.running_mode() == RunningMode.RUN:
             sbench.run()
+            sbench.schedule_enhancements()
 
     # TODO: Replace this by inotify
     time.sleep(1)
