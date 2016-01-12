@@ -15,6 +15,12 @@ source "$ezBenchDir/profiles.d/utils/common.sh"
 # $testsList             [WO]: List of tests that should be ran in this profile
 # $testExcludeList       [WO]: List of tests that should be excluded in this profile
 
+function __compile__() {
+    make -j8 || return 71
+    make_install_sha1_dump || return 72
+    return 0
+}
+
 function __default_make_and_deploy__() {
     # Return error codes:
     # 71: Compilation error
@@ -22,10 +28,12 @@ function __default_make_and_deploy__() {
 
     x_show_debug_info_start
 
-    make -j8 || exit 71
-    make_install_sha1_dump || exit 72
+    __compile__
+    compile_error=$?
 
     x_show_debug_info_stop
+
+    return $compile_error
 }
 
 function __git_version_deployed__() {
