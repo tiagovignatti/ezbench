@@ -1,0 +1,6 @@
+test_name=no-op
+test_exec_time=0
+
+no-op_run() {
+    echo 1
+}
