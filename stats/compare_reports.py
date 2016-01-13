@@ -35,8 +35,9 @@ import sys
 import os
 
 # Import ezbench from the utils/ folder
-sys.path.append(os.path.abspath(sys.path[0]+'/../utils/'))
-sys.path.append(os.path.abspath(sys.path[0]+'/../utils/env_dump'))
+ezbench_dir = os.path.abspath(sys.path[0]+'/../')
+sys.path.append(ezbench_dir+'/utils/')
+sys.path.append(ezbench_dir+'/utils/env_dump')
 from ezbench import *
 from env_dump_parser import *
 
@@ -61,14 +62,21 @@ else:
 # commit -> report_name -> benchmark -> bench results
 db = dict()
 db["commits"] = collections.OrderedDict()
-db["reports"] = args.log_folder
+db["reports"] = list()
 db["benchmarks"] = list()
 db['env_sets'] = dict()
 db["envs"] = dict()
 human_envs = dict()
 for log_folder in args.log_folder:
 	print("{f}: ".format(f=log_folder), end="")
-	report = genPerformanceReport(log_folder)
+	report_name = [x for x in log_folder.split('/') if x][-1]
+	try:
+		sbench = SmartEzbench(ezbench_dir, report_name, readonly=True)
+		report = sbench.report()
+	except RuntimeError:
+		report = genPerformanceReport(log_folder)
+
+	db["reports"].append(report_name)
 
 	# drop the no-op benchmark
 	report.benchmarks = list(filter(lambda b: b.full_name != "no-op", report.benchmarks))
@@ -84,7 +92,7 @@ for log_folder in args.log_folder:
 
 		if not commit.sha1 in db["commits"]:
 			db["commits"][commit.sha1] = dict()
-		db["commits"][commit.sha1][log_folder] = dict()
+		db["commits"][commit.sha1][report_name] = dict()
 
 		# Add the results and compute the average performance
 		score_sum = 0
@@ -92,7 +100,7 @@ for log_folder in args.log_folder:
 		for result in commit.results:
 			if not result.benchmark.full_name in db["benchmarks"]:
 				db["benchmarks"].append(result.benchmark.full_name)
-			db["commits"][commit.sha1][log_folder][result.benchmark.full_name] = result
+			db["commits"][commit.sha1][report_name][result.benchmark.full_name] = result
 			orig_avr_runs = sum(result.data) / float(len(result.data))
 			average = convert_unit(orig_avr_runs, result.unit_str, output_unit)
 			score_sum += average
@@ -120,7 +128,7 @@ for log_folder in args.log_folder:
 				                                                             'extension count$',
 				                                                             'window id$'])
 				tup = dict()
-				tup['log_folder'] = log_folder
+				tup['log_folder'] = report_name
 				tup['commit'] = commit
 				tup['run'] = e
 
@@ -143,8 +151,8 @@ for log_folder in args.log_folder:
 			avg = score_sum / count
 		else:
 			avg = 0
-		db["commits"][commit.sha1][log_folder]["average"] = float("{0:.2f}".format(avg))
-		db["commits"][commit.sha1][log_folder]["average_unit"] = output_unit
+		db["commits"][commit.sha1][report_name]["average"] = float("{0:.2f}".format(avg))
+		db["commits"][commit.sha1][report_name]["average_unit"] = output_unit
 
 # Generate the environment
 for bench in human_envs:
@@ -616,7 +624,7 @@ print("Generating the HTML")
 if args.title is not None:
     title = args.title
 else:
-    title = "Performance report on the run named '{run_name}'".format(run_name=args.log_folder)
+    title = "Performance report on the run named '{run_name}'".format(run_name=report_name)
 
 html = Template(html_template).render(title=title, db=db, output_unit=output_unit,
 				      default_commit=list(db["commits"])[-1])
