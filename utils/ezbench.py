@@ -602,6 +602,8 @@ class SmartEzbench:
         # Check all the commits
         bench_prev = dict()
         commit_prev = None
+        last_commit_good = None
+        runs_not_run = []
         for commit in r.commits:
             # Look for compilation errors
             if ((commit.compil_exit_code > 0 and commit_prev is not None and
@@ -616,7 +618,27 @@ class SmartEzbench:
                                                           commit_prev.sha1,
                                                           commit.sha1, msg)
                 if middle_commit is not None:
-                    self.add_benchmark(middle_commit, "no-op", 1)
+                    self.force_benchmark_rounds(middle_commit, "no-op", 1)
+                elif commit.compil_exit_code > 0:
+                    # The current commit introduced a build failure, mark
+                    # the previous commit as being the last known-good
+                    last_commit_good = commit_prev
+                else:
+                    # The current commit fixed a build failure, we do not need
+                    # to mark that the build is broken anymore and add all the
+                    # benchmark runs that were found in the range of unbuildable
+                    # commits.
+                    last_commit_good = None
+                    for run in runs_not_run:
+                        self.force_benchmark_rounds(commit.sha1, run[0], run[1])
+
+            # If the current commit refuses to build, move the benchmarks we were
+            # supposed to run to the last commit before it got broken
+            if commit.compil_exit_code > 0 and last_commit_good is not None:
+                for benchmark in self.state['commits'][commit.sha1]['benchmarks']:
+                    rounds = self.state['commits'][commit.sha1]['benchmarks'][benchmark]['rounds']
+                    self.force_benchmark_rounds(last_commit_good.sha1, benchmark, rounds)
+                    runs_not_run.append((benchmark, rounds))
 
             # Look for performance regressions
             for result in commit.results:
@@ -636,9 +658,8 @@ class SmartEzbench:
                         middle_commit = self.__find_middle_commit(git_history, old_commit,
                                                                   commit.sha1, msg)
                         if middle_commit is not None:
-                            # TODO: Just ensure the benchmark is run
                             # TODO: Figure out how many runs we need based on the variance
-                            self.add_benchmark(middle_commit, bench, 3)
+                            self.force_benchmark_rounds(middle_commit, bench, 3)
 
                 bench_prev[bench] = (commit.sha1, perf)
             commit_prev = commit
