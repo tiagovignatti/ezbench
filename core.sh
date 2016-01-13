@@ -452,6 +452,11 @@ function compile {
     local exit_code=$?
     printf "Exiting with error code $exit_code\n" >> "$compile_logs"
     compile_end=$(date +%s)
+
+    # Reset to the original commit early
+    git reset --hard "$commit_head" 2> /dev/null
+
+    # Check for compilation errors
     if [ "$exit_code" -ne '0' ]; then
         git reset --hard HEAD~ > /dev/null 2> /dev/null
 
@@ -482,7 +487,6 @@ function compile {
         printf "    ${c_bright_red}ERROR${c_reset}: The deployed version ($version) does not match the wanted one($commit)\n"
         exit 73
     fi
-
 }
 
 if [ $rounds -eq 0 ]
