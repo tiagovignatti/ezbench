@@ -653,8 +653,8 @@ class SmartEzbench:
 
                     if (diff > (1 + perf_change_threshold) or
                         diff < (1 - perf_change_threshold)):
-                        msg = "Bench '{}' went from {} to {} {}".format(bench, old_perf,
-                                                                        perf, bench_unit)
+                        msg = "Bench '{}' went from {} to {} {}".format(bench, round(old_perf, 2),
+                                                                        round(perf, 2), bench_unit)
                         middle_commit = self.__find_middle_commit(git_history, old_commit,
                                                                   commit.sha1, msg)
                         if middle_commit is not None:
