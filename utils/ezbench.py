@@ -659,7 +659,8 @@ class SmartEzbench:
                                                                   commit.sha1, msg)
                         if middle_commit is not None:
                             # TODO: Figure out how many runs we need based on the variance
-                            self.force_benchmark_rounds(middle_commit, bench, 3)
+                            # In the mean time, re-use the same number of runs
+                            self.force_benchmark_rounds(middle_commit, bench, len(result.data))
 
                 bench_prev[bench] = (commit.sha1, perf)
             commit_prev = commit
