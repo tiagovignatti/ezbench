@@ -405,6 +405,32 @@ class SmartEzbench:
         self.__save_state()
         self.__release_lock()
 
+    def force_benchmark_rounds(self, commit, benchmark, at_least):
+        if at_least < 1:
+            return 0
+
+        self.__reload_state(keep_lock=True)
+        if commit not in self.state['commits']:
+            self.state['commits'][commit] = dict()
+            self.state['commits'][commit]["benchmarks"] = dict()
+
+        if benchmark not in self.state['commits'][commit]['benchmarks']:
+            self.state['commits'][commit]['benchmarks'][benchmark] = dict()
+            self.state['commits'][commit]['benchmarks'][benchmark]['rounds'] = 0
+
+        to_add = at_least - self.state['commits'][commit]['benchmarks'][benchmark]['rounds']
+
+        if to_add > 0:
+            self.state['commits'][commit]['benchmarks'][benchmark]['rounds'] += to_add
+            self.__save_state()
+
+        self.__release_lock()
+
+        if to_add > 0:
+            return to_add
+        else:
+            return 0
+
     def __prioritize_runs(self, task_tree, deployed_version):
         task_list = list()
 
