@@ -103,6 +103,9 @@ for log_folder in args.log_folder:
 			for e in range(0, len(result.env_files)):
 				# Create the per-run information
 				envfile = result.env_files[e]
+				if envfile is None:
+					continue
+
 				r = EnvDumpReport(log_folder + "/" + envfile, False).to_set(['^DATE',
 				                                                             '^ENV.ENV_DUMP_FILE',
 				                                                             '^ENV.EZBENCH_PERFMETER_PID',
