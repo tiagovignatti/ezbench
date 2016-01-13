@@ -70,12 +70,18 @@ for log_folder in args.log_folder:
 	print("{f}: ".format(f=log_folder), end="")
 	report = genPerformanceReport(log_folder)
 
+	# drop the no-op benchmark
+	report.benchmarks = list(filter(lambda b: b.full_name != "no-op", report.benchmarks))
+
 	# make sure all the benchmarks are listed in db["envs"]
 	for benchmark in report.benchmarks:
 		db["envs"][benchmark.full_name] = dict()
 
 	# add all the commits
 	for commit in report.commits:
+		# drop the no-op results
+		commit.results = list(filter(lambda r: r.benchmark.full_name != "no-op", commit.results))
+
 		if not commit.sha1 in db["commits"]:
 			db["commits"][commit.sha1] = dict()
 		db["commits"][commit.sha1][log_folder] = dict()
