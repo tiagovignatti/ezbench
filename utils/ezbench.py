@@ -217,8 +217,9 @@ class TaskEntry:
         self.rounds = rounds
 
 class SmartEzbench:
-    def __init__(self, ezbench_dir, report_name):
+    def __init__(self, ezbench_dir, report_name, readonly = False):
         self.state = dict()
+        self.readonly = readonly
         self.state['ezbench_dir'] = ezbench_dir
         self.state['report_name'] = report_name
         self.state['log_folder'] = ezbench_dir + '/logs/' + report_name
@@ -230,7 +231,7 @@ class SmartEzbench:
 
         # Create the log directory
         first_run = False
-        if not os.path.exists(self.state['log_folder']):
+        if not readonly and not os.path.exists(self.state['log_folder']):
             os.makedirs(self.state['log_folder'])
             first_run = True
 
@@ -239,19 +240,24 @@ class SmartEzbench:
 
         # Add the welcome message
         if first_run or not self.__reload_state():
+            if readonly:
+                raise RuntimeError("The report {} does not exist".format(report_name))
             self.__save_state()
             self.__log(Criticality.II,
-                       "Created report '{report_name}' in {log_folder}".format(report_name=report_name,
-                                                                               log_folder=self.state['log_folder']))
+                    "Created report '{report_name}' in {log_folder}".format(report_name=report_name,
+                                                                            log_folder=self.state['log_folder']))
 
     def __log(self, error, msg):
         time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         log_msg = "{time}: ({error}) {msg}\n".format(time=time, error=error.name, msg=msg)
         print(log_msg, end="")
-        self.log_file.write(log_msg)
-        self.log_file.flush()
+        if not self.readonly:
+            self.log_file.write(log_msg)
+            self.log_file.flush()
 
     def __grab_lock(self):
+        if self.readonly:
+            return
         self.lock_fd = open(self.state['smart_ezbench_lock'], 'w')
         try:
             fcntl.flock(self.lock_fd, fcntl.LOCK_EX)
@@ -261,6 +267,9 @@ class SmartEzbench:
             return False
 
     def __release_lock(self):
+        if self.readonly:
+            return
+
         try:
             fcntl.flock(self.lock_fd, fcntl.LOCK_UN)
             self.lock_fd.close()
@@ -292,6 +301,9 @@ class SmartEzbench:
         return ret
 
     def __save_state(self):
+        if self.self.readonly:
+            return
+
         try:
             state_tmp = str(self.state['smart_ezbench_state']) + ".tmp"
             with open(state_tmp, 'wt') as f:
