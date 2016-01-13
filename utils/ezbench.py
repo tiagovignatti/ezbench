@@ -577,6 +577,7 @@ class SmartEzbench:
         # Generate the report, order commits based on the git history
         r = genPerformanceReport(self.state['log_folder'], silentMode = True,
                                  commits_rev_order=git_history)
+        return r
 
     def __find_middle_commit(self, git_history, old, new, msg):
         old_idx = git_history.index(old)
