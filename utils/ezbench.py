@@ -25,11 +25,12 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
+from email.utils import parsedate_tz, mktime_tz
+from datetime import datetime
 from array import array
 from enum import Enum
 from numpy import *
 import subprocess
-import datetime
 import atexit
 import pprint
 import fcntl
@@ -248,7 +249,7 @@ class SmartEzbench:
                                                                             log_folder=self.state['log_folder']))
 
     def __log(self, error, msg):
-        time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         log_msg = "{time}: ({error}) {msg}\n".format(time=time, error=error.name, msg=msg)
         print(log_msg, end="")
         if not self.readonly:
@@ -704,6 +705,63 @@ class Commit:
         self.results = []
         self.geom_mean_cache = -1
         self.label = label
+
+        # Set default values then parse the patch
+        self.full_sha1 = sha1
+        self.author = "UNKNOWN AUTHOR"
+        self.commiter = "UNKNOWN COMMITER"
+        self.author_date = datetime.min
+        self.commit_date = datetime.min
+        self.title = ''
+        self.commit_log = ''
+        self.signed_of_by = set()
+        self.reviewed_by = set()
+        self.tested_by = set()
+        self.bugs = set()
+        try:
+            with open(patch, 'r') as f:
+                log_started = False
+                fdo_bug_re = re.compile('fdo#(\d+)')
+                basefdourl = "https://bugs.freedesktop.org/show_bug.cgi?id="
+                for line in f:
+                    line = line.strip()
+                    if line == "---": # Detect the end of the header
+                        break
+                    elif line.startswith('commit'):
+                        self.full_sha1 = line.split(' ')[1]
+                    elif line.startswith('Author:'):
+                        self.author = line[12:]
+                    elif line.startswith('AuthorDate: '):
+                        self.author_date = datetime.fromtimestamp(mktime_tz(parsedate_tz(line[12:])))
+                    elif line.startswith('Commit:'):
+                        self.commiter = line[12:]
+                    elif line.startswith('CommitDate: '):
+                        self.commit_date = datetime.fromtimestamp(mktime_tz(parsedate_tz(line[12:])))
+                    elif line == '':
+                        # The commit log is about to start
+                        log_started = True
+                    elif log_started:
+                        if self.title == '':
+                            self.title = line
+                        else:
+                            self.commit_log += line + '\n'
+                            if line.startswith('Reviewed-by: '):
+                                self.reviewed_by |= {line[13:]}
+                            elif line.startswith('Signed-off-by: '):
+                                self.signed_of_by |= {line[15:]}
+                            elif line.startswith('Tested-by: '):
+                                self.tested_by |= {line[11:]}
+                            elif line.startswith('Bugzilla: '):
+                                self.bugs |= {line[10:]}
+                            elif line.startswith('Fixes: '):
+                                self.bugs |= {line[7:]}
+                            else:
+                                fdo_bug_m = fdo_bug_re.search(line)
+                                if fdo_bug_m is not None:
+                                    bugid = fdo_bug_m.groups()[0]
+                                    self.bugs |= {basefdourl + bugid}
+        except IOError:
+            pass
 
         # Look for the exit code
         self.compil_exit_code = -1
