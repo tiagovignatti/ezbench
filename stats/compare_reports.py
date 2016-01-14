@@ -90,6 +90,8 @@ for log_folder in args.log_folder:
 	for commit in report.commits:
 		# drop the no-op results
 		commit.results = list(filter(lambda r: r.benchmark.full_name != "no-op", commit.results))
+		if len(commit.results) == 0 and commit.compil_exit_code == 0:
+			continue
 
 		if not commit.sha1 in db["commits"]:
 			db["commits"][commit.sha1] = dict()
