@@ -49,6 +49,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--title", help="Set the title for the report")
 parser.add_argument("--unit", help="Set the output unit (Default: ms)")
 parser.add_argument("--output", help="Report html file path", required=True)
+parser.add_argument("--commit_url", help="HTTP URL pattern, {commit} contains the SHA1")
 parser.add_argument("log_folder", nargs='+')
 args = parser.parse_args()
 
@@ -93,6 +94,11 @@ for log_folder in args.log_folder:
 		if not commit.sha1 in db["commits"]:
 			db["commits"][commit.sha1] = dict()
 			db["commits"][commit.sha1]['reports'] = dict()
+			db["commits"][commit.sha1]['commit'] = commit
+			if commit.compil_exit_code <= 0:
+				db["commits"][commit.sha1]['build_color'] = "#00FF00"
+			else:
+				db["commits"][commit.sha1]['build_color'] = "#FF0000"
 		db["commits"][commit.sha1]['reports'][report_name] = dict()
 
 		# Add the results and compute the average performance
@@ -184,10 +190,16 @@ for bench in db['env_sets']:
 db["benchmarks"] = sort(db["benchmarks"])
 pprint.pprint(db)
 
+# Support creating new URLs
+if args.commit_url is not None:
+    db["commit_url"] = args.commit_url
+
 # Generate the report
 html_template="""
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<%! import cgi %>
 
 <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
@@ -251,22 +263,22 @@ html_template="""
                             return null;
                         }
                     };
-                    series[col - 1].color = '#CCCCCC';
+                    series[col - 2].color = '#CCCCCC';
                 }
                 else {
                     activColumns[col] = col;
-                    series[col - 1].color = null;
+                    series[col - 2].color = null;
                 }
             }
 
             function showAllColumns(dataTable, chart, activColumns, series, show) {
-                for (var i = 1; i < dataTable.getNumberOfColumns(); i++) {
+                for (var i = 2; i < dataTable.getNumberOfColumns(); i++) {
                     showColumn(dataTable, chart, activColumns, series, i, show)
                 }
             }
 
             function showColumnCombo(dataTable, chart, activColumns, series, col, show) {
-                seriesCol = Math.ceil((col - 1) / 2);
+                seriesCol = Math.ceil((col - 2) / 2);
                 if (!show) {
                     activColumns[col] = {
                         label: dataTable.getColumnLabel(col),
@@ -285,7 +297,7 @@ html_template="""
             }
 
             function showAllColumnsCombo(dataTable, chart, activColumns, series, show) {
-                for (var i = 1; i < dataTable.getNumberOfColumns(); i+=2) {
+                for (var i = 2; i < dataTable.getNumberOfColumns(); i+=2) {
                     showColumnCombo(dataTable, chart, activColumns, series, i, show)
                 }
             }
@@ -299,12 +311,23 @@ html_template="""
             function drawTrend() {
                 var dataTable = new google.visualization.DataTable();
                 dataTable.addColumn('string', 'Commit');
+                dataTable.addColumn({type: 'string', role: 'tooltip', p: { html: true }});
                 % for report in db["reports"]:
                 dataTable.addColumn('number', '${report}');
                 % endfor
                 dataTable.addRows([
                 % for commit in db["commits"]:
-                    ['${commit}'\\
+                    ['${commit}', "<h4>${db["commits"][commit]['commit'].full_name}\\
+% if 'commit_url' in db:
+ (<a href='${db["commit_url"].format(commit=commit)}' target='_blank'>url</a>)\\
+% endif
+</h4><table>\\
+<tr><td><b>Author:</b></td><td>${cgi.escape(db["commits"][commit]['commit'].author)}</td><tr/>\\
+<tr><td><b>Commit date:</b></td><td>${db["commits"][commit]['commit'].commit_date}</td><tr/>\\
+<tr><td><b>Build exit code:</b></td><td bgcolor='${db["commits"][commit]['build_color']}'><center>${db["commits"][commit]['commit'].compil_exit_code}</center></td><tr/>\\
+</table>\\
+<p><b>Perf:</b> ${db["commits"][commit]['reports'][report]["average"]} ${output_unit}</p>\\
+"\\
                         % for report in db["reports"]:
                             % if report in db["commits"][commit]['reports']:
 , ${db["commits"][commit]['reports'][report]["average"]}\\
@@ -349,7 +372,7 @@ html_template="""
                         var col = sel[0].column;
 
                         var allActive = true;
-                        for (var i = 1; i < dataTable.getNumberOfColumns(); i++) {
+                        for (var i = 2; i < dataTable.getNumberOfColumns(); i++) {
                             if (activColumns[i] != i) {
                                 allActive = false;
                             }
@@ -369,7 +392,7 @@ html_template="""
                         }
 
                         var allHidden = true;
-                        for (var i = 1; i < dataTable.getNumberOfColumns(); i++) {
+                        for (var i = 2; i < dataTable.getNumberOfColumns(); i++) {
                             if (activColumns[i] == i) {
                                 allHidden = false;
                             }
