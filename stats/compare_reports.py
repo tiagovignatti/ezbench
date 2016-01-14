@@ -92,7 +92,8 @@ for log_folder in args.log_folder:
 
 		if not commit.sha1 in db["commits"]:
 			db["commits"][commit.sha1] = dict()
-		db["commits"][commit.sha1][report_name] = dict()
+			db["commits"][commit.sha1]['reports'] = dict()
+		db["commits"][commit.sha1]['reports'][report_name] = dict()
 
 		# Add the results and compute the average performance
 		score_sum = 0
@@ -100,7 +101,7 @@ for log_folder in args.log_folder:
 		for result in commit.results:
 			if not result.benchmark.full_name in db["benchmarks"]:
 				db["benchmarks"].append(result.benchmark.full_name)
-			db["commits"][commit.sha1][report_name][result.benchmark.full_name] = result
+			db["commits"][commit.sha1]['reports'][report_name][result.benchmark.full_name] = result
 			orig_avr_runs = sum(result.data) / float(len(result.data))
 			average = convert_unit(orig_avr_runs, result.unit_str, output_unit)
 			score_sum += average
@@ -151,8 +152,8 @@ for log_folder in args.log_folder:
 			avg = score_sum / count
 		else:
 			avg = 0
-		db["commits"][commit.sha1][report_name]["average"] = float("{0:.2f}".format(avg))
-		db["commits"][commit.sha1][report_name]["average_unit"] = output_unit
+		db["commits"][commit.sha1]['reports'][report_name]["average"] = float("{0:.2f}".format(avg))
+		db["commits"][commit.sha1]['reports'][report_name]["average_unit"] = output_unit
 
 # Generate the environment
 for bench in human_envs:
@@ -305,8 +306,8 @@ html_template="""
                 % for commit in db["commits"]:
                     ['${commit}'\\
                         % for report in db["reports"]:
-                            % if report in db["commits"][commit]:
-, ${db["commits"][commit][report]["average"]}\\
+                            % if report in db["commits"][commit]['reports']:
+, ${db["commits"][commit]['reports'][report]["average"]}\\
                             % else:
 , null\\
                             % endif
@@ -411,14 +412,14 @@ html_template="""
                 if (currentCommit == "${commit}") {
                     dataTable.addRows([
                     % for report in db["reports"]:
-                        % if report in db["commits"][commit]:
-                             ["${report}", ${db["commits"][commit][report]["average"]}, "<h3>${report} - ${benchmark}</h3><p>\\
+                        % if report in db["commits"][commit]['reports']:
+                             ["${report}", ${db["commits"][commit]['reports'][report]["average"]}, "<h3>${report} - ${benchmark}</h3><p>\\
                              % for r in db["reports"]:
 <%
                                      if not r in db["commits"][commit]:
                                          continue
-                                     if db["commits"][commit][report]["average"] != 0:
-                                         diff = db["commits"][commit][r]["average"] / db["commits"][commit][report]["average"] * 100
+                                     if db["commits"][commit]['reports'][report]["average"] != 0:
+                                         diff = db["commits"][commit]['reports'][r]["average"] / db["commits"][commit]['reports'][report]["average"] * 100
                                          diff = float("{0:.2f}".format(diff))
                                      else:
                                         diff = "ERR"
@@ -427,18 +428,18 @@ html_template="""
                                          btag="<b>"
                                          btagend="</b>"
                                  %>\\
-${btag}${r}: ${db["commits"][commit][r]["average"]} ${output_unit} (${diff}%)${btagend}<br/>\\
+${btag}${r}: ${db["commits"][commit]['reports'][r]["average"]} ${output_unit} (${diff}%)${btagend}<br/>\\
                             % endfor
 </p>"\\
                             % for benchmark in db["benchmarks"]:
-                                % if benchmark in db["commits"][commit][report]:
-, ${db["commits"][commit][report][benchmark].average}, "<h3>${report} - ${benchmark}</h3><p>\\
+                                % if benchmark in db["commits"][commit]['reports'][report]:
+, ${db["commits"][commit]['reports'][report][benchmark].average}, "<h3>${report} - ${benchmark}</h3><p>\\
                                     % for r in db["reports"]:
 <%
                                             if not r in db["commits"][commit] or benchmark not in db["commits"][commit][r]:
                                                 continue
-                                            if db["commits"][commit][report][benchmark].average != 0:
-                                                diff = db["commits"][commit][r][benchmark].average / db["commits"][commit][report][benchmark].average * 100
+                                            if db["commits"][commit]['reports'][report][benchmark].average != 0:
+                                                diff = db["commits"]['reports'][commit][r][benchmark].average / db["commits"][commit]['reports'][report][benchmark].average * 100
                                                 diff = float("{0:.2f}".format(diff))
                                             else:
                                                 diff = "ERR"
@@ -447,7 +448,7 @@ ${btag}${r}: ${db["commits"][commit][r]["average"]} ${output_unit} (${diff}%)${b
                                                 btag="<b>"
                                                 btagend="</b>"
                                         %>\\
-${btag}${r}: ${db["commits"][commit][r][benchmark].average} ${output_unit} (${diff}%)${btagend}<br/>\\
+${btag}${r}: ${db["commits"][commit]['reports'][r][benchmark].average} ${output_unit} (${diff}%)${btagend}<br/>\\
                                     % endfor
 </p>"\\
                            % else:
