@@ -301,7 +301,7 @@ class SmartEzbench:
         return ret
 
     def __save_state(self):
-        if self.self.readonly:
+        if self.readonly:
             return
 
         try:
