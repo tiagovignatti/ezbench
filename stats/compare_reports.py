@@ -320,14 +320,21 @@ html_template="""
                 % endfor
                 dataTable.addRows([
                 % for commit in db["commits"]:
-                    ['${commit}', "<h3>${db["commits"][commit]['commit'].full_name}\\
+                    ['${commit}', "<h3>${db["commits"][commit]['commit'].full_name}</h3><h4>Commit\\
 % if 'commit_url' in db:
- (<a href='${db["commit_url"].format(commit=commit)}' target='_blank'>url</a>)\\
+ (<a href='${db["commit_url"].format(commit=commit)}' target='_blank'>URL</a>)\\
 % endif
-</h3><h4>Commit</h4><table>\\
+</h4><table>\\
 <tr><td><b>Author:</b></td><td>${cgi.escape(db["commits"][commit]['commit'].author)}</td><tr/>\\
 <tr><td><b>Commit date:</b></td><td>${db["commits"][commit]['commit'].commit_date}</td><tr/>\\
 <tr><td><b>Build exit code:</b></td><td bgcolor='${db["commits"][commit]['build_color']}'><center>${db["commits"][commit]['build_error']}</center></td><tr/>\\
+% if len(db["commits"][commit]['commit'].bugs) > 0:
+<tr><td><b>Referenced bugs</b></td><td><ul>\\
+% for bug in db["commits"][commit]['commit'].bugs:
+<li><a href='${bug}' target='_blank'>${bug}</a></li>\\
+% endfor
+</ul></td></tr>\\
+% endif
 </table>\\
 <h4>Perf</h4><table>\\
 % for report in db["reports"]:
