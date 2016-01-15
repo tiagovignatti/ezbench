@@ -26,6 +26,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 from email.utils import parsedate_tz, mktime_tz
+from collections import namedtuple
 from datetime import datetime
 from array import array
 from enum import Enum
@@ -576,20 +577,24 @@ class SmartEzbench:
         run_info = ezbench.run_commits(["HEAD"], [], [], dry_run=True)
 
         # Get the list of commits and store their position in the list in a dict
-        git_history = subprocess.check_output(["/usr/bin/git", "log", "--format=%h"],
-                                            cwd=run_info.repo_dir).decode().split()
+        output = subprocess.check_output(["/usr/bin/git", "log", "--format=%h %ct"],
+                                          cwd=run_info.repo_dir).decode().split('\n')
+
+        GitCommit = namedtuple('GitCommit', 'sha1 timestamp')
+        for line in output:
+            fields = line.split(' ')
+            if len(fields) == 2:
+                git_history.append(GitCommit(fields[0], fields[1]))
 
         return git_history
 
-    def report(self, git_history=None, reorder_commits = True):
+    def report(self, git_history=list(), reorder_commits = True):
         if reorder_commits and git_history is None:
             git_history = self.git_history()
-        else:
-            git_history = list()
 
         # Generate the report, order commits based on the git history
         r = genPerformanceReport(self.state['log_folder'], silentMode = True,
-                                 commits_rev_order=git_history)
+                                 commits_rev_order=[c.sha1 for c in git_history])
         return r
 
     def __find_middle_commit(self, git_history, old, new, msg):
@@ -612,7 +617,7 @@ class SmartEzbench:
         if git_history is None:
             git_history = self.git_history()
         r = genPerformanceReport(self.state['log_folder'], silentMode = True,
-                                 commits_rev_order=git_history)
+                                 commits_rev_order=[c.sha1 for c in git_history])
 
         # Check all the commits
         bench_prev = dict()
@@ -865,7 +870,7 @@ def readNotes():
     except:
         return []
 
-def genPerformanceReport(log_folder, silentMode = False, commits_rev_order = dict()):
+def genPerformanceReport(log_folder, silentMode = False, commits_rev_order = list()):
     benchmarks = []
     commits = []
     labels = dict()
