@@ -68,12 +68,15 @@ db["benchmarks"] = list()
 db['env_sets'] = dict()
 db["envs"] = dict()
 human_envs = dict()
+git_history = None
 for log_folder in args.log_folder:
 	print("{f}: ".format(f=log_folder), end="")
 	report_name = [x for x in log_folder.split('/') if x][-1]
 	try:
 		sbench = SmartEzbench(ezbench_dir, report_name, readonly=True)
-		report = sbench.report()
+		if git_history is None:
+			git_history = sbench.git_history()
+		report = sbench.report(git_history=git_history)
 	except RuntimeError:
 		report = genPerformanceReport(log_folder)
 

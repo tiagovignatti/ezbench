@@ -568,7 +568,7 @@ class SmartEzbench:
 
         return True
 
-    def __get_git_history__(self):
+    def git_history(self):
         git_history = list()
 
         # Get the repo directory
@@ -581,11 +581,11 @@ class SmartEzbench:
 
         return git_history
 
-    def report(self, reorder_commits = True):
-        git_history = dict()
-
-        if reorder_commits:
-            git_history = self.__get_git_history__()
+    def report(self, git_history=None, reorder_commits = True):
+        if reorder_commits and git_history is None:
+            git_history = self.git_history()
+        else:
+            git_history = list()
 
         # Generate the report, order commits based on the git history
         r = genPerformanceReport(self.state['log_folder'], silentMode = True,
@@ -607,9 +607,10 @@ class SmartEzbench:
                        "{} due to commit '{}'".format(msg, new))
             return None
 
-    def schedule_enhancements(self, perf_change_threshold=0.05):
+    def schedule_enhancements(self, git_history=None, perf_change_threshold=0.05):
         # Generate the report, order commits based on the git history
-        git_history = self.__get_git_history__()
+        if git_history is None:
+            git_history = self.git_history()
         r = genPerformanceReport(self.state['log_folder'], silentMode = True,
                                  commits_rev_order=git_history)
 
