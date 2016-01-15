@@ -101,6 +101,7 @@ for log_folder in args.log_folder:
 				db["commits"][commit.sha1]['build_color'] = "#00FF00"
 			else:
 				db["commits"][commit.sha1]['build_color'] = "#FF0000"
+			db["commits"][commit.sha1]['build_error'] = str(EzbenchExitCode(commit.compil_exit_code)).split('.')[1]
 		db["commits"][commit.sha1]['reports'][report_name] = dict()
 
 		# Add the results and compute the average performance
@@ -326,7 +327,7 @@ html_template="""
 </h4><table>\\
 <tr><td><b>Author:</b></td><td>${cgi.escape(db["commits"][commit]['commit'].author)}</td><tr/>\\
 <tr><td><b>Commit date:</b></td><td>${db["commits"][commit]['commit'].commit_date}</td><tr/>\\
-<tr><td><b>Build exit code:</b></td><td bgcolor='${db["commits"][commit]['build_color']}'><center>${db["commits"][commit]['commit'].compil_exit_code}</center></td><tr/>\\
+<tr><td><b>Build exit code:</b></td><td bgcolor='${db["commits"][commit]['build_color']}'><center>${db["commits"][commit]['build_error']}</center></td><tr/>\\
 </table>\\
 <p><b>Perf:</b> ${db["commits"][commit]['reports'][report]["average"]} ${output_unit}</p>\\
 "\\
