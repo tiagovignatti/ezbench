@@ -401,6 +401,14 @@ fi
 if [ -z "$makeAndDeployCmd" ]
 then
     avgBuildTime=0
+
+    # Since we cannot deploy a new version, we need to use the version that is
+    # currently deployed
+    if [ -n "$deployedVersion" ]
+    then
+        printf "WARNING: Cannot deploy new versions, forcing the commit list to $deployedVersion\n"
+        commitList=$deployedVersion
+    fi
 else
     avgBuildTime=$(git config --get ezbench.average-build-time 2>/dev/null || echo 30)
 fi
@@ -431,16 +439,35 @@ bad_color=$c_bright_red
 good_color=$c_bright_green
 meh_color=$c_bright_yellow
 
-function compile {
+function compile_and_deploy {
     # Accessible variables
     # $commit     [RO]: SHA1 id of the current commit
     # $commitName [RO]: Name of the commit
 
-    [ -z "$makeAndDeployCmd" ] && return 0
-
     # early exit if the deployed version is the wanted commit
     version=$(read_git_version_deployed)
     [ $? -eq 0 ] && [[ "$version" =~ "$commit" ]] && return 0
+
+    # Make sure we are in the right folder
+    cd "$gitRepoDir" || exit 31
+
+    # Select the commit of interest
+    if [ "$commit" == "$stash" ]
+    then
+        git reset --hard "$commit_head" > /dev/null
+        git stash apply "$stash" > /dev/null
+        echo -e "${c_bright_yellow}WIP${c_reset}"
+        echo "$commit" >> "$commitListLog"
+        git diff > "$logsFolder/${commit}.patch"
+    else
+        git reset --hard "$commit" > /dev/null
+        git show --format="%Cblue%h%Creset %Cgreen%s%Creset" -s
+        if [ -z "$(grep ^"$commit" "$commitListLog" 2> /dev/null)" ]
+        then
+            git show --format="%h %s" -s >> "$commitListLog"
+        fi
+        git format-patch HEAD~ --format=fuller --stdout > "$logsFolder/${commit}.patch"
+    fi
 
     # Call the user-defined pre-compile hook
     callIfDefined compile_pre_hook
@@ -456,10 +483,11 @@ function compile {
     # Reset to the original commit early
     git reset --hard "$commit_head" 2> /dev/null
 
+    # Call the user-defined post-compile hook
+    callIfDefined compile_post_hook
+
     # Check for compilation errors
     if [ "$exit_code" -ne '0' ]; then
-        git reset --hard HEAD~ > /dev/null 2> /dev/null
-
         # Forward the error code from $makeAndDeployCmd if it is a valid error code
         if [ $exit_code -eq 71 ]; then
             component="Compilation"
@@ -476,9 +504,6 @@ function compile {
     # Update our build time estimator
     avgBuildTime=$(bc <<< "0.75*$avgBuildTime + 0.25*($compile_end - $compile_start)")
     git config --replace-all ezbench.average-build-time "$(printf "%.0f" "$avgBuildTime")"
-
-    # Call the user-defined post-compile hook
-    callIfDefined compile_post_hook
 
     # Check that the deployed image is the right one
     version=$(read_git_version_deployed)
@@ -504,30 +529,8 @@ fi
 # Iterate through the commits
 for commit in $commitList
 do
-    # save the commit in the commit_list
-
-    # Make sure we are in the right folder
-    cd "$gitRepoDir" || exit 31
-
-    # Select the commit of interest
-    if [ "$commit" == "$stash" ]
-    then
-        git reset --hard "$commit_head" > /dev/null
-        git stash apply "$stash" > /dev/null
-        echo -e "${c_bright_yellow}WIP${c_reset}"
-        echo "$commit" >> "$commitListLog"
-        git diff > "$logsFolder/${commit}.patch"
-    else
-        git reset --hard "$commit" > /dev/null
-        git show --format="%Cblue%h%Creset %Cgreen%s%Creset" -s
-        if [ -z "$(grep ^"$commit" "$commitListLog" 2> /dev/null)" ]
-        then
-            git show --format="%h %s" -s >> "$commitListLog"
-        fi
-        git format-patch HEAD~ --format=fuller --stdout > "$logsFolder/${commit}.patch"
-    fi
-
-    compile
+    # compile and deploy the commit
+    compile_and_deploy $commit
 
     # Iterate through the tests
     fpsALL=""
