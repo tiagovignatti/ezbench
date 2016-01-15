@@ -320,17 +320,22 @@ html_template="""
                 % endfor
                 dataTable.addRows([
                 % for commit in db["commits"]:
-                    ['${commit}', "<h4>${db["commits"][commit]['commit'].full_name}\\
+                    ['${commit}', "<h3>${db["commits"][commit]['commit'].full_name}\\
 % if 'commit_url' in db:
  (<a href='${db["commit_url"].format(commit=commit)}' target='_blank'>url</a>)\\
 % endif
-</h4><table>\\
+</h3><h4>Commit</h4><table>\\
 <tr><td><b>Author:</b></td><td>${cgi.escape(db["commits"][commit]['commit'].author)}</td><tr/>\\
 <tr><td><b>Commit date:</b></td><td>${db["commits"][commit]['commit'].commit_date}</td><tr/>\\
 <tr><td><b>Build exit code:</b></td><td bgcolor='${db["commits"][commit]['build_color']}'><center>${db["commits"][commit]['build_error']}</center></td><tr/>\\
 </table>\\
-<p><b>Perf:</b> ${db["commits"][commit]['reports'][report]["average"]} ${output_unit}</p>\\
-"\\
+<h4>Perf</h4><table>\\
+% for report in db["reports"]:
+% if report in db["commits"][commit]['reports']:
+<tr><td><b>${report}:</b></td><td>${db["commits"][commit]['reports'][report]["average"]} ${output_unit}</td></tr>\\
+% endif
+% endfor
+</table><p></p>"\\
                         % for report in db["reports"]:
                             % if report in db["commits"][commit]['reports']:
 , ${db["commits"][commit]['reports'][report]["average"]}\\
