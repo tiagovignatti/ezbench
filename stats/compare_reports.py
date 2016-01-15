@@ -467,10 +467,10 @@ ${btag}${r}: ${db["commits"][commit]['reports'][r]["average"]} ${output_unit} ($
 , ${db["commits"][commit]['reports'][report][benchmark].average}, "<h3>${report} - ${benchmark}</h3><p>\\
                                     % for r in db["reports"]:
 <%
-                                            if not r in db["commits"][commit] or benchmark not in db["commits"][commit][r]:
+                                            if not r in db["commits"][commit]['reports'] or benchmark not in db["commits"][commit]['reports'][r]:
                                                 continue
                                             if db["commits"][commit]['reports'][report][benchmark].average != 0:
-                                                diff = db["commits"]['reports'][commit][r][benchmark].average / db["commits"][commit]['reports'][report][benchmark].average * 100
+                                                diff = db["commits"][commit]['reports'][r][benchmark].average / db["commits"][commit]['reports'][report][benchmark].average * 100
                                                 diff = float("{0:.2f}".format(diff))
                                             else:
                                                 diff = "ERR"
