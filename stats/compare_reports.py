@@ -280,7 +280,7 @@ html_template="""
             }
 
             function showColumnCombo(dataTable, chart, activColumns, series, col, show) {
-                seriesCol = Math.ceil((col - 2) / 2);
+                seriesCol = Math.ceil((col - 1) / 2);
                 if (!show) {
                     activColumns[col] = {
                         label: dataTable.getColumnLabel(col),
@@ -299,7 +299,7 @@ html_template="""
             }
 
             function showAllColumnsCombo(dataTable, chart, activColumns, series, show) {
-                for (var i = 2; i < dataTable.getNumberOfColumns(); i+=2) {
+                for (var i = 1; i < dataTable.getNumberOfColumns(); i+=2) {
                     showColumnCombo(dataTable, chart, activColumns, series, i, show)
                 }
             }
