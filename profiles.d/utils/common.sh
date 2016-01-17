@@ -8,14 +8,23 @@ function xserver_setup_start() {
 
     sudo -n chvt 5
     sleep 1 # Wait for the potential x-server running to release MASTER
-    x_pid=$(sudo -n $ezBenchDir/profiles.d/utils/_launch_background.sh Xorg -nolisten tcp -noreset :42 vt5 -auth /tmp/ezbench_XAuth 2> /dev/null) # TODO: Save the xorg logs
+    x_pid=$(sudo -n $ezBenchDir/profiles.d/utils/_launch_background.sh Xorg -nolisten tcp -noreset :42 vt5 -auth /tmp/ezbench_XAuth 2> /tmp/lolo) # TODO: Save the xorg logs
     export EZBENCH_X_PID=$x_pid
 
     export DISPLAY=:42
     export XAUTHORITY=/tmp/ezbench_XAuth
 
-    # disable DPMS
-    xset s off -dpms
+    # disable DPMS. The X-Server may not have started yet, so try multiple times (up to 5 seconds)
+    for i in {0..50}
+    do
+        xset s off -dpms 2> /dev/null
+        [ $? -eq 0 ] && return 0
+        sleep 0.1
+    done
+
+    echo "ERROR: The X-Server still has not started after 5 seconds" >&2
+    xserver_setup_stop
+    return 1
 }
 
 function xserver_setup_stop() {
