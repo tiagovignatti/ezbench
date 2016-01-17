@@ -258,6 +258,9 @@ function read_git_version_deployed() {
     return 1
 }
 
+# Execute the user-defined pre hook
+callIfDefined ezbench_pre_hook
+
 # Check the git repo, saving then displaying the HEAD commit
 if [ -z "$gitRepoDir" ]
 then
@@ -314,9 +317,6 @@ function finish {
 }
 trap finish EXIT
 trap finish INT # Needed for zsh
-
-# Execute the user-defined pre hook
-callIfDefined ezbench_pre_hook
 
 # Seed the results with the last round?
 commitListLog="$logsFolder/commit_list"
