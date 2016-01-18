@@ -261,6 +261,10 @@ html_template="""
             var currentCommit = "${default_commit}";
 
             function showColumn(dataTable, chart, activColumns, series, col, show) {
+                seriesCol = 0
+                for (i = 0; i < col; i++)
+                    if (dataTable.getColumnType(i) == 'number')
+                        seriesCol++
                 if (!show) {
                     activColumns[col] = {
                         label: dataTable.getColumnLabel(col),
@@ -269,31 +273,6 @@ html_template="""
                             return null;
                         }
                     };
-                    series[col - 2].color = '#CCCCCC';
-                }
-                else {
-                    activColumns[col] = col;
-                    series[col - 2].color = null;
-                }
-            }
-
-            function showAllColumns(dataTable, chart, activColumns, series, show) {
-                for (var i = 2; i < dataTable.getNumberOfColumns(); i++) {
-                    showColumn(dataTable, chart, activColumns, series, i, show)
-                }
-            }
-
-            function showColumnCombo(dataTable, chart, activColumns, series, col, show) {
-                seriesCol = Math.ceil((col - 1) / 2);
-                if (!show) {
-                    activColumns[col] = {
-                        label: dataTable.getColumnLabel(col),
-                        type: "number",
-                        calc: function () {
-                            return null;
-                        }
-                    };
-		//alert(dataTable.getColumnLabel(col) + " " + dataTable.getColumnType(col))
                     series[seriesCol].color = '#CCCCCC';
                 }
                 else {
@@ -302,9 +281,10 @@ html_template="""
                 }
             }
 
-            function showAllColumnsCombo(dataTable, chart, activColumns, series, show) {
-                for (var i = 1; i < dataTable.getNumberOfColumns(); i+=2) {
-                    showColumnCombo(dataTable, chart, activColumns, series, i, show)
+            function showAllColumns(dataTable, chart, activColumns, series, show) {
+                for (var i = 1; i < dataTable.getNumberOfColumns(); i++) {
+                    if (dataTable.getColumnType(i) == 'number')
+                        showColumn(dataTable, chart, activColumns, series, i, show)
                 }
             }
 
@@ -546,15 +526,15 @@ ${btag}${r}: ${db["commits"][commit]['reports'][r][benchmark].average} ${output_
                         if (activColumns[col] == col) {
                             // The clicked column is active
                             if (allActive) {
-                                showAllColumnsCombo(dataTable, chart, activColumns, series, false);
-                                showColumnCombo(dataTable, chart, activColumns, series, col, true);
+                                showAllColumns(dataTable, chart, activColumns, series, false);
+                                showColumn(dataTable, chart, activColumns, series, col, true);
                             } else {
-                                showColumnCombo(dataTable, chart, activColumns, series, col, false);
+                                showColumn(dataTable, chart, activColumns, series, col, false);
                             }
                         }
                         else {
                             // The clicked columns is inactive, show it
-                            showColumnCombo(dataTable, chart, activColumns, series, col, true);
+                            showColumn(dataTable, chart, activColumns, series, col, true);
                         }
 
                         var allHidden = true;
@@ -566,7 +546,7 @@ ${btag}${r}: ${db["commits"][commit]['reports'][r][benchmark].average} ${output_
                             }
                         }
                         if (allHidden) {
-                            showAllColumnsCombo(dataTable, chart, activColumns, series, true);
+                            showAllColumns(dataTable, chart, activColumns, series, true);
                             activeCols = dataTable.getNumberOfColumns();
                         }
 
