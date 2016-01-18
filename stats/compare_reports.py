@@ -288,6 +288,41 @@ html_template="""
                 }
             }
 
+            function handle_selection(sel, dataTable, series, activColumns, chart) {
+                var col = sel[0].column;
+
+                var allActive = true;
+                for (var i = 1; i < dataTable.getNumberOfColumns(); i++) {
+                    if (dataTable.getColumnType(i) == 'number' && activColumns[i] != i) {
+                        allActive = false;
+                    }
+                }
+                if (activColumns[col] == col) {
+                    // The clicked columns is active
+                    if (allActive) {
+                        showAllColumns(dataTable, chart, activColumns, series, false);
+                        showColumn(dataTable, chart, activColumns, series, col, true);
+                    } else {
+                        showColumn(dataTable, chart, activColumns, series, col, false);
+                    }
+                }
+                else {
+                    // The clicked columns is inactive, show it
+                    showColumn(dataTable, chart, activColumns, series, col, true);
+                }
+
+                var activeColsCount = 0;
+                for (var i = 1; i < dataTable.getNumberOfColumns(); i++) {
+                    if (dataTable.getColumnType(i) == 'number' && activColumns[i] == i) {
+                        activeColsCount++;
+                    }
+                }
+                if (activeColsCount == 0)
+                    showAllColumns(dataTable, chart, activColumns, series, true);
+
+                return activeColsCount
+            }
+
             function adjustChartSize(id_chart, reportsCount, benchmarkCount) {
                 var size = 75 + reportsCount * (25 + (benchmarkCount * 8));
                 id_chart.style.height = size + "px";
@@ -367,36 +402,7 @@ html_template="""
                     var sel = chart.getSelection();
                     // See https://developers.google.com/chart/interactive/docs/reference#visgetselection
                     if (sel.length > 0 && typeof sel[0].row === 'object') {
-                        var col = sel[0].column;
-
-                        var allActive = true;
-                        for (var i = 2; i < dataTable.getNumberOfColumns(); i++) {
-                            if (activColumns[i] != i) {
-                                allActive = false;
-                            }
-                        }
-                        if (activColumns[col] == col) {
-                            // The clicked columns is active
-                            if (allActive) {
-                                showAllColumns(dataTable, chart, activColumns, series, false);
-                                showColumn(dataTable, chart, activColumns, series, col, true);
-                            } else {
-                                showColumn(dataTable, chart, activColumns, series, col, false);
-                            }
-                        }
-                        else {
-                            // The clicked columns is inactive, show it
-                            showColumn(dataTable, chart, activColumns, series, col, true);
-                        }
-
-                        var allHidden = true;
-                        for (var i = 2; i < dataTable.getNumberOfColumns(); i++) {
-                            if (activColumns[i] == i) {
-                                allHidden = false;
-                            }
-                        }
-                        if (allHidden)
-                            showAllColumns(dataTable, chart, activColumns, series, true);
+                        handle_selection(sel, dataTable, series, activColumns, chart)
 
                         // Redraw the chart with the masked columns
                         var view = new google.visualization.DataView(dataTable);
@@ -515,40 +521,7 @@ ${btag}${r}: ${db["commits"][commit]['reports'][r][benchmark].average} ${output_
                     var sel = chart.getSelection();
                     // See https://developers.google.com/chart/interactive/docs/reference#visgetselection
                     if (sel.length > 0 && typeof sel[0].row === 'object') {
-                        var col = sel[0].column;
-
-                        var allActive = true;
-                        for (var i = 1; i < dataTable.getNumberOfColumns(); i+=2) {
-                            if (activColumns[i] != i) {
-                                allActive = false;
-                            }
-                        }
-                        if (activColumns[col] == col) {
-                            // The clicked column is active
-                            if (allActive) {
-                                showAllColumns(dataTable, chart, activColumns, series, false);
-                                showColumn(dataTable, chart, activColumns, series, col, true);
-                            } else {
-                                showColumn(dataTable, chart, activColumns, series, col, false);
-                            }
-                        }
-                        else {
-                            // The clicked columns is inactive, show it
-                            showColumn(dataTable, chart, activColumns, series, col, true);
-                        }
-
-                        var allHidden = true;
-                        var activeCols = 0;
-                        for (var i = 1; i < dataTable.getNumberOfColumns(); i+=2) {
-                            if (activColumns[i] == i) {
-                                activeCols++;
-                                allHidden = false;
-                            }
-                        }
-                        if (allHidden) {
-                            showAllColumns(dataTable, chart, activColumns, series, true);
-                            activeCols = dataTable.getNumberOfColumns();
-                        }
+                        activeCols = handle_selection(sel, dataTable, series, activColumns, chart)
 
                         // reduce the size of the chart to fit the data
                         adjustChartSize(details_chart, dataTable.getNumberOfRows(), activeCols);
