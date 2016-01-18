@@ -1,7 +1,11 @@
 test -e "$UNIGINE_HEAVEN_FOLDER/bin/heaven_x64" || return 1
 
-unigine:heaven_run() {
+function __unigine_heaven_run__ {
     cd "$UNIGINE_HEAVEN_FOLDER" # Set this variable in test_options.sh
+
+    fullscreen=$1
+    width=$2
+    height=$3
 
     LD_LIBRARY_PATH=bin:bin/x64:$LD_LIBRARY_PATH \
     MESA_EXTENSION_OVERRIDE="-GL_ARB_sample_shading -GL_ARB_blend_func_extended" \
@@ -12,12 +16,25 @@ unigine:heaven_run() {
         -sound_app null \
         -engine_config ../data/heaven_4.0.cfg \
         -system_script heaven/unigine.cpp \
-        -extern_define PHORONIX,RELEASE \
-        -video_mode -1 \
-        -video_fullscreen 1 | grep FPS: | xargs | cut -d ' ' -f 2
+        -extern_define PHORONIX,LANGUAGE_EN,RELEASE,QUALITY_HIGH,TESSELLATION_NORMAL \
+        -video_mode -1 -video_width $width -video_height $height -video_multisample 0 \
+        -video_fullscreen $fullscreen | grep FPS: | xargs | cut -d ' ' -f 2
 }
 
-unigine:heaven:cpu_run() { INTEL_NO_HW=1 unigine:heaven_run; }
+while read name width height; do
+   name="unigine:heaven:${name}"
 
-test_name="unigine:heaven unigine:heaven:cpu"
+   eval "$name:fullscreen_run() { __unigine_heaven_run__ 1 $width $height; }"
+   test_name="$test_name $name:fullscreen"
+
+   eval "$name:window_run() { __unigine_heaven_run__ 0 $width $height; }"
+   test_name="$test_name $name:window"
+done<<EOL
+        720p 1280 720
+        1080p 1920 1080
+EOL
+
+eval "unigine:heaven:cpu_run() { INTEL_NO_HW=1 __unigine_heaven_run__ 0 $width $height; }"
+test_name="$test_name unigine:heaven:cpu"
+
 test_exec_time=300
