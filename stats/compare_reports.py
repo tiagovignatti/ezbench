@@ -67,6 +67,7 @@ db["reports"] = list()
 db["benchmarks"] = list()
 db['env_sets'] = dict()
 db["envs"] = dict()
+db["targets"] = dict()
 human_envs = dict()
 git_history = None
 for log_folder in args.log_folder:
@@ -107,7 +108,7 @@ for log_folder in args.log_folder:
 			db["commits"][commit.sha1]['build_error'] = str(EzbenchExitCode(commit.compil_exit_code)).split('.')[1]
 		db["commits"][commit.sha1]['reports'][report_name] = dict()
 
-		# Add the results and compute the average performance
+		# Add the results and perform some stats
 		score_sum = 0
 		count = 0
 		for result in commit.results:
@@ -119,6 +120,10 @@ for log_folder in args.log_folder:
 			score_sum += average
 			count += 1
 			result.average = float("{0:.2f}".format(average))
+
+			# Compare to the target
+			if not result.benchmark.full_name in db["targets"]:
+				db["targets"][result.benchmark.full_name] = average
 
 			# Environment
 			if result.benchmark.full_name not in human_envs:
@@ -331,21 +336,16 @@ html_template="""
 
             function drawTrend() {
                 var dataTable = new google.visualization.DataTable();
-                dataTable.addColumn('string', 'Commit');
-                dataTable.addColumn({type: 'string', role: 'tooltip', p: { html: true }});
-                % for report in db["reports"]:
-                dataTable.addColumn('number', '${report}');
-                % endfor
-                dataTable.addRows([
-                % for commit in db["commits"]:
-                    ['${commit}', "<h3>${db["commits"][commit]['commit'].full_name}</h3><h4>Commit\\
+
+<%def name="tooltip_commit_table(commit)">\\
+<h4>Commit\\
 % if 'commit_url' in db:
  (<a href='${db["commit_url"].format(commit=commit)}' target='_blank'>URL</a>)\\
 % endif
 </h4><table>\\
-<tr><td><b>Author:</b></td><td>${cgi.escape(db["commits"][commit]['commit'].author)}</td><tr/>\\
-<tr><td><b>Commit date:</b></td><td>${db["commits"][commit]['commit'].commit_date}</td><tr/>\\
-<tr><td><b>Build exit code:</b></td><td bgcolor='${db["commits"][commit]['build_color']}'><center>${db["commits"][commit]['build_error']}</center></td><tr/>\\
+<tr><td><b>Author:</b></td><td>${cgi.escape(db["commits"][commit]['commit'].author)}</td></tr>\\
+<tr><td><b>Commit date:</b></td><td>${db["commits"][commit]['commit'].commit_date}</td></tr>\\
+<tr><td><b>Build exit code:</b></td><td bgcolor='${db["commits"][commit]['build_color']}'><center>${db["commits"][commit]['build_error']}</center></td></tr>\\
 % if len(db["commits"][commit]['commit'].bugs) > 0:
 <tr><td><b>Referenced bugs</b></td><td><ul>\\
 % for bug in db["commits"][commit]['commit'].bugs:
@@ -354,7 +354,17 @@ html_template="""
 </ul></td></tr>\\
 % endif
 </table>\\
-<h4>Perf</h4><table>\\
+</%def>
+
+% if len(db['reports']) > 1:
+                dataTable.addColumn('string', 'Commit');
+                dataTable.addColumn({type: 'string', role: 'tooltip', p: { html: true }});
+                % for report in db["reports"]:
+                dataTable.addColumn('number', '${report}');
+                % endfor
+                dataTable.addRows([
+                % for commit in db["commits"]:
+                    ['${commit}', "<h3>${db["commits"][commit]['commit'].full_name}</h3>${tooltip_commit_table(commit)}<h4>Perf</h4><table>\\
 % for report in db["reports"]:
 % if report in db["commits"][commit]['reports']:
 <tr><td><b>${report}:</b></td><td>${db["commits"][commit]['reports'][report]["average"]} ${output_unit}</td></tr>\\
@@ -371,6 +381,34 @@ html_template="""
 ],
                 % endfor
                 ]);
+% else:
+                <%
+                    report = db["reports"][0]
+                %>
+                dataTable.addColumn('string', 'Commits');
+                % for benchmark in db["benchmarks"]:
+                dataTable.addColumn('number', '${benchmark}');
+                dataTable.addColumn({type: 'string', role: 'tooltip', p: { html: true }});
+                % endfor
+
+                dataTable.addRows([
+                % for commit in db["commits"]:
+["${commit}"\\
+                    % for benchmark in db["benchmarks"]:
+                        % if benchmark in db["commits"][commit]['reports'][report]:
+                        <%
+                            diff_target = db["commits"][commit]['reports'][report][benchmark].average * 100 / db['targets'][benchmark]
+                            diff_target = "{0:.2f}".format(diff_target)
+                        %>
+, ${diff_target}, "<h3>${db["commits"][commit]['commit'].full_name}</h3>${tooltip_commit_table(commit)}<h4>Perf</h4><table><tr><td><b>Target</b></td><td>${diff_target} %</td></tr><tr><td><b>Raw value</b></td><td>${db["commits"][commit]['reports'][report][benchmark].average} ${output_unit}</td></tr></table>"\\
+                            % else:
+, null, "${benchmark}"\\
+                            % endif
+                    % endfor
+],
+                % endfor
+                ]);
+% endif
 
                 var activColumns = [];
                 var series = {};
@@ -382,15 +420,19 @@ html_template="""
                 }
 
                 var options = {
-                    chart: {
+                chart: {
                         title: 'Performance trend across multiple commits'
                     },
-                    legend: { position: 'top', textStyle: {fontSize: 12}, maxLines: 3},
+                % if len(db['reports']) > 1:
                     focusTarget: 'category',
+                    vAxis: {title: 'Average result (${output_unit})'},
+                % else:
+                    vAxis: {title: '% of target (%)'},
+                % endif
+                    legend: { position: 'top', textStyle: {fontSize: 12}, maxLines: 3},
                     tooltip: {trigger: 'selection', isHtml: true},
                     crosshair: { trigger: 'both' },
                     hAxis: {title: 'Commits', slantedText: true, slantedTextAngle: 45},
-                    vAxis: {title: 'Average result (${output_unit})'},
                     series: series,
                     chartArea: {left:"6%", width:"95%"}
                 };
