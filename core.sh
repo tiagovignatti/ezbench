@@ -51,6 +51,7 @@
 #       - 71: Compilation failed
 #       - 72: Deployment failed
 #       - 73: The deployed version does not match the wanted version
+#       - 74: A reboot is necessary
 #
 #   Tests:
 #       - 100: At least one test does not exist
@@ -300,23 +301,33 @@ for id in "$@"; do
     commitList+=" "
 done
 
-# function to call on exit
-function finish {
-    exitcode=$?
-
-    # to be executed on exit, possibly twice!
+# functions to call on exit
+function __ezbench_reset_git_state__ {
     git reset --hard "$commit_head" 2> /dev/null
     [ -n "$stash" ] && git stash apply "$stash" > /dev/null
+}
+
+function __ezbench_finish__ {
+    exitcode=$?
+    action=$1
+
+    # to be executed on exit, possibly twice!
+    __ezbench_reset_git_state__
 
     # Execute the user-defined post hook
     callIfDefined ezbench_post_hook
 
-    printf "Exiting with error code $exitcode\n"
-
-    exit $exitcode
+    if [ "$action" == "reboot" ]
+    then
+        printf "Rebooting with error code $exitcode\n"
+        sudo reboot
+    else
+        printf "Exiting with error code $exitcode\n"
+        exit $exitcode
+    fi
 }
-trap finish EXIT
-trap finish INT # Needed for zsh
+trap __ezbench_finish__ EXIT
+trap __ezbench_finish__ INT # Needed for zsh
 
 # Seed the results with the last round?
 commitListLog="$logsFolder/commit_list"
@@ -477,11 +488,18 @@ function compile_and_deploy {
     compile_start=$(date +%s)
     eval "$makeAndDeployCmd" > "$compile_logs" 2>&1
     local exit_code=$?
-    printf "Exiting with error code $exit_code\n" >> "$compile_logs"
     compile_end=$(date +%s)
 
+    # The exit code 74 actually means everything is fine but we need to reboot
+    if [ $exit_code -eq 74 ]
+    then
+        printf "Exiting with error code 0\n" >> "$compile_logs"
+    else
+        printf "Exiting with error code $exit_code\n" >> "$compile_logs"
+    fi
+
     # Reset to the original commit early
-    git reset --hard "$commit_head" 2> /dev/null
+   __ezbench_reset_git_state__
 
     # Call the user-defined post-compile hook
     callIfDefined compile_post_hook
@@ -493,6 +511,9 @@ function compile_and_deploy {
             component="Compilation"
         elif [ $exit_code -eq 72 ]; then
             component="Deployment"
+        elif [ $exit_code -eq 74 ]; then
+            $?=$exit_code
+            __ezbench_finish__ "reboot"
         else
             exit_code=70
         fi

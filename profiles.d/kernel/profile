@@ -54,8 +54,8 @@ function __default_make_and_deploy__() {
 
     [ "$compile_error" -ne 0 ] && return $compile_error
 
-    # Here we go, reboot on the new kernel!
-    sudo reboot
+    # Return that a reboot is necessary
+    return 74
 }
 
 function __git_version_deployed__() {
