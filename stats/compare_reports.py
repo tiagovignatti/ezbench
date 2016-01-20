@@ -349,7 +349,7 @@ html_template="""
 % if len(db["commits"][commit]['commit'].bugs) > 0:
 <tr><td><b>Referenced bugs</b></td><td><ul>\\
 % for bug in db["commits"][commit]['commit'].bugs:
-<li><a href='${bug}' target='_blank'>${bug}</a></li>\\
+<li><a href='${bug.replace('"', '&quot;')}' target='_blank'>${bug.replace('"', '&quot;')}</a></li>\\
 % endfor
 </ul></td></tr>\\
 % endif
