@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 from email.utils import parsedate_tz, mktime_tz
 from collections import namedtuple
 from datetime import datetime
+from dateutil import relativedelta
 from array import array
 from enum import Enum
 from numpy import *
@@ -789,6 +790,10 @@ class Commit:
         except IOError:
             pass
 
+    def build_broken(self):
+        return (self.compil_exit_code >= EzbenchExitCode.COMP_DEP_UNK_ERROR.value and
+                self.compil_exit_code <= EzbenchExitCode.DEPLOYMENT_ERROR.value)
+
     def geom_mean(self):
         if self.geom_mean_cache >= 0:
             return self.geom_mean_cache
@@ -808,11 +813,92 @@ class Commit:
         geom_mean_cache = value
         return value
 
+class EventCommitRange:
+    def __init__(self, old, new = None):
+        self.old = old
+        if new is None:
+            self.new = old
+        else:
+            self.new = new
+
+    def is_single_commit(self):
+        return self.distance() <= 1
+
+    def distance(self):
+        if self.old is not None:
+            return self.old.git_distance_head - self.new.git_distance_head
+        else:
+            return sys.maxsize
+
+    def __str__(self):
+        if self.new == None:
+            return "commit {}".format(self.old.sha1)
+
+        if self.is_single_commit():
+            return "commit {}".format(self.new.sha1)
+        elif self.old is not None:
+            return "commit range {}:{}({})".format(self.old.sha1, self.new.sha1,
+                                                   self.distance())
+        else:
+            return "commit before {}".format(self.new.sha1)
+
+
+        float("inf")
+
+class EventBuildBroken:
+    def __init__(self, commit_range):
+        self.commit_range = commit_range
+
+    def __str__(self):
+        return "{} broke the build".format(self.commit_range)
+
+class EventBuildFixed:
+    def __init__(self, broken_commit_range, fixed_commit_range):
+        self.broken_commit_range = broken_commit_range
+        self.fixed_commit_range = fixed_commit_range
+
+    def broken_for_time(self):
+        if (self.broken_commit_range.new.commit_date > datetime.min and
+            self.fixed_commit_range.old.commit_date > datetime.min):
+            attrs = ['years', 'months', 'days', 'hours', 'minutes', 'seconds']
+            human_readable = lambda delta: ['%d %s' % (getattr(delta, attr),
+                                                       getattr(delta, attr) > 1 and attr or attr[:-1])
+                for attr in attrs if getattr(delta, attr)]
+            res=', '.join(human_readable(relativedelta.relativedelta(self.fixed_commit_range.old.commit_date,
+                                                                     self.broken_commit_range.new.commit_date)))
+            if len(res) == 0:
+                return "0 seconds"
+            else:
+                return res
+        return None
+
+    def broken_for_commit_count(self):
+        return (self.broken_commit_range.new.git_distance_head -
+                self.fixed_commit_range.new.git_distance_head)
+
+    def __str__(self):
+        parenthesis = ""
+        if (not self.broken_commit_range.is_single_commit() or
+            not self.fixed_commit_range.is_single_commit()):
+            parenthesis = "at least "
+        parenthesis += "for "
+
+        time = self.broken_for_time()
+        if time is not None and time != "":
+            parenthesis += time + " and "
+        parenthesis += "{} commits".format(self.broken_for_commit_count())
+
+        main = "{} fixed the build regression introduced by {}"
+        main = main.format(self.fixed_commit_range, self.broken_commit_range)
+        return "{} ({})".format(main, parenthesis)
+
+
 class Report:
     def __init__(self, benchmarks, commits, notes):
         self.benchmarks = benchmarks
         self.commits = commits
         self.notes = notes
+        self.events = list()
 
     def enhance_report(self, commits_rev_order):
         if len(commits_rev_order) == 0:
@@ -832,6 +918,22 @@ class Report:
 
         # Sort the remaining commits
         self.commits.sort(key=lambda commit: len(commits_rev_order) - commit.git_distance_head)
+
+        # Generate events
+        commit_prev = None
+        build_broken_since = None
+        for commit in self.commits:
+            commit_range = EventCommitRange(commit_prev, commit)
+
+            # Look for compilation errors
+            if commit.build_broken() and build_broken_since is None:
+                self.events.append(EventBuildBroken(commit_range))
+                build_broken_since = EventCommitRange(commit_prev, commit)
+            elif not commit.build_broken() and build_broken_since is not None:
+                self.events.append(EventBuildFixed(build_broken_since, commit_range))
+                build_broken_since = None
+
+            commit_prev = commit
 
 def readCsv(filepath):
     data = []
