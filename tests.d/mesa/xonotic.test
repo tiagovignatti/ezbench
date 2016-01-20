@@ -1,16 +1,32 @@
-test -e "$XONOTIC_FOLDER/xonotic-sdl" || return 1
+test -e "$XONOTIC_FOLDER/xonotic-glx" || return 1
 
 __xonotic__() {
+    fullscreen=$1
+    width=$2
+    height=$3
+
     # 10510 frames 24.7782191 seconds 424.1628480 fps, one-second fps min/avg/max: 57 1352 7027 (336 seconds)
     local extract_fps="egrep -e '[0-9]+ frames' | cut -d ' ' -f 5 2> /dev/null"
 
-    run_bench 0 $XONOTIC_FOLDER/xonotic-sdl -benchmark demos/the-big-keybench | eval $extract_fps
+    run_bench 0 $XONOTIC_FOLDER/xonotic-glx +vid_width $width +vid_height $height \
+                +vid_fullscreen $fullscreen +exec effects-high.cfg                \
+                -benchmark demos/the-big-keybench | eval $extract_fps
 }
 
-test_name="$test_name xonotic"
-eval "xonotic_run() { __xonotic__; }"
+while read name width height; do
+   name="xonotic:${name}"
 
+   eval "$name:fullscreen_run() { __xonotic__ 1 $width $height; }"
+   test_name="$test_name $name:fullscreen"
+
+   eval "$name:window_run() { __xonotic__ 0 $width $height; }"
+   test_name="$test_name $name:window"
+done<<EOL
+        720p 1280 720
+        1080p 1920 1080
+EOL
+
+eval "xonotic:cpu_run() { INTEL_NO_HW=1 __xonotic__ 0 $width $height; }"
 test_name="$test_name xonotic:cpu"
-eval "xonotic:cpu_run() { INTEL_NO_HW=1 __xonotic__; }"
 
 test_exec_time=80
