@@ -140,6 +140,8 @@ class Ezbench:
         benchmarks = []
         pred_exec_time = 0
         deployed_commit = ""
+        repo_dir = ""
+        head_commit = ""
         re_commit_list = re.compile('^Testing \d+ commits: ')
         re_repo = re.compile('^Repo = (.*), HEAD = (.*), deployed version = (.*)$')
         for line in output.split("\n"):
@@ -576,6 +578,9 @@ class SmartEzbench:
         # Get the repo directory
         ezbench = self.__create_ezbench()
         run_info = ezbench.run_commits(["HEAD"], [], [], dry_run=True)
+
+        if not run_info.success():
+            return git_history
 
         # Get the list of commits and store their position in the list in a dict
         output = subprocess.check_output(["/usr/bin/git", "log", "--format=%h %ct"],
