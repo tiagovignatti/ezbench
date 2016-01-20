@@ -600,8 +600,8 @@ class SmartEzbench:
             git_history = self.git_history()
 
         # Generate the report, order commits based on the git history
-        r = genPerformanceReport(self.log_folder, silentMode = True,
-                                 commits_rev_order=[c.sha1 for c in git_history])
+        r = genPerformanceReport(self.log_folder, silentMode = True)
+        r.enhance_report([c.sha1 for c in git_history])
         return r
 
     def __find_middle_commit(self, git_history, old, new, msg):
@@ -624,8 +624,8 @@ class SmartEzbench:
         if git_history is None:
             git_history = self.git_history()
         commits_rev_order = [c.sha1 for c in git_history]
-        r = genPerformanceReport(self.log_folder, silentMode = True,
-                                 commits_rev_order=commits_rev_order)
+        r = genPerformanceReport(self.log_folder, silentMode = True)
+        r.enhance_report(commits_rev_order)
 
         # Check all the commits
         bench_prev = dict()
@@ -814,6 +814,25 @@ class Report:
         self.commits = commits
         self.notes = notes
 
+    def enhance_report(self, commits_rev_order):
+        if len(commits_rev_order) == 0:
+            return
+
+        # Get rid of the commits that are not in the commits list
+        to_del = list()
+        for c in range(0, len(self.commits)):
+            if self.commits[c].sha1 not in commits_rev_order:
+                to_del.append(c)
+        for v in reversed(to_del):
+            del self.commits[v]
+
+        # Add the index inside the commit
+        for commit in self.commits:
+            commit.git_distance_head = commits_rev_order.index(commit.sha1)
+
+        # Sort the remaining commits
+        self.commits.sort(key=lambda commit: len(commits_rev_order) - commit.git_distance_head)
+
 def readCsv(filepath):
     data = []
 
@@ -878,7 +897,7 @@ def readNotes():
     except:
         return []
 
-def genPerformanceReport(log_folder, silentMode = False, commits_rev_order = list()):
+def genPerformanceReport(log_folder, silentMode = False):
     benchmarks = []
     commits = []
     labels = dict()
@@ -909,7 +928,7 @@ def genPerformanceReport(log_folder, silentMode = False, commits_rev_order = lis
             sys.stderr.write("The commit_list file is empty\n")
         return Report(benchmarks, commits, notes)
 
-    # Gather all the information from the commits and generate the images
+    # Gather all the information from the commits
     if not silentMode:
         print ("Reading the results for {0} commits".format(len(commitsLines)))
     commits_txt = ""
@@ -990,19 +1009,6 @@ def genPerformanceReport(log_folder, silentMode = False, commits_rev_order = lis
 
     # Read the notes before going back to the original folder
     notes = readNotes()
-
-    # Sort the commits, if asked for
-    if len(commits_rev_order) > 0:
-        # Get rid of the commits that are not in the commits list
-        to_del = list()
-        for c in range(0, len(commits)):
-            if commits[c].sha1 not in commits_rev_order:
-                to_del.append(c)
-        for v in reversed(to_del):
-            del commits[v]
-
-        # Now we can sort the remaining commits
-        commits.sort(key=lambda commit: len(commits_rev_order) - commits_rev_order.index(commit.sha1))
 
     # Go back to the original folder
     os.chdir(cwd)
