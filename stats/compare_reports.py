@@ -91,11 +91,17 @@ for log_folder in args.log_folder:
 	for benchmark in report.benchmarks:
 		db["envs"][benchmark.full_name] = dict()
 
+	for event in report.events:
+		if type(event) is EventBuildBroken:
+			event.commit_range.new.annotation = event.commit_range.new.sha1 + ": build broken"
+		elif type(event) is EventBuildFixed:
+			event.fixed_commit_range.new.annotation = event.fixed_commit_range.new.sha1 + ": build fixed"
+
 	# add all the commits
 	for commit in report.commits:
 		# drop the no-op results
 		commit.results = list(filter(lambda r: r.benchmark.full_name != "no-op", commit.results))
-		if len(commit.results) == 0 and commit.compil_exit_code == 0:
+		if len(commit.results) == 0 and not hasattr(commit, 'annotation'):
 			continue
 
 		if not commit.sha1 in db["commits"]:
@@ -201,12 +207,12 @@ for bench in db['env_sets']:
 # Sort the benchmarks by name to avoid ever-changing layouts
 db["benchmarks"] = sort(db["benchmarks"])
 
-if args.verbose:
-    pprint.pprint(db)
-
 # Support creating new URLs
 if args.commit_url is not None:
     db["commit_url"] = args.commit_url
+
+if args.verbose:
+    pprint.pprint(db)
 
 # Generate the report
 html_template="""
@@ -389,6 +395,7 @@ html_template="""
                     report = db["reports"][0]
                 %>
                 dataTable.addColumn('string', 'Commits');
+                dataTable.addColumn({type: 'string', role:'annotation'});
                 % for benchmark in db["benchmarks"]:
                 dataTable.addColumn('number', '${benchmark}');
                 dataTable.addColumn({type: 'string', role: 'tooltip', p: { html: true }});
@@ -397,6 +404,11 @@ html_template="""
                 dataTable.addRows([
                 % for commit in db["commits"]:
 ["${commit}"\\
+                    % if hasattr(db["commits"][commit]['commit'], 'annotation'):
+, "${db["commits"][commit]['commit'].annotation}"\\
+                    %else:
+, null\\
+                    % endif
                     % for benchmark in db["benchmarks"]:
                         % if benchmark in db["commits"][commit]['reports'][report]:
                         <%
@@ -430,6 +442,7 @@ html_template="""
                     focusTarget: 'category',
                     vAxis: {title: 'Average result (${output_unit})'},
                 % else:
+                    annotations: {style: 'line', textStyle: {fontSize: 12}},
                     vAxis: {title: '% of target (%)'},
                 % endif
                     legend: { position: 'top', textStyle: {fontSize: 12}, maxLines: 3},
