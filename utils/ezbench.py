@@ -220,25 +220,26 @@ class TaskEntry:
 
 class SmartEzbench:
     def __init__(self, ezbench_dir, report_name, readonly = False):
-        self.state = dict()
         self.readonly = readonly
-        self.state['ezbench_dir'] = ezbench_dir
+        self.ezbench_dir = ezbench_dir
+        self.log_folder = ezbench_dir + '/logs/' + report_name
+        self.smart_ezbench_state = self.log_folder + "/smartezbench.state"
+        self.smart_ezbench_lock = self.log_folder + "/smartezbench.lock"
+        self.smart_ezbench_log = self.log_folder + "/smartezbench.log"
+
+        self.state = dict()
         self.state['report_name'] = report_name
-        self.state['log_folder'] = ezbench_dir + '/logs/' + report_name
-        self.state['smart_ezbench_state'] = self.state['log_folder'] + "/smartezbench.state"
-        self.state['smart_ezbench_lock'] = self.state['log_folder'] + "/smartezbench.lock"
-        self.state['smart_ezbench_log'] = self.state['log_folder'] + "/smartezbench.log"
         self.state['commits'] = dict()
         self.state['mode'] = RunningMode.INITIAL.value
 
         # Create the log directory
         first_run = False
-        if not readonly and not os.path.exists(self.state['log_folder']):
-            os.makedirs(self.state['log_folder'])
+        if not readonly and not os.path.exists(self.log_folder):
+            os.makedirs(self.log_folder)
             first_run = True
 
         # Open the log file as append
-        self.log_file = open(self.state['smart_ezbench_log'], "a")
+        self.log_file = open(self.smart_ezbench_log, "a")
 
         # Add the welcome message
         if first_run or not self.__reload_state():
@@ -247,7 +248,7 @@ class SmartEzbench:
             self.__save_state()
             self.__log(Criticality.II,
                     "Created report '{report_name}' in {log_folder}".format(report_name=report_name,
-                                                                            log_folder=self.state['log_folder']))
+                                                                            log_folder=self.log_folder))
 
     def __log(self, error, msg):
         time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -260,7 +261,7 @@ class SmartEzbench:
     def __grab_lock(self):
         if self.readonly:
             return
-        self.lock_fd = open(self.state['smart_ezbench_lock'], 'w')
+        self.lock_fd = open(self.smart_ezbench_lock, 'w')
         try:
             fcntl.flock(self.lock_fd, fcntl.LOCK_EX)
             return True
@@ -282,7 +283,7 @@ class SmartEzbench:
     def __reload_state_unlocked(self):
         # check if a report already exists
         try:
-            with open(self.state['smart_ezbench_state'], 'rt') as f:
+            with open(self.smart_ezbench_state, 'rt') as f:
                 self.state_read_time = time.time()
                 try:
                     self.state = json.loads(f.read())
@@ -307,11 +308,11 @@ class SmartEzbench:
             return
 
         try:
-            state_tmp = str(self.state['smart_ezbench_state']) + ".tmp"
+            state_tmp = str(self.smart_ezbench_state) + ".tmp"
             with open(state_tmp, 'wt') as f:
                 f.write(json.dumps(self.state, sort_keys=True, indent=4, separators=(',', ': ')))
                 f.close()
-                os.rename(state_tmp, self.state['smart_ezbench_state'])
+                os.rename(state_tmp, self.smart_ezbench_state)
                 return True
         except IOError:
             self.__log(Criticality.EE, "Could not dump the current state to a file!")
@@ -319,7 +320,7 @@ class SmartEzbench:
 
     def __create_ezbench(self, ezbench_path = None, profile = None, report_name = None):
         if ezbench_path is None:
-            ezbench_path = self.state['ezbench_dir'] + "/core.sh"
+            ezbench_path = self.ezbench_dir + "/core.sh"
         if profile is None:
             profile = self.profile()
         if report_name is None:
@@ -495,7 +496,7 @@ class SmartEzbench:
         self.__log(Criticality.II, "All the dependencies are met, generate a report...")
 
         # Generate a report to compare the goal with the current state
-        report = genPerformanceReport(self.state['log_folder'], silentMode = True)
+        report = genPerformanceReport(self.log_folder, silentMode = True)
         self.__log(Criticality.II,
                    "The report contains {count} commits".format(count=len(report.commits)))
 
@@ -593,7 +594,7 @@ class SmartEzbench:
             git_history = self.git_history()
 
         # Generate the report, order commits based on the git history
-        r = genPerformanceReport(self.state['log_folder'], silentMode = True,
+        r = genPerformanceReport(self.log_folder, silentMode = True,
                                  commits_rev_order=[c.sha1 for c in git_history])
         return r
 
@@ -616,7 +617,7 @@ class SmartEzbench:
         # Generate the report, order commits based on the git history
         if git_history is None:
             git_history = self.git_history()
-        r = genPerformanceReport(self.state['log_folder'], silentMode = True,
+        r = genPerformanceReport(self.log_folder, silentMode = True,
                                  commits_rev_order=[c.sha1 for c in git_history])
 
         # Check all the commits
