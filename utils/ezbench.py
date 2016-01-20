@@ -623,8 +623,9 @@ class SmartEzbench:
         # Generate the report, order commits based on the git history
         if git_history is None:
             git_history = self.git_history()
+        commits_rev_order = [c.sha1 for c in git_history]
         r = genPerformanceReport(self.log_folder, silentMode = True,
-                                 commits_rev_order=[c.sha1 for c in git_history])
+                                 commits_rev_order=commits_rev_order)
 
         # Check all the commits
         bench_prev = dict()
@@ -641,7 +642,7 @@ class SmartEzbench:
                     msg = "The build got broken"
                 else:
                     msg = "The build got fixed"
-                middle_commit = self.__find_middle_commit(git_history,
+                middle_commit = self.__find_middle_commit(commits_rev_order,
                                                           commit_prev.sha1,
                                                           commit.sha1, msg)
                 if middle_commit is not None:
@@ -682,7 +683,7 @@ class SmartEzbench:
                         diff < (1 - perf_change_threshold)):
                         msg = "Bench '{}' went from {} to {} {}".format(bench, round(old_perf, 2),
                                                                         round(perf, 2), bench_unit)
-                        middle_commit = self.__find_middle_commit(git_history, old_commit,
+                        middle_commit = self.__find_middle_commit(commits_rev_order, old_commit,
                                                                   commit.sha1, msg)
                         if middle_commit is not None:
                             # TODO: Figure out how many runs we need based on the variance
