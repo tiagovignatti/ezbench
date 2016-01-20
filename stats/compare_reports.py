@@ -50,6 +50,7 @@ parser.add_argument("--title", help="Set the title for the report")
 parser.add_argument("--unit", help="Set the output unit (Default: ms)")
 parser.add_argument("--output", help="Report html file path", required=True)
 parser.add_argument("--commit_url", help="HTTP URL pattern, {commit} contains the SHA1")
+parser.add_argument("--verbose", help="Be more verbose when generating the report", action="store_true")
 parser.add_argument("log_folder", nargs='+')
 args = parser.parse_args()
 
@@ -199,7 +200,9 @@ for bench in db['env_sets']:
 
 # Sort the benchmarks by name to avoid ever-changing layouts
 db["benchmarks"] = sort(db["benchmarks"])
-pprint.pprint(db)
+
+if args.verbose:
+    pprint.pprint(db)
 
 # Support creating new URLs
 if args.commit_url is not None:
