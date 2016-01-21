@@ -1,20 +1,17 @@
-# WARNING: Requires libframetime: https://github.com/clbr/libframetime
-
 test -e "$GPUTEST_FOLDER/GpuTest" || return 1
-test -e "$LIBFRAMETIME64_SO" || return 1
 
 # 2 arguments: $benchmark $benchmark_opts
 __gputest__() {
     cd "$GPUTEST_FOLDER" # Set this variable in test_options.sh
-    local benchmark="/benchmark /no_scorebox"
+    duration_s=30
+    local benchmark="/benchmark /no_scorebox /msaa=0 /benchmark_duration_ms=${duration_s}000"
 
-    rm -f /tmp/frametime.log
-
-    LIBFRAMETIME_FILE=/tmp/frametime.log LD_PRELOAD=$LIBFRAMETIME64_SO \
+    rm _geeks3d_gputest_log.txt
+    MESA_GL_VERSION_OVERRIDE=4.0 MESA_GLSL_VERSION_OVERRIDE=400 \
     run_bench 0 ./GpuTest /test=$1 $benchmark $2 > /dev/null || return 1
+    frames_rendered=$(cat _geeks3d_gputest_log.txt | grep "# frames rendered" | cut -d '#' -f 2 | cut -d ':' -f2)
 
-    # read back the result, skip the first frames since they are the loading frames
-    cat /tmp/frametime.log | awk '{if (++n > 10) {print 1000000/$2}}'
+    bc <<< "scale=3; ${frames_rendered}/${duration_s}"
 }
 
 fullscreen="/width=1920 /height=1080 /fullscreen"
@@ -35,4 +32,4 @@ for t in $GL2_1 $GL3_3 $GL4_0; do
     eval "${name}_run() { __gputest__ $t \"$window\"; }"
 done
 
-test_exec_time=60
+test_exec_time=37
