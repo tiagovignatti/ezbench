@@ -1,92 +1,143 @@
 = TODO =
 
 == Priority list ==
- - ezbench profiles : Blocks smart ezbench for checking which version of the repo is currently installed
- -
+ - watchdogs
+ - auto deploying of the component being tested
+ - experiment mode
 
-== Ezbench.sh ==
+== core.sh ==
+
+=== Watchdog support ===
+
+Add watchdog support to reboot the machine if the test is taking too long to
+execute and the machine does not want to work anymore.
+
+Systemd has some nice features which could be built-in smart-ezbench and ezbenchd
+but this watchdog cannot be stopped or re-programmed during compilation which may
+take any amount of time.
+
+More investigation needs to be made.
 
 === Profiles ===
 
-Profiles allow users to link hooks, tests list and repo path under one name to
-reduce any kind of error and ease reproducibility.
+ - Add auto-deployment support which would download from the git repo of
+ interest and setup ezbench to make use of it.
 
- - Have a folder called profiles.d/ that will store profiles
- - Profiles may be stored in sub-directories (to allow sharing between machines)
- - A profile's ID is its path in the
- - A git repo's config may contain the ezbench profile to be used (overridable by the user, but displaying a warning)
+ - Create a new repo every time we are about to compile, this should be very
+ cheap and would guarantee that we do not destroy the current state of the repo.
+
+ - Add information about how to create working URLs for every commit SHA1, this
+ is useful when creating reports.
+
+==== Kernel ====
+
+Make the default kernel profile work on ubuntu and not just archlinux by
+supporting the initramfs creation tool from ubuntu.
 
 === Tests ===
 
-Let tests tell what kind of units are returned and if bigger is better or worse.
+ - Auto deploy benchmarks
 
-=== Compilation ===
+ - Do dependency checking a bit better so as we can report what is missing for
+ one benchmark
 
-Do not recompile if the version that is currently being used is the right one!
+ - Add a benchmark-testing mode that will run the benchmark a hundred time and
+ deduce the variance of it. This will be used by smart ezbench to figure out how
+ many runs are necessary.
+
+ - Output multiple metrics, possibly under the name
+ ${commit}_bench_${benchmark}.${metric}_metric
+
+=== Reset the environment to a previously-used one ===
+
+When wanting to add data to a certain commit, we need to check the environment
+did not change, or, if it did, make at least that the results do not have a
+different average. At the very least, we should prevent adding data if anything
+in the environment changed except volatile information like the throttling count.
 
 == Reports ==
 
+ - Store the execution runid along with the value in the result file to avoid
+ mis-labeling run IDs and to detect execution errors!
+
 === Move commits to a different folder ===
 
-The current report folder is kind of a mess because it potentially contains thousands of files.
+The current report folder is kind of a mess because it potentially contains
+thousands of files.
 
-We could create one folder per commit and store the data there. The name could be suffixed with the commit date.
-
-=== Store the environment used when benchmarking ===
-
-We need this to allow devs to reproduce the entire environment the benchmark used.
-
-The environment contains:
-
-- All the versions and commit IDs of graphics stack:
-    - kernel (git, sha1 of the file and /proc/kconfig.gz)
-    - libdrm
-    - mesa
-    - xserver
-    - xf86-video-xxxx
-    - etc
-- The hardware used
-- The BIOS version
-- The screens layout and resolution
-
-This could be made easier if the graphics stack was entirely compiled using a set of scripts hosted by ezbench.
+We could create one folder per commit and store the data there. The name could
+be suffixed with the commit date.
 
 === Potentially share commit results between reports ===
 
-Benchmarks take forever to run, so it really is infuriating to have to re-run them over and over again when nothing changed!
+Benchmarks take forever to run, so it really is infuriating to have to re-run
+them over and over again when nothing changed!
 
-This issue will be mitigated when Smart_Ezbench lands as one could copy the benchmark results of a previous run in the new report folder to avoid re-executing them. This would be made easy if using folders per commits.
+This issue will be mitigated when Smart_Ezbench lands as one could copy the
+benchmark results of a previous run in the new report folder to avoid
+re-executing them. This would be made easy if using folders per commits.
 
-The actual solution will be to store results in a separate folder with the state that got used to generate them. This would allow re-using results when nothing changed :)
+The actual solution will be to store results in a separate folder with the state
+that got used to generate them. This would allow re-using results when nothing
+changed :)
 
 In the mean time, we can store the results of each commits in a separate folder
-
-== Smart Ezbench ==
-
-Smart Ezbench is trying to store all the necessary information about benchmarking report to the disk so as if the computer crashes or reboots, the benchmarking can keep on going.
 
 === Experiment mode ===
 
 There is currently only one mode to ezbench, it is making a report.
 
-This is not very convenient during the development phase as we often want to compare different approches to a baseline.
+This is not very convenient during the development phase as we often want to
+compare different approches to a baseline.
 
-The goal would be to remember what were the settings set for the baseline and automatically run the experiment when asked to by the user.
+The goal would be to remember what were the settings set for the baseline and
+automatically run the experiment when asked to by the user.
 
-At a user's wish (amd probably at the end of every run), a report should be created to show the differences.
+At a user's wish (amd probably at the end of every run), a report should be
+created to show the differences.
 
-Upon changes to the baseline parameters (set of benchmarks, # of runs, ...), the previous experiments should also be updated to contain all the needed data. This allows the developer to add data over-night for a broader set of benchmarks or reducing the variance by adding runs.
+Upon changes to the baseline parameters (set of benchmarks, # of runs, ...), the
+previous experiments should also be updated to contain all the needed data. This
+allows the developer to add data over-night for a broader set of benchmarks or
+reducing the variance by adding runs.
+
+EDIT: Profiles already get us close to this, but not entirely. I will need to
+think more about this
 
 == Utils ==
 
 === Easy way to build the graphics stack from git ===
 
-To ease up the set-up of the build environment which is also error-prone and prone to having differences from machines to machines, we propose adding a bunch of scripts that would set up the graphics stack from git, have sane defaults values and work together.
+To ease up the set-up of the build environment which is also error-prone and
+prone to having differences from machines to machines, we propose adding a bunch
+of scripts that would set up the graphics stack from git, have sane defaults
+values and work together.
 
-Having such a script set could allow us to store the git SHA1 IDs and build-ids in the generated binaries.
+Having such a script set could allow us to store the git SHA1 IDs and build-ids
+in the generated binaries.
+
+EDIT: Chad's script would be good for mesa already!
+    http://sarah.thesharps.us/2015/12/17/building-a-custom-intel-graphics-stack/
 
 == gen_report.py ==
 
 === Allow filtering the results ===
 
-There is a ton of data in a performance report. It would be nice if we could filter the rest of the data when we unselect a benchmark in the trend view.
+There is a ton of data in a performance report. It would be nice if we could
+filter the rest of the data when we unselect a benchmark in the trend view.
+
+== env-dump ==
+
+ - Save the SHA1 of the config (zcat /proc/config.gz | sha1sum -) and compare
+ that to the SHA1_DB to get where it comes from. If it is not found in the DB,
+ I guess we will have to keep it as unknown and hope the kernel version is
+ enough information for us to check the config.
+
+ - Save the kernel parameters
+
+ - Save the list of modules loaded
+
+ - Save the configure command line in the SHA1-DB
+
+ - Add a way to save storage by storing a diff with a previous report. This
+ means we need to add support for applying a patch

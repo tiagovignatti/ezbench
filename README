@@ -3,10 +3,21 @@
 This repo contains a collection of tools to benchmark graphics-related
 patch-series.
 
-== Ezbench.sh ==
+== Core.sh ==
+
+WARNING: This tool can be used directly from the CLI but it is recommenced that
+you use ezbench in conjunction with ezbenchd which together support testing the
+kernel and which are much more robust to errors.
 
 This tool is responsible for collecting the data and generating logs that will
 be used by another tool to generate a visual report.
+
+To operate, this script requires a git repo, the ability to compile and deploy
+a commit and then benchmarks to be run. To simplify the usage, a profile should
+be written for each repo you want to test that will allow ezbench to check the
+current version that is deployed, to compile and install a new version and set
+some default parameters to avoid typing very-long command lines every time a
+set of benchmarks needs to be run.
 
 By default, the logs will be outputed in logs/<date of the run>/ and are stored
 mostly as csv files. The main report is found under the name results and needs
@@ -16,8 +27,7 @@ structure will be written really soon.
 
 You may specify whatever name you want by adding -N <name> to the command line.
 This is very useful when testing kernel-related stuff as we need to reboot on
-a new kernel to test a new commit. Support for this is not perfect yet as some
-duplicates in commit_list may happen.
+a new kernel to test a new commit.
 
 === Dependencies ===
 
@@ -28,17 +38,16 @@ duplicates in commit_list may happen.
 
 === Configuration ===
 
-The tests configuration file is named test_options.sh. A sample file called
-test_options.sh.sample comes with the repo and is a good basis for your first
+The tests configuration file is named user_parameters.sh. A sample file called
+user_parameters.sh.sample comes with the repo and is a good basis for your first
 configuration file.
 
 You will need to adjust this file to give the location of the base directory of
-all the benchmark folders.
+all the benchmark folders and repositories for the provided profiles.
 
 Another important note about core.sh is that it is highly modular and
-hook-based. Have a look at conf.d/README for the documentation about the
-different hooks. The hooks can be defined in test_options.sh or in whatever file
-whose extension would be .conf and located in the conf.d directory.
+hook-based. Have a look at profiles.d/$profile/conf.d/README for the
+documentation about the different hooks.
 
 === Examples ===
 
@@ -56,6 +65,11 @@ benchmarks 3 times on 3 commits (in this order), HEAD~5 HEAD~2 HEAD~10.
 
     ./core.sh -p ~/repos/mesa -b synmark:Gl21Batch2$ -r 3 HEAD~5 HEAD~2 HEAD~10
 
+To use the mesa profile, which has the advantage of checking that the deployment
+was successful, you may achieve the same result by running:
+
+    ./core.sh -P mesa -b synmark:Gl21Batch2$ -r 3 HEAD~5 HEAD~2 HEAD~10
+
 ==== Retrospectives ====
 
 Here is an example of how to generate a retrospective. The interesting part is
@@ -63,12 +77,92 @@ the call to utils/get_commit_list.py which generates a list of commits
 
     ./core.sh -p ~/repos/mesa -B cpu -b GLB27:Egypt:offscreen \
                  -b GLB27:Trex:offscreen -b GLB30:Manhattan:offscreen \
-                 -b GLB30:Trex:offscreen -b unigine:heaven -b unigine:valley \
-                 -r 3 -m "./recompile-release.sh" `utils/get_commit_list.py \
-                          -p ~/repos/mesa -s 2014-12-01 -i "1 week"`
+                 -b GLB30:Trex:offscreen -b unigine:heaven:1080p:fullscreen \
+                 -b unigine:valley:1080p:fullscreen -r 3 \
+                 -m "./recompile-release.sh" \
+                 `utils/get_commit_list.py -p ~/repos/mesa -s 2014-12-01 -i "1 week"`
+
+== ezbench ==
+
+This tool is meant to make the usage of core.sh easy and support testing
+performance across reboots.
+
+It allows creating a new performance report, scheduling benchmark
+runs, changing the execution rounds on the fly and then start, pause or halt
+the execution of this report.
+
+This tool uses core.sh as a backend for checking that the commits SHA1 and tests
+do exist so you are sure that the work can be executed when the time comes.
+
+=== Dependencies ===
+
+ - python3
+ - numpy
+
+=== Examples ===
+
+==== Creating a report ====
+
+The ezbench command allows you to create a new performance report. To create
+a performance report named 'mesa-tracking-pub-benchmarks', using the core.sh
+profile 'mesa', you need to run the following command:
+
+    ./ezbench -p mesa mesa-tracking-pub-benchmarks
+
+==== Adding benchmarks runs ====
+
+Adding the 2 rounds of benchmark GLB27:Egypt:offscreen to the report
+mesa-tracking-pub-benchmarks for the commit HEAD can be done using the following
+command:
+
+    ./ezbench -r 2 -b GLB27:Egypt:offscreen -c HEAD mesa-tracking-pub-benchmarks
+
+A retrospective can be made in the same fashion as with core.sh at the exception
+made that it would also work across reboots which is good when testing kernels:
+
+    ./ezbench -r 3 -b GLB27:Egypt:offscreen -b GLB27:Trex:offscreen \
+              -b GLB30:Manhattan:offscreen -b GLB30:Trex:offscreen \
+              -b unigine:heaven:1080p:fullscreen -b unigine:valley:1080p:fullscreen \
+              -c "`utils/get_commit_list.py -p ~/repos/mesa -s 2014-12-01 -i "1 week"`"
+              mesa-tracking-pub-benchmarks
+
+==== Checking the status of a report ====
+
+You can check the status of the 'mesa-tracking-pub-benchmarks' report by calling
+the following command:
+
+    ./ezbench mesa-tracking-pub-benchmarks status
+
+==== Changing the execution status of the report ====
+
+When creating a report, the default state of the report is "initial" which means
+that nothing will happen until the state is changed. To change the state, you
+need to run the following command:
+
+    ./ezbench mesa-tracking-pub-benchmarks (run|pause|abort)
+
+ - The "run" state says that the report is ready to be run by ezbenchd.py.
+
+ - The "pause" and "abort" states indicate that ezbenchd.py should not be
+ executing any benchmarks from this report. The difference between the "pause"
+ and "abort" states is mostly for humans, to convey the actual intent.
+
+==== Starting collecting data without ezbenchd.py ====
+
+If you are not using ezbenchd.py, you may simply run the following command to
+start collecting data:
+
+    ./ezbench mesa-tracking-pub-benchmarks start
+
+This command will automatically change the state of the report to "run".
+
+== utils/ezbenchd.py ==
 
 
 == stats/gen_report.py ==
+
+WARNING: This tool is deprecated, compare_reports.py is the prefered way now even
+if the single-report mode is not as advanced as the gen_report.py.
 
 The goal of this tool is to read the reports from ezbench and make them
 presentable to engineers and managers.
@@ -103,6 +197,8 @@ logs/public_benchmarks_trend_broadwell/index.html. Nothing more, nothing less.
 
 
 == utils/perf_bisect.py ==
+
+WARNING: The introduction of smart ezbench made this tool absolutely useless
 
 The perf_bisect.py tool allows bisecting performance issues. It is quite trivial
 to use, so just check out the example.
