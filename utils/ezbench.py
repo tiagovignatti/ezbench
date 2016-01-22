@@ -440,6 +440,9 @@ class SmartEzbench:
         to_add = at_least - self.state['commits'][commit]['benchmarks'][benchmark]['rounds']
 
         if to_add > 0:
+            self.__log(Criticality.WW,
+                       "Schedule {} more runs for the benchmark {} on commit {}".format(to_add, benchmark, commit))
+
             self.state['commits'][commit]['benchmarks'][benchmark]['rounds'] += to_add
             self.__save_state()
 
@@ -611,7 +614,7 @@ class SmartEzbench:
         middle_idx = int(old_idx - ((old_idx - new_idx) / 2))
         if middle_idx != old_idx and middle_idx != new_idx:
             middle = git_history[middle_idx]
-            log = "{} between commits {}({}) and {}({}), bisect using commit {}({})"
+            log = "{} between commits {}({}) and {}({}), would bisect using commit {}({})"
             self.__log(Criticality.WW,
                         log.format(msg, old, old_idx, new, new_idx, middle, middle_idx))
             return middle
@@ -633,6 +636,7 @@ class SmartEzbench:
         commit_prev = None
         last_commit_good = None
         runs_not_run = []
+        tasks = []
         for commit in r.commits:
             # Look for compilation errors
             if ((commit.compil_exit_code > 0 and commit_prev is not None and
@@ -689,10 +693,19 @@ class SmartEzbench:
                         if middle_commit is not None:
                             # TODO: Figure out how many runs we need based on the variance
                             # In the mean time, re-use the same number of runs
-                            self.force_benchmark_rounds(middle_commit, bench, len(result.data))
+                            tasks.append((abs(diff - 1), middle_commit, bench, len(result.data)))
 
                 bench_prev[bench] = (commit.sha1, perf)
             commit_prev = commit
+
+        # Only schedule the commit with the most important perf change to
+        # speed up the bisecting process
+        tasks_sorted = sorted(tasks, key=lambda t: t[0])
+        if len(tasks_sorted) > 0:
+            commit = tasks_sorted[-1][1]
+            for t in tasks_sorted:
+                if t[1] == commit:
+                    self.force_benchmark_rounds(t[1], t[2], t[3])
 
 # Report parsing
 class Benchmark:
