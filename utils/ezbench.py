@@ -530,7 +530,7 @@ class SmartEzbench:
 
         # Delete the tests on commits that do not compile
         for commit in report.commits:
-            if commit.compil_exit_code > 0:
+            if commit.build_broken() and commit.sha1 in task_tree:
                 self.__log(Criticality.II,
                            "Cancelling the following runs because commit {} does not compile:".format(commit.sha1))
                 self.__log(Criticality.II, task_tree[commit.sha1])
