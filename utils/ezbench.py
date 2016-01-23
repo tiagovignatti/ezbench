@@ -473,7 +473,7 @@ class SmartEzbench:
 
     def run(self):
         self.__log(Criticality.II, "----------------------")
-        self.__log(Criticality.II, "Starting a run: {report}".format(report=self.state['report_name']))
+        self.__log(Criticality.II, "Starting a run: {report} ({path})".format(report=self.state['report_name'], path=self.log_folder))
 
         # Check the current state (FIXME: racy)
         running_state=self.running_mode()
