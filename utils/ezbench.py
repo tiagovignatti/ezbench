@@ -639,11 +639,11 @@ class SmartEzbench:
         tasks = []
         for commit in r.commits:
             # Look for compilation errors
-            if ((commit.compil_exit_code > 0 and commit_prev is not None and
-                 commit_prev.compil_exit_code == 0) or
-               (commit.compil_exit_code == 0 and commit_prev is not None and
-                 commit_prev.compil_exit_code > 0)):
-                if commit.compil_exit_code > 0:
+            if ((commit.build_broken() and commit_prev is not None and
+                 not commit_prev.build_broken()) or
+               (not commit.build_broken() and commit_prev is not None and
+                 commit_prev.build_broken())):
+                if commit.build_broken():
                     msg = "The build got broken"
                 else:
                     msg = "The build got fixed"
@@ -652,7 +652,7 @@ class SmartEzbench:
                                                           commit.sha1, msg)
                 if middle_commit is not None:
                     self.force_benchmark_rounds(middle_commit, "no-op", 1)
-                elif commit.compil_exit_code > 0:
+                elif commit.build_broken():
                     # The current commit introduced a build failure, mark
                     # the previous commit as being the last known-good
                     last_commit_good = commit_prev
@@ -667,7 +667,7 @@ class SmartEzbench:
 
             # If the current commit refuses to build, move the benchmarks we were
             # supposed to run to the last commit before it got broken
-            if commit.compil_exit_code > 0 and last_commit_good is not None:
+            if commit.build_broken() and last_commit_good is not None:
                 for benchmark in self.state['commits'][commit.sha1]['benchmarks']:
                     rounds = self.state['commits'][commit.sha1]['benchmarks'][benchmark]['rounds']
                     self.force_benchmark_rounds(last_commit_good.sha1, benchmark, rounds)
