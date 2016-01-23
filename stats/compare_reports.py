@@ -347,6 +347,7 @@ html_template="""
                 var dataTable = new google.visualization.DataTable();
 
 <%def name="tooltip_commit_table(commit)">\\
+<h3>${db["commits"][commit]['commit'].full_name.replace('"', '&quot;')}</h3>\\
 <h4>Commit\\
 % if 'commit_url' in db:
  (<a href='${db["commit_url"].format(commit=commit)}' target='_blank'>URL</a>)\\
@@ -373,7 +374,7 @@ html_template="""
                 % endfor
                 dataTable.addRows([
                 % for commit in db["commits"]:
-                    ['${commit}', "<h3>${db["commits"][commit]['commit'].full_name}</h3>${tooltip_commit_table(commit)}<h4>Perf</h4><table>\\
+                    ['${commit}', "${tooltip_commit_table(commit)}<h4>Perf</h4><table>\\
 % for report in db["reports"]:
 % if report in db["commits"][commit]['reports']:
 <tr><td><b>${report}:</b></td><td>${db["commits"][commit]['reports'][report]["average"]} ${output_unit}</td></tr>\\
@@ -415,7 +416,7 @@ html_template="""
                             diff_target = db["commits"][commit]['reports'][report][benchmark].average * 100 / db['targets'][benchmark]
                             diff_target = "{0:.2f}".format(diff_target)
                         %>
-, ${diff_target}, "<h3>${db["commits"][commit]['commit'].full_name}</h3>${tooltip_commit_table(commit)}<h4>Perf</h4><table><tr><td><b>Target</b></td><td>${diff_target} %</td></tr><tr><td><b>Raw value</b></td><td>${db["commits"][commit]['reports'][report][benchmark].average} ${output_unit}</td></tr></table>"\\
+, ${diff_target}, "${tooltip_commit_table(commit)}<h4>Perf</h4><table><tr><td><b>Target</b></td><td>${diff_target} %</td></tr><tr><td><b>Raw value</b></td><td>${db["commits"][commit]['reports'][report][benchmark].average} ${output_unit}</td></tr></table>"\\
                             % else:
 , null, "${benchmark}"\\
                             % endif
