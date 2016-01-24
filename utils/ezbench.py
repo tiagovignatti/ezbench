@@ -550,12 +550,18 @@ class SmartEzbench:
         self.state['beenRunBefore'] = True
 
         # Start generating ezbench calls
+        commit_broken = []
         for e in task_list:
             running_mode = self.running_mode()
             if running_mode != RunningMode.RUN:
                 self.__log(Criticality.II,
                        "Running mode changed from RUN to {mode}. Exit...".format(mode=running_mode.name))
                 return False
+
+            if e.commit in commit_broken:
+                msg = "Commit {commit} got marked as broken, cancel the {count} runs for benchmark {benchmark}"
+                self.__log(Criticality.WW, msg.format(count=e.rounds, commit=e.commit, benchmark=e.benchmark))
+                continue
 
             self.__log(Criticality.DD,
                        "make {count} runs for benchmark {benchmark} using commit {commit}".format(count=e.rounds,
@@ -570,8 +576,12 @@ class SmartEzbench:
                 # Error we cannot do anything about, probably a setup issue
                 # Let's mark the run as aborted until the user resets it!
                 self.set_running_mode(RunningMode.ERROR)
-            #elif run_info.exit_code == EzbenchExitCode.COMPILATION_FAILED:
-                # TODO:Mark the commit as broken
+            elif (run_info.exit_code == EzbenchExitCode.COMPILATION_FAILED or
+                  run_info.exit_code == EzbenchExitCode.DEPLOYMENT_FAILED):
+                # Cancel any other test on this commit
+                commit_broken.append(e.commit)
+
+
 
         self.__log(Criticality.II, "Done")
 
