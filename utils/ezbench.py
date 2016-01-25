@@ -1062,7 +1062,8 @@ def genPerformanceReport(log_folder, silentMode = False):
         commit = Commit(sha1, full_name, compile_log, patch, label)
 
         # find all the benchmarks
-        benchFiles = glob.glob("{sha1}_bench_*".format(sha1=commit.sha1));
+        pattern = "{sha1}_bench".format(sha1=commit.sha1)
+        benchFiles = [f for f in os.listdir(".") if f.startswith(pattern)]
         benchs_txt = ""
         for benchFile in benchFiles:
             # Skip when the file is a run file (finishes by #XX)
