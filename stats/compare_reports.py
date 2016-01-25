@@ -265,6 +265,15 @@ html_template="""
             table tr:nth-child(even){
                 background: #dae5f4;
             }
+
+            .close_button {
+                color: black;
+                background-color: grey;
+                cursor:pointer;
+            }
+            .close_button:hover {
+                text-decoration:underline;
+            }
         </style>
         <script type="text/javascript" src="https://www.google.com/jsapi"></script>
         <script type="text/javascript">
@@ -343,11 +352,15 @@ html_template="""
                 id_chart.style.width = "100%";
             }
 
+            function trendUnselect() {
+                trend_chart.setSelection(null);
+            }
+
             function drawTrend() {
                 var dataTable = new google.visualization.DataTable();
 
 <%def name="tooltip_commit_table(commit)">\\
-<h3>${db["commits"][commit]['commit'].full_name.replace('"', '&quot;')}</h3>\\
+<h3>${db["commits"][commit]['commit'].full_name.replace('"', '&quot;')} <span class='close_button' onclick='javascript:trendUnselect();' title='Close this tooltip'>[X]</span></h3>\\
 <h4>Commit\\
 % if 'commit_url' in db:
  (<a href='${db["commit_url"].format(commit=commit)}' target='_blank'>URL</a>)\\
@@ -454,19 +467,19 @@ html_template="""
                     chartArea: {left:"6%", width:"95%"}
                 };
 
-                var chart = new google.visualization.LineChart(document.getElementById('trends_chart'));
-                chart.draw(dataTable, options);
+                trend_chart = new google.visualization.LineChart(document.getElementById('trends_chart'));
+                trend_chart.draw(dataTable, options);
 
-                google.visualization.events.addListener(chart, 'select', function () {
-                    var sel = chart.getSelection();
+                google.visualization.events.addListener(trend_chart, 'select', function () {
+                    var sel = trend_chart.getSelection();
                     // See https://developers.google.com/chart/interactive/docs/reference#visgetselection
                     if (sel.length > 0 && typeof sel[0].row === 'object') {
-                        handle_selection(sel, dataTable, series, activColumns, chart)
+                        handle_selection(sel, dataTable, series, activColumns, trend_chart)
 
                         // Redraw the chart with the masked columns
                         var view = new google.visualization.DataView(dataTable);
                         view.setColumns(activColumns);
-                        chart.draw(view, options);
+                        trend_chart.draw(view, options);
                     }
 
                     if (sel.length > 0 && typeof sel[0].row === 'number') {
@@ -479,7 +492,7 @@ html_template="""
                     }
 
                     if (sel.length == 0) {
-                        chart.setSelection(null);
+                        trend_chart.setSelection(null);
                     }
                 });
             }
