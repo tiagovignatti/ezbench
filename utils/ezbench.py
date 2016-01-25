@@ -909,7 +909,7 @@ class EventBuildFixed:
         if (not self.broken_commit_range.is_single_commit() or
             not self.fixed_commit_range.is_single_commit()):
             parenthesis = "at least "
-        parenthesis += "for "
+        parenthesis += "after "
 
         time = self.broken_for_time()
         if time is not None and time != "":
