@@ -920,6 +920,25 @@ class EventBuildFixed:
         main = main.format(self.fixed_commit_range, self.broken_commit_range)
         return "{} ({})".format(main, parenthesis)
 
+class EventPerfChange:
+    def __init__(self, benchmark, commit_range, old_perf, new_perf):
+        self.benchmark = benchmark
+        self.commit_range = commit_range
+        self.old_perf = old_perf
+        self.new_perf = new_perf
+
+    def diff(self):
+        if self.old_perf != 0:
+            return (1 - (self.new_perf / self.old_perf)) * -1
+        elif self.new_perf == 0 and self.old_perf == 0:
+            return 0
+        else:
+            return float("inf")
+
+    def __str__(self):
+        msg = "{} changed the performance of {} from {:.2f} to {:.2f} ({:+.2f}%)"
+        return msg.format(self.commit_range, self.benchmark.full_name,
+                          self.old_perf, self.new_perf, self.diff() * 100)
 
 class Report:
     def __init__(self, benchmarks, commits, notes):
@@ -928,7 +947,7 @@ class Report:
         self.notes = notes
         self.events = list()
 
-    def enhance_report(self, commits_rev_order):
+    def enhance_report(self, commits_rev_order, perf_change_threshold = 0.05):
         if len(commits_rev_order) == 0:
             return
 
@@ -949,6 +968,7 @@ class Report:
 
         # Generate events
         commit_prev = None
+        bench_prev = dict()
         build_broken_since = None
         for commit in self.commits:
             commit_range = EventCommitRange(commit_prev, commit)
@@ -960,6 +980,23 @@ class Report:
             elif not commit.build_broken() and build_broken_since is not None:
                 self.events.append(EventBuildFixed(build_broken_since, commit_range))
                 build_broken_since = None
+
+            # Look for performance regressions
+            for result in commit.results:
+                perf = sum(result.data) / len(result.data)
+                bench = result.benchmark.full_name
+                bench_unit = result.benchmark.unit_str
+                if bench in bench_prev:
+                    # We got previous perf results, compare!
+                    old_commit = bench_prev[bench][0]
+                    old_perf = bench_prev[bench][1]
+                    thrs = perf_change_threshold * old_perf
+
+                    if thrs > 0 and abs(perf - old_perf) >= thrs:
+                        self.events.append(EventPerfChange(result.benchmark,
+                                                           commit_range,
+                                                           old_perf, perf))
+                bench_prev[bench] = (commit.sha1, perf)
 
             commit_prev = commit
 
