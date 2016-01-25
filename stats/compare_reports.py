@@ -440,10 +440,10 @@ html_template="""
                     % endif
                     % for benchmark in db["benchmarks"]:
                         % if benchmark in db["commits"][commit]['reports'][report]:
-                        <%
-                            diff_target = db["commits"][commit]['reports'][report][benchmark].average * 100 / db['targets'][benchmark]
-                            diff_target = "{0:.2f}".format(diff_target)
-                        %>
+<%
+    diff_target = db["commits"][commit]['reports'][report][benchmark].average * 100 / db['targets'][benchmark]
+    diff_target = "{0:.2f}".format(diff_target)
+%>\\
 , ${diff_target}, "${tooltip_commit_table(commit)}<h4>Perf</h4><table><tr><td><b>Target</b></td><td>${diff_target} %</td></tr><tr><td><b>Raw value</b></td><td>${db["commits"][commit]['reports'][report][benchmark].average} ${output_unit}</td></tr></table>"\\
                             % else:
 , null, "${benchmark}"\\
@@ -527,7 +527,7 @@ html_template="""
                     dataTable.addRows([
                     % for report in db["reports"]:
                         % if report in db["commits"][commit]['reports']:
-                             ["${report}", ${db["commits"][commit]['reports'][report]["average"]}, "<h3>${report} - ${benchmark}</h3><p>\\
+                             ["${report}", ${db["commits"][commit]['reports'][report]["average"]}, "<h3>${report} - Average</h3><p>\\
                              % for r in db["reports"]:
 <%
                                      if not r in db["commits"][commit]:
