@@ -94,8 +94,15 @@ for log_folder in args.log_folder:
 	for event in report.events:
 		if type(event) is EventBuildBroken:
 			event.commit_range.new.annotation = event.commit_range.new.sha1 + ": build broken"
+			event.commit_range.new.annotation_long = str(event)
 		elif type(event) is EventBuildFixed:
 			event.fixed_commit_range.new.annotation = event.fixed_commit_range.new.sha1 + ": build fixed"
+			event.fixed_commit_range.new.annotation_long = str(event)
+		elif type(event) is EventPerfChange:
+			for result in event.commit_range.new.results:
+				if result.benchmark.full_name != event.benchmark.full_name:
+					continue
+				result.annotation = str(event)
 
 	# add all the commits
 	for commit in report.commits:
@@ -380,6 +387,9 @@ html_template="""
 <li><a href='${bug.replace('"', '&quot;')}' target='_blank'>${bug.replace('"', '&quot;')}</a></li>\\
 % endfor
 </ul></td></tr>\\
+% endif
+% if hasattr(db["commits"][commit]['commit'], "annotation_long"):
+<tr><td><b>Annotation:</b></td><td>${cgi.escape(db["commits"][commit]['commit'].annotation_long)}</td></tr>\\
 % endif
 </table>\\
 </%def>
