@@ -209,7 +209,7 @@ class EnvDumpReport:
 
             ignore = False
             for ignoreentry in ignore_list:
-                if re.search(ignoreentry, entrykey) is not None:
+                if ignoreentry.search(entrykey) is not None:
                     ignore = True
             if ignore == True:
                 continue
@@ -221,4 +221,9 @@ class EnvDumpReport:
         return out
 
     def to_set(self, ignore_list=[]):
-        return self.__to_set__(self.values, "", ignore_list)
+        ignore_list_re = []
+        # pre-compile the ignore_list
+        for ignoreentry in ignore_list:
+            ignore_list_re.append(re.compile(ignoreentry))
+
+        return self.__to_set__(self.values, "", ignore_list_re)
