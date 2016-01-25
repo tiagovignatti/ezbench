@@ -1062,8 +1062,9 @@ def genPerformanceReport(log_folder, silentMode = False):
         commit = Commit(sha1, full_name, compile_log, patch, label)
 
         # find all the benchmarks
+        files_list = os.listdir()
         pattern = "{sha1}_bench".format(sha1=commit.sha1)
-        benchFiles = [f for f in os.listdir(".") if f.startswith(pattern)]
+        benchFiles = [f for f in files_list if f.startswith(pattern)]
         benchs_txt = ""
         for benchFile in benchFiles:
             # Skip when the file is a run file (finishes by #XX)
@@ -1104,7 +1105,7 @@ def genPerformanceReport(log_folder, silentMode = False):
 
             # Look for the runs
             run_re = re.compile(r'^{benchFile}#[0-9]+$'.format(benchFile=benchFile))
-            runsFiles = [f for f in os.listdir() if run_re.search(f)]
+            runsFiles = [f for f in benchFiles if run_re.search(f)]
             runsFiles.sort(key=lambda x: '{0:0>100}'.format(x).lower()) # Sort the runs in natural order
             for runFile in runsFiles:
                 data, unit, more_is_better = readCsv(runFile)
