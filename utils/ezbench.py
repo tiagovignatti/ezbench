@@ -682,10 +682,9 @@ class SmartEzbench:
                     # We got previous perf results, compare!
                     old_commit = bench_prev[bench][0]
                     old_perf = bench_prev[bench][1]
-                    diff = perf / old_perf
+                    thrs = perf_change_threshold * old_perf
 
-                    if (diff > (1 + perf_change_threshold) or
-                        diff < (1 - perf_change_threshold)):
+                    if thrs > 0 and abs(perf - old_perf) >= thrs:
                         msg = "Bench '{}' went from {} to {} {}".format(bench, round(old_perf, 2),
                                                                         round(perf, 2), bench_unit)
                         middle_commit = self.__find_middle_commit(commits_rev_order, old_commit,
@@ -693,7 +692,13 @@ class SmartEzbench:
                         if middle_commit is not None:
                             # TODO: Figure out how many runs we need based on the variance
                             # In the mean time, re-use the same number of runs
-                            tasks.append((abs(diff - 1), middle_commit, bench, len(result.data)))
+                            if old_perf != 0:
+                                score = abs(1 - (perf / old_perf))
+                            elif perf == 0 and old_perf == 0:
+                                score = 0
+                            else:
+                                score = float("inf")
+                            tasks.append((score, middle_commit, bench, len(result.data)))
 
                 bench_prev[bench] = (commit.sha1, perf)
             commit_prev = commit
