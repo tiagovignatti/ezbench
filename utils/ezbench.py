@@ -1102,7 +1102,8 @@ def genPerformanceReport(log_folder, silentMode = False):
                 benchmark.unit_str = result.unit_str
 
             # Look for the runs
-            runsFiles = [f for f in os.listdir() if re.search(r'^{benchFile}#[0-9]+$'.format(benchFile=benchFile), f)]
+            run_re = re.compile(r'^{benchFile}#[0-9]+$'.format(benchFile=benchFile))
+            runsFiles = [f for f in os.listdir() if run_re.search(f)]
             runsFiles.sort(key=lambda x: '{0:0>100}'.format(x).lower()) # Sort the runs in natural order
             for runFile in runsFiles:
                 data, unit, more_is_better = readCsv(runFile)
