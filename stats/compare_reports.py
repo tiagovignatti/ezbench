@@ -266,6 +266,11 @@ html_template="""
                 background: #dae5f4;
             }
 
+            .env_node:hover {
+                cursor: pointer;
+                text-decoration: underline;
+            }
+
             .close_button {
                 color: black;
                 background-color: grey;
@@ -630,7 +635,7 @@ ${btag}${r}: ${db["commits"][commit]['reports'][r][benchmark].average} ${output_
 
                 <div class="css-treeview">
                     <%def name="outputtreenode(node, id, label, attr = '')">
-                        <li><input type="checkbox" id="${id}" ${attr}/><label for="${id}">+${label}</label><ul>
+                        <li><input type="checkbox" id="${id}" ${attr}/><label class="env_node" for="${id}">+${label}</label><ul>
                             <table>
                             % for child in sorted(node):
                                 % if type(node[child]) is str:
