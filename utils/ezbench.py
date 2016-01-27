@@ -716,11 +716,17 @@ class SmartEzbench:
         # Only schedule the commit with the most important perf change to
         # speed up the bisecting process
         tasks_sorted = sorted(tasks, key=lambda t: t[0])
-        if len(tasks_sorted) > 0:
+        while len(tasks_sorted) > 0:
             commit = tasks_sorted[-1][1]
+            self.__log(Criticality.DD, "Add all the tasks using commit {}".format(commit))
+            added = 0
             for t in tasks_sorted:
                 if t[1] == commit:
-                    self.force_benchmark_rounds(t[1], t[2], t[3])
+                    added += self.force_benchmark_rounds(t[1], t[2], t[3])
+            if added > 0:
+                break
+            del tasks_sorted[-1]
+            self.__log(Criticality.DD, "No work scheduled using commit {}, try another one".format(commit))
 
 # Report parsing
 class Benchmark:
