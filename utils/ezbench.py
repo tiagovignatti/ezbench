@@ -634,6 +634,8 @@ class SmartEzbench:
             return None
 
     def schedule_enhancements(self, git_history=None, perf_change_threshold=0.05):
+        self.__log(Criticality.DD, "Start enhancing the report".format(commit))
+
         # Generate the report, order commits based on the git history
         if git_history is None:
             git_history = self.git_history()
@@ -727,6 +729,8 @@ class SmartEzbench:
                 break
             del tasks_sorted[-1]
             self.__log(Criticality.DD, "No work scheduled using commit {}, try another one".format(commit))
+
+        self.__log(Criticality.DD, "Done enhancing the report".format(commit))
 
 # Report parsing
 class Benchmark:
