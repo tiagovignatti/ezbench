@@ -30,6 +30,7 @@ from collections import namedtuple
 from datetime import datetime
 from dateutil import relativedelta
 from array import array
+from scipy import stats
 from enum import Enum
 from numpy import *
 import subprocess
@@ -749,6 +750,40 @@ class BenchResult:
         self.env_files = []
         self.unit_str = None
 
+    def result(self):
+        return sum(self.data) / len(self.data)
+
+    def __samples_needed__(self, sigma, margin, confidence=0.95):
+        # TODO: Find the function in scipy to get these values
+        if confidence <= 0.9:
+            z = 1.645
+        elif confidence <= 0.95:
+            z = 1.960
+        else:
+            z = 2.576
+        return ((z * sigma) / margin)**2
+
+    # wanted_margin is a number between 0 and 1
+    def confidence_margin(self, wanted_margin = None, confidence=0.95):
+        data = array(self.data)
+        if len(data) < 2 or data.var() == 0:
+            return 0, 2
+
+        mean, var, std = stats.bayes_mvs(data, alpha=0.95)
+        margin = (mean.minmax[1] - mean.minmax[0]) / 2 / mean.statistic
+        wanted_samples = 2
+
+        if wanted_margin is not None:
+            # TODO: Get sigma from the benchmark instead!
+            sigma = (std.minmax[1] - std.minmax[0]) / 2
+            target_margin = mean.statistic * wanted_margin
+            wanted_samples = math.ceil(self.__samples_needed__(sigma,
+                                                               target_margin,
+                                                               confidence))
+
+        return margin, wanted_samples
+
+
 class Commit:
     def __init__(self, sha1, full_name, compile_log, patch, label):
         self.sha1 = sha1
@@ -950,6 +985,17 @@ class EventPerfChange:
         return msg.format(self.commit_range, self.benchmark.full_name,
                           self.old_perf, self.new_perf, self.diff() * 100)
 
+class EventInsufficientSignificanceResult:
+    def __init__(self, result, wanted_margin):
+        self.result = result
+        self.wanted_margin = wanted_margin
+
+    def __str__(self):
+        margin, wanted_n = self.result.confidence_margin(self.wanted_margin)
+        msg = "Benchmark {} on commit {} requires more runs to reach the wanted margin ({:.2f}% vs {:.2f}%), proposes n = {}."
+        return msg.format(self.result.benchmark.full_name, self.result.commit.sha1,
+                          margin * 100, self.wanted_margin * 100, wanted_n)
+
 class Report:
     def __init__(self, benchmarks, commits, notes):
         self.benchmarks = benchmarks
@@ -993,9 +1039,15 @@ class Report:
 
             # Look for performance regressions
             for result in commit.results:
-                perf = sum(result.data) / len(result.data)
+                perf = result.result()
                 bench = result.benchmark.full_name
                 bench_unit = result.benchmark.unit_str
+
+                wanted_margin = perf_change_threshold / 2
+                current_margin, wanted_n = result.confidence_margin(wanted_margin)
+                if current_margin > wanted_margin:
+                    self.events.append(EventInsufficientSignificanceResult(result, wanted_margin))
+
                 if bench in bench_prev:
                     # We got previous perf results, compare!
                     old_commit = bench_prev[bench][0]
