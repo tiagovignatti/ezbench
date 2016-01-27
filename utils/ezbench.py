@@ -966,11 +966,12 @@ class EventBuildFixed:
         return "{} ({})".format(main, parenthesis)
 
 class EventPerfChange:
-    def __init__(self, benchmark, commit_range, old_perf, new_perf):
+    def __init__(self, benchmark, commit_range, old_perf, new_perf, confidence):
         self.benchmark = benchmark
         self.commit_range = commit_range
         self.old_perf = old_perf
         self.new_perf = new_perf
+        self.confidence = confidence
 
     def diff(self):
         if self.old_perf != 0:
@@ -981,9 +982,10 @@ class EventPerfChange:
             return float("inf")
 
     def __str__(self):
-        msg = "{} changed the performance of {} from {:.2f} to {:.2f} ({:+.2f}%)"
+        msg = "{} changed the performance of {} from {:.2f} to {:.2f} ({:+.2f}%) with confidence p={:.2f}"
         return msg.format(self.commit_range, self.benchmark.full_name,
-                          self.old_perf, self.new_perf, self.diff() * 100)
+                          self.old_perf, self.new_perf, self.diff() * 100,
+                          self.confidence)
 
 class EventInsufficientSignificanceResult:
     def __init__(self, result, wanted_margin):
@@ -1003,7 +1005,8 @@ class Report:
         self.notes = notes
         self.events = list()
 
-    def enhance_report(self, commits_rev_order, perf_change_threshold = 0.05):
+    def enhance_report(self, commits_rev_order, max_variance = 0.025,
+                       perf_diff_confidence = 0.95, smallest_perf_change=0.005):
         if len(commits_rev_order) == 0:
             return
 
@@ -1043,22 +1046,24 @@ class Report:
                 bench = result.benchmark.full_name
                 bench_unit = result.benchmark.unit_str
 
-                wanted_margin = perf_change_threshold / 2
-                current_margin, wanted_n = result.confidence_margin(wanted_margin)
-                if current_margin > wanted_margin:
-                    self.events.append(EventInsufficientSignificanceResult(result, wanted_margin))
+                current_margin, wanted_n = result.confidence_margin(max_variance)
+                if current_margin > max_variance:
+                    self.events.append(EventInsufficientSignificanceResult(result, max_variance))
 
                 if bench in bench_prev:
                     # We got previous perf results, compare!
-                    old_commit = bench_prev[bench][0]
-                    old_perf = bench_prev[bench][1]
-                    thrs = perf_change_threshold * old_perf
+                    t, p = stats.ttest_ind(bench_prev[bench].data, result.data, equal_var=True)
+                    perf = result.result()
+                    old_perf = bench_prev[bench].result()
+                    diff = abs(perf - old_perf) / old_perf
 
-                    if thrs > 0 and abs(perf - old_perf) >= thrs:
+                    # If we are not $perf_diff_confidence sure that this is the
+                    # same normal distribution, say that the performance changed
+                    if p < perf_diff_confidence and diff >= smallest_perf_change:
                         self.events.append(EventPerfChange(result.benchmark,
                                                            commit_range,
-                                                           old_perf, perf))
-                bench_prev[bench] = (commit.sha1, perf)
+                                                           old_perf, perf, 1 - p))
+                bench_prev[bench] = result
 
             commit_prev = commit
 
