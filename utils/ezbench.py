@@ -1028,6 +1028,18 @@ class Report:
         self.notes = notes
         self.events = list()
 
+    def find_commit(self, sha1):
+        for commit in self.commits:
+            if commit.sha1 == sha1:
+                return commit
+        return None
+
+    def find_result(self, commit, benchmark):
+        for result in commit.results:
+            if result.benchmark == benchmark:
+                return result
+        return None
+
     def enhance_report(self, commits_rev_order, max_variance = 0.025,
                        perf_diff_confidence = 0.95, smallest_perf_change=0.005):
         if len(commits_rev_order) == 0:
