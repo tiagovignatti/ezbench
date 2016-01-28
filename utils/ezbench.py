@@ -750,8 +750,20 @@ class BenchResult:
         self.env_files = []
         self.unit_str = None
 
+        # cached data
+        self._cache_result = None
+        self._cache_mean = None
+        self._cache_std = None
+
+    def invalidate_cache(self):
+        self._cache_result = None
+        self._cache_mean = None
+        self._cache_std = None
+
     def result(self):
-        return sum(self.data) / len(self.data)
+        if self._cache_result is None:
+            self._cache_result = sum(self.data) / len(self.data)
+        return self._cache_result
 
     def __samples_needed__(self, sigma, margin, confidence=0.95):
         # TODO: Find the function in scipy to get these values
@@ -763,20 +775,25 @@ class BenchResult:
             z = 2.576
         return ((z * sigma) / margin)**2
 
+    def __compute_stats__(self):
+        if self._cache_mean is None or self._cache_std is None:
+            self._cache_mean, var, self._cache_std = stats.bayes_mvs(array(self.data),
+                                                                     alpha=0.95)
+
     # wanted_margin is a number between 0 and 1
     def confidence_margin(self, wanted_margin = None, confidence=0.95):
         data = array(self.data)
         if len(data) < 2 or data.var() == 0:
             return 0, 2
 
-        mean, var, std = stats.bayes_mvs(data, alpha=0.95)
-        margin = (mean.minmax[1] - mean.minmax[0]) / 2 / mean.statistic
+        self.__compute_stats__()
+        margin = (self._cache_mean[1][1] - self._cache_mean[1][0]) / 2 / self._cache_mean[0]
         wanted_samples = 2
 
         if wanted_margin is not None:
             # TODO: Get sigma from the benchmark instead!
-            sigma = (std.minmax[1] - std.minmax[0]) / 2
-            target_margin = mean.statistic * wanted_margin
+            sigma = (self._cache_std[1][1] - self._cache_std[1][0]) / 2
+            target_margin = self._cache_mean[0] * wanted_margin
             wanted_samples = math.ceil(self.__samples_needed__(sigma,
                                                                target_margin,
                                                                confidence))
