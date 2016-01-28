@@ -619,22 +619,29 @@ class SmartEzbench:
         r.enhance_report([c.sha1 for c in git_history])
         return r
 
-    def __find_middle_commit(self, git_history, old, new, msg):
+    def __find_middle_commit__(self, git_history, old, new):
         old_idx = git_history.index(old)
         new_idx = git_history.index(new)
         middle_idx = int(old_idx - ((old_idx - new_idx) / 2))
         if middle_idx != old_idx and middle_idx != new_idx:
             middle = git_history[middle_idx]
-            log = "{} between commits {}({}) and {}({}), would bisect using commit {}({})"
-            self.__log(Criticality.WW,
-                        log.format(msg, old, old_idx, new, new_idx, middle, middle_idx))
             return middle
         else:
-            self.__log(Criticality.WW,
-                       "{} due to commit '{}'".format(msg, new))
             return None
 
-    def schedule_enhancements(self, git_history=None, perf_change_threshold=0.05):
+    # WARNING: benchmark may be None!
+    def __score_event__(self, git_history, commit_sha1, benchmark, severity):
+        commit_weight = 1 - (git_history.index(commit_sha1) / len(git_history))
+
+        bench_weight = 1
+        if benchmark is not None and hasattr(benchmark, 'score_weight'):
+            bench_weight = benchmark.score_weight
+
+        return commit_weight * bench_weight * severity
+
+    def schedule_enhancements(self, git_history=None, max_variance = 0.025,
+                              perf_diff_confidence = 0.95, smallest_perf_change=0.005,
+                              max_run_count = 100):
         self.__log(Criticality.DD, "Start enhancing the report")
 
         # Generate the report, order commits based on the git history
@@ -642,82 +649,96 @@ class SmartEzbench:
             git_history = self.git_history()
         commits_rev_order = [c.sha1 for c in git_history]
         r = genPerformanceReport(self.log_folder, silentMode = True)
-        r.enhance_report(commits_rev_order)
+        r.enhance_report(commits_rev_order, max_variance, perf_diff_confidence,
+                         smallest_perf_change)
 
-        # Check all the commits
-        bench_prev = dict()
-        commit_prev = None
-        last_commit_good = None
-        runs_not_run = []
+        # Check all events
         tasks = []
-        for commit in r.commits:
-            # Look for compilation errors
-            if ((commit.build_broken() and commit_prev is not None and
-                 not commit_prev.build_broken()) or
-               (not commit.build_broken() and commit_prev is not None and
-                 commit_prev.build_broken())):
-                if commit.build_broken():
-                    msg = "The build got broken"
-                else:
-                    msg = "The build got fixed"
-                middle_commit = self.__find_middle_commit(commits_rev_order,
-                                                          commit_prev.sha1,
-                                                          commit.sha1, msg)
-                if middle_commit is not None:
-                    self.force_benchmark_rounds(middle_commit, "no-op", 1)
-                elif commit.build_broken():
-                    # The current commit introduced a build failure, mark
-                    # the previous commit as being the last known-good
-                    last_commit_good = commit_prev
-                else:
-                    # The current commit fixed a build failure, we do not need
-                    # to mark that the build is broken anymore and add all the
-                    # benchmark runs that were found in the range of unbuildable
-                    # commits.
-                    last_commit_good = None
-                    for run in runs_not_run:
-                        self.force_benchmark_rounds(commit.sha1, run[0], run[1])
+        for e in r.events:
+            commit_sha1 = None
+            benchmark = None
+            event_prio = 1
+            severity = 0 # should be a value in [0, 1]
+            bench_name_to_run = ""
+            runs = 0
+            if type(e) is EventBuildBroken:
+                if e.commit_range.old is None or e.commit_range.is_single_commit():
+                    continue
+                middle = self.__find_middle_commit__(commits_rev_order,
+                                                     e.commit_range.old.sha1,
+                                                     e.commit_range.new.sha1)
+                if middle is None:
+                    continue
 
-            # If the current commit refuses to build, move the benchmarks we were
-            # supposed to run to the last commit before it got broken
-            if commit.build_broken() and last_commit_good is not None:
-                for benchmark in self.state['commits'][commit.sha1]['benchmarks']:
-                    rounds = self.state['commits'][commit.sha1]['benchmarks'][benchmark]['rounds']
-                    self.force_benchmark_rounds(last_commit_good.sha1, benchmark, rounds)
-                    runs_not_run.append((benchmark, rounds))
+                # Schedule the work
+                commit_sha1 = middle
+                severity = 1
+                event_prio = 0.5
+                bench_name_to_run = "no-op"
+                runs = 1
+            elif type(e) is EventBuildFixed:
+                if e.fixed_commit_range.is_single_commit():
+                    continue
+                middle = self.__find_middle_commit__(commits_rev_order,
+                                                     e.fixed_commit_range.old.sha1,
+                                                     e.fixed_commit_range.new.sha1)
+                if middle is None:
+                    continue
 
-            # Look for performance regressions
-            for result in commit.results:
-                perf = sum(result.data) / len(result.data)
-                bench = result.benchmark.full_name
-                bench_unit = result.benchmark.unit_str
-                if result.benchmark.full_name in bench_prev:
-                    # We got previous perf results, compare!
-                    old_commit = bench_prev[bench][0]
-                    old_perf = bench_prev[bench][1]
-                    thrs = perf_change_threshold * old_perf
+                # Schedule the work
+                commit_sha1 = middle
+                severity = 1
+                event_prio = 0.5
+                bench_name_to_run = "no-op"
+                runs = 1
+            elif type(e) is EventPerfChange:
+                if e.commit_range.is_single_commit():
+                    continue
 
-                    if thrs > 0 and abs(perf - old_perf) >= thrs:
-                        msg = "Bench '{}' went from {} to {} {}".format(bench, round(old_perf, 2),
-                                                                        round(perf, 2), bench_unit)
-                        middle_commit = self.__find_middle_commit(commits_rev_order, old_commit,
-                                                                  commit.sha1, msg)
-                        if middle_commit is not None:
-                            # TODO: Figure out how many runs we need based on the variance
-                            # In the mean time, re-use the same number of runs
-                            if old_perf != 0:
-                                score = abs(1 - (perf / old_perf))
-                            elif perf == 0 and old_perf == 0:
-                                score = 0
-                            else:
-                                score = float("inf")
-                            tasks.append((score, middle_commit, bench, len(result.data)))
+                # ignore commits which have a big variance
+                result_new = r.find_result(e.commit_range.new, e.benchmark)
+                margin, wanted_n = result_new.confidence_margin()
+                if margin > max_variance:
+                    continue
 
-                bench_prev[bench] = (commit.sha1, perf)
-            commit_prev = commit
+                middle = self.__find_middle_commit__(commits_rev_order,
+                                                     e.commit_range.old.sha1,
+                                                     e.commit_range.new.sha1)
+                if middle is None:
+                    continue
 
-        # Only schedule the commit with the most important perf change to
-        # speed up the bisecting process
+                # Schedule the work
+                commit_sha1 = middle
+                benchmark = e.benchmark
+                severity = min(abs(e.diff()), 1) * e.confidence
+                event_prio = 0.75
+
+                result_old = r.find_result(e.commit_range.old, e.benchmark)
+                bench_name_to_run = benchmark.full_name
+                runs = (len(result_old.data) + len(result_new.data)) / 2
+            elif type(e) is EventInsufficientSignificance:
+                commit_sha1 = e.result.commit.sha1
+                benchmark = e.result.benchmark
+                missing_runs = max(2, e.wanted_n() - len(e.result.data)) # Schedule at least 2 more runs
+                severity = min(missing_runs / len(e.result.data), 1)
+                event_prio = 1
+
+                bench_name_to_run = benchmark.full_name
+                runs = min(20, missing_runs) # cap the maximum amount of runs to play nice
+
+                # Make sure we do not schedule more than the maximum amount of run
+                if len(e.result.data) + runs > max_run_count:
+                    runs = max_run_count - len(e.result.data)
+                    if runs == 0:
+                        continue
+
+            score = self.__score_event__(commits_rev_order, commit_sha1, benchmark, severity)
+            score *= event_prio
+
+            tasks.append((score, commit_sha1, bench_name_to_run, runs, type(e).__name__))
+
+        # Only schedule the commit with the biggest score to speed up bisecting
+        # of the most important issues
         tasks_sorted = sorted(tasks, key=lambda t: t[0])
         while len(tasks_sorted) > 0:
             commit = tasks_sorted[-1][1]
