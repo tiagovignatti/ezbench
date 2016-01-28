@@ -700,6 +700,10 @@ class SmartEzbench:
                 margin, wanted_n = result_new.confidence_margin()
                 if margin > max_variance:
                     continue
+                result_old = r.find_result(e.commit_range.old, e.benchmark)
+                margin, wanted_n = result_new.confidence_margin()
+                if margin > max_variance:
+                    continue
 
                 middle = self.__find_middle_commit__(commits_rev_order,
                                                      e.commit_range.old.sha1,
@@ -713,7 +717,6 @@ class SmartEzbench:
                 severity = min(abs(e.diff()), 1) * e.confidence
                 event_prio = 0.75
 
-                result_old = r.find_result(e.commit_range.old, e.benchmark)
                 bench_name_to_run = benchmark.full_name
                 runs = (len(result_old.data) + len(result_new.data)) / 2
             elif type(e) is EventInsufficientSignificance:
