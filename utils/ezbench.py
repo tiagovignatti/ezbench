@@ -1004,10 +1004,16 @@ class EventPerfChange:
                           self.old_perf, self.new_perf, self.diff() * 100,
                           self.confidence)
 
-class EventInsufficientSignificanceResult:
+class EventInsufficientSignificance:
     def __init__(self, result, wanted_margin):
         self.result = result
         self.wanted_margin = wanted_margin
+
+    def margin(self):
+        return self.result.confidence_margin(self.wanted_margin)[0]
+
+    def wanted_n(self):
+        return self.result.confidence_margin(self.wanted_margin)[1]
 
     def __str__(self):
         margin, wanted_n = self.result.confidence_margin(self.wanted_margin)
@@ -1065,7 +1071,7 @@ class Report:
 
                 current_margin, wanted_n = result.confidence_margin(max_variance)
                 if current_margin > max_variance:
-                    self.events.append(EventInsufficientSignificanceResult(result, max_variance))
+                    self.events.append(EventInsufficientSignificance(result, max_variance))
 
                 if bench in bench_prev:
                     # We got previous perf results, compare!
