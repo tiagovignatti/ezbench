@@ -740,7 +740,7 @@ class SmartEzbench:
             score = self.__score_event__(commits_rev_order, commit_sha1, benchmark, severity)
             score *= event_prio
 
-            tasks.append((score, commit_sha1, bench_name_to_run, runs, type(e).__name__))
+            tasks.append((score, commit_sha1, bench_name_to_run, runs, e))
 
         # Only schedule the commit with the biggest score to speed up bisecting
         # of the most important issues
@@ -753,6 +753,7 @@ class SmartEzbench:
                 if t[1] == commit:
                     added += self.force_benchmark_rounds(t[1], t[2], t[3])
             if added > 0:
+                self.__log(Criticality.II, "{}".format(t[4]))
                 break
             del tasks_sorted[-1]
             self.__log(Criticality.DD, "No work scheduled using commit {}, try another one".format(commit))
