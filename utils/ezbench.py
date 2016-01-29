@@ -48,6 +48,7 @@ import re
 
 # Ezbench runs
 class EzbenchExitCode(Enum):
+    UNKNOWN = -1
     NO_ERROR = 0
     ARG_PROFILE_NAME_MISSING = 11
     ARG_PROFILE_INVALID = 12
@@ -900,20 +901,20 @@ class Commit:
             pass
 
         # Look for the exit code
-        self.compil_exit_code = -1
+        self.compil_exit_code = EzbenchExitCode.UNKNOWN
         try:
             with open(compile_log, 'r') as f:
                 for line in f:
                     pass
                 # Line contains the last line of the report, parse it
                 if line.startswith("Exiting with error code "):
-                    self.compil_exit_code = int(line[24:])
+                    self.compil_exit_code = EzbenchExitCode(int(line[24:]))
         except IOError:
             pass
 
     def build_broken(self):
-        return (self.compil_exit_code >= EzbenchExitCode.COMP_DEP_UNK_ERROR.value and
-                self.compil_exit_code <= EzbenchExitCode.DEPLOYMENT_ERROR.value)
+        return (self.compil_exit_code.value >= EzbenchExitCode.COMP_DEP_UNK_ERROR.value and
+                self.compil_exit_code.value <= EzbenchExitCode.DEPLOYMENT_ERROR.value)
 
     def geom_mean(self):
         if self.geom_mean_cache >= 0:
@@ -1301,7 +1302,7 @@ def genPerformanceReport(log_folder, silentMode = False):
 
             # Add the result to the commit's results
             commit.results.append(result)
-            commit.compil_exit_code = 0 # The deployment must have been successful if there is data
+            commit.compil_exit_code = EzbenchExitCode.NO_ERROR # The deployment must have been successful if there is data
 
         # Add the commit to the list of commits
         commit.results = sorted(commit.results, key=lambda res: res.benchmark.full_name)

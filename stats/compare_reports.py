@@ -118,7 +118,7 @@ for log_folder in args.log_folder:
 			db["commits"][commit.sha1] = dict()
 			db["commits"][commit.sha1]['reports'] = dict()
 			db["commits"][commit.sha1]['commit'] = commit
-			if commit.compil_exit_code <= 0:
+			if not commit.build_broken():
 				db["commits"][commit.sha1]['build_color'] = "#00FF00"
 			else:
 				db["commits"][commit.sha1]['build_color'] = "#FF0000"
