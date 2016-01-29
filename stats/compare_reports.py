@@ -65,6 +65,7 @@ else:
 db = dict()
 db["commits"] = collections.OrderedDict()
 db["reports"] = list()
+db["events"] = dict()
 db["benchmarks"] = list()
 db['env_sets'] = dict()
 db["envs"] = dict()
@@ -91,6 +92,7 @@ for log_folder in args.log_folder:
 	for benchmark in report.benchmarks:
 		db["envs"][benchmark.full_name] = dict()
 
+	db["events"][report_name] = list()
 	for event in report.events:
 		if type(event) is EventBuildBroken:
 			event.commit_range.new.annotation = event.commit_range.new.sha1 + ": build broken"
@@ -103,6 +105,7 @@ for log_folder in args.log_folder:
 				if result.benchmark.full_name != event.benchmark.full_name:
 					continue
 				result.annotation = str(event)
+		db["events"][report_name].append(event)
 
 	# add all the commits
 	for commit in report.commits:
@@ -233,7 +236,7 @@ html_template="""
         <title>${title}</title>
         <meta http-equiv="content-type" content="text/html; charset=utf-8" />
         <style>
-            body {{ font-size: 10pt; }}
+            body { font-size: 10pt; }
             table { font-size: 10pt; }
 
             /* http://martinivanov.net/2011/09/26/css3-treevew-no-javascript/ */
@@ -694,6 +697,17 @@ ${btag}${r}: ${db["commits"][commit]['reports'][r][benchmark].average} ${output_
                     </tr>
                     % endfor
                 </table>
+            % endfor
+
+            <h2>Events</h2>
+
+            % for report in db['events']:
+            <h3>${report}</h3>
+            <ul>
+            % for event in db['events'][report]:
+                <li>${event}</li>
+            % endfor
+            </ul>
             % endfor
     </body>
 
