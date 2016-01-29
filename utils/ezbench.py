@@ -805,8 +805,16 @@ class BenchResult:
 
     def __compute_stats__(self):
         if self._cache_mean is None or self._cache_std is None:
-            self._cache_mean, var, self._cache_std = stats.bayes_mvs(array(self.data),
-                                                                     alpha=0.95)
+            if len(self.data) > 1:
+                self._cache_mean, var, self._cache_std = stats.bayes_mvs(array(self.data),
+                                                                         alpha=0.95)
+            else:
+                if len(self.data) == 0:
+                    value = 0
+                else:
+                    value = self.data[0]
+                self._cache_mean = (value, (value, value))
+                self._cache_std = (float("inf"), (float("inf"), float("inf")))
 
     def margin(self):
         self.__compute_stats__()
