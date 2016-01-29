@@ -709,6 +709,8 @@ class SmartEzbench:
                 if middle is None:
                     continue
 
+                # FIXME: handle the case where the middle commit refuses to build
+
                 # Schedule the work
                 commit_sha1 = middle
                 benchmark = e.benchmark
