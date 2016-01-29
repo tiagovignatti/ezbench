@@ -697,12 +697,10 @@ class SmartEzbench:
 
                 # ignore commits which have a big variance
                 result_new = r.find_result(e.commit_range.new, e.benchmark)
-                margin, wanted_n = result_new.confidence_margin()
-                if margin > max_variance:
+                if result_new.margin() > max_variance:
                     continue
                 result_old = r.find_result(e.commit_range.old, e.benchmark)
-                margin, wanted_n = result_new.confidence_margin()
-                if margin > max_variance:
+                if result_old.margin() > max_variance:
                     continue
 
                 middle = self.__find_middle_commit__(commits_rev_order,
@@ -807,6 +805,10 @@ class BenchResult:
             self._cache_mean, var, self._cache_std = stats.bayes_mvs(array(self.data),
                                                                      alpha=0.95)
 
+    def margin(self):
+        self.__compute_stats__()
+        return (self._cache_mean[1][1] - self._cache_mean[1][0]) / 2 / self._cache_mean[0]
+
     # wanted_margin is a number between 0 and 1
     def confidence_margin(self, wanted_margin = None, confidence=0.95):
         data = array(self.data)
@@ -814,7 +816,7 @@ class BenchResult:
             return 0, 2
 
         self.__compute_stats__()
-        margin = (self._cache_mean[1][1] - self._cache_mean[1][0]) / 2 / self._cache_mean[0]
+        margin = self.margin()
         wanted_samples = 2
 
         if wanted_margin is not None:
@@ -1108,8 +1110,7 @@ class Report:
                 bench = result.benchmark.full_name
                 bench_unit = result.benchmark.unit_str
 
-                current_margin, wanted_n = result.confidence_margin(max_variance)
-                if current_margin > max_variance:
+                if result.margin() > max_variance:
                     self.events.append(EventInsufficientSignificance(result, max_variance))
 
                 if bench in bench_prev:
