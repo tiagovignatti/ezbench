@@ -129,11 +129,11 @@ for log_folder in args.log_folder:
 			if not result.benchmark.full_name in db["benchmarks"]:
 				db["benchmarks"].append(result.benchmark.full_name)
 			db["commits"][commit.sha1]['reports'][report_name][result.benchmark.full_name] = result
-			orig_avr_runs = sum(result.data) / float(len(result.data))
-			average = convert_unit(orig_avr_runs, result.unit_str, output_unit)
+			average = convert_unit(result.result(), result.unit_str, output_unit)
 			score_sum += average
 			count += 1
 			result.average = float("{0:.2f}".format(average))
+			result.margin_str = float("{0:.3f}".format(result.margin()))
 
 			# Compare to the target
 			if not result.benchmark.full_name in db["targets"]:
@@ -441,10 +441,11 @@ html_template="""
                     % for benchmark in db["benchmarks"]:
                         % if benchmark in db["commits"][commit]['reports'][report]:
 <%
-    diff_target = db["commits"][commit]['reports'][report][benchmark].average * 100 / db['targets'][benchmark]
+    result = db["commits"][commit]['reports'][report][benchmark]
+    diff_target = result.average * 100 / db['targets'][benchmark]
     diff_target = "{0:.2f}".format(diff_target)
 %>\\
-, ${diff_target}, "${tooltip_commit_table(commit)}<h4>Perf</h4><table><tr><td><b>Target</b></td><td>${diff_target} %</td></tr><tr><td><b>Raw value</b></td><td>${db["commits"][commit]['reports'][report][benchmark].average} ${output_unit}</td></tr></table>"\\
+, ${diff_target}, "${tooltip_commit_table(commit)}<h4>Perf</h4><table><tr><td><b>Target</b></td><td>${diff_target} %</td></tr><tr><td><b>Raw value</b></td><td>${result.average} ${output_unit} +/- ${result.margin_str}% (n=${len(result.data)})</td></tr></table>"\\
                             % else:
 , null, "${benchmark}"\\
                             % endif
