@@ -133,7 +133,7 @@ for log_folder in args.log_folder:
 			score_sum += average
 			count += 1
 			result.average = float("{0:.2f}".format(average))
-			result.margin_str = float("{0:.3f}".format(result.margin()))
+			result.margin_str = float("{0:.2f}".format(result.margin() * 100))
 
 			# Compare to the target
 			if not result.benchmark.full_name in db["targets"]:
