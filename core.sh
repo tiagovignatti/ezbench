@@ -259,6 +259,34 @@ function read_git_version_deployed() {
     return 1
 }
 
+# functions to call on exit
+function __ezbench_reset_git_state__ {
+    git reset --hard "$commit_head" 2> /dev/null
+    [ -n "$stash" ] && git stash apply "$stash" > /dev/null
+}
+
+function __ezbench_finish__ {
+    exitcode=$?
+    action=$1
+
+    # to be executed on exit, possibly twice!
+    __ezbench_reset_git_state__
+
+    # Execute the user-defined post hook
+    callIfDefined ezbench_post_hook
+
+    if [ "$action" == "reboot" ]
+    then
+        printf "Rebooting with error code $exitcode\n"
+        sudo reboot
+    else
+        printf "Exiting with error code $exitcode\n"
+        exit $exitcode
+    fi
+}
+trap __ezbench_finish__ EXIT
+trap __ezbench_finish__ INT # Needed for zsh
+
 # Execute the user-defined pre hook
 callIfDefined ezbench_pre_hook
 
@@ -300,34 +328,6 @@ for id in "$@"; do
     [ $? -ne 0 ] && printf "ERROR: Invalid commit ID '$id'\n" && exit 51
     commitList+=" "
 done
-
-# functions to call on exit
-function __ezbench_reset_git_state__ {
-    git reset --hard "$commit_head" 2> /dev/null
-    [ -n "$stash" ] && git stash apply "$stash" > /dev/null
-}
-
-function __ezbench_finish__ {
-    exitcode=$?
-    action=$1
-
-    # to be executed on exit, possibly twice!
-    __ezbench_reset_git_state__
-
-    # Execute the user-defined post hook
-    callIfDefined ezbench_post_hook
-
-    if [ "$action" == "reboot" ]
-    then
-        printf "Rebooting with error code $exitcode\n"
-        sudo reboot
-    else
-        printf "Exiting with error code $exitcode\n"
-        exit $exitcode
-    fi
-}
-trap __ezbench_finish__ EXIT
-trap __ezbench_finish__ INT # Needed for zsh
 
 # Seed the results with the last round?
 commitListLog="$logsFolder/commit_list"
