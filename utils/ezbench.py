@@ -109,7 +109,7 @@ class Ezbench:
             ezbench_cmd.append("-B"); ezbench_cmd.append(benchmark_excl)
 
         if rounds is not None:
-            ezbench_cmd.append("-r"); ezbench_cmd.append(str(rounds))
+            ezbench_cmd.append("-r"); ezbench_cmd.append(str(int(rounds)))
 
         if self.make_command is not None:
             ezbench_cmd.append("-m"); ezbench_cmd.append(self.make_command)
