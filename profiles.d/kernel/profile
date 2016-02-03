@@ -40,7 +40,8 @@ function __compile_and_deploy__() {
     # This part assumes that you have a working .config already set up. You can generate it using make localmodconfig.
     make olddefconfig || return 71
     make -j8 || return 71
-    capture=$(sudo make modules_install)
+    capture=$(sudo make modules_install || return 71)
+    [ $? -neq 0 ] && { echo "$capture"; return 71; }
     echo "$capture"
     kernel_id=$(echo "$capture" | grep DEPMOD | grep -o '[^ ]*$')
 
