@@ -727,18 +727,16 @@ class SmartEzbench:
             elif type(e) is EventInsufficientSignificance:
                 commit_sha1 = e.result.commit.sha1
                 benchmark = e.result.benchmark
-                cur_runs = len(e.result.data)
-                wanted_runs = max(cur_runs + 2, e.wanted_n()) # schedule at least 2 more runs
-                missing_runs = wanted_runs - cur_runs
-                severity = min(missing_runs / cur_runs, 1)
+                missing_runs = max(2, e.wanted_n() - len(e.result.data)) # Schedule at least 2 more runs
+                severity = min(missing_runs / len(e.result.data), 1)
                 event_prio = 1
 
                 bench_name_to_run = benchmark.full_name
-                runs = min(cur_runs + 20, wanted_runs) # cap the maximum amount of runs to play nice
+                runs = min(20, missing_runs) # cap the maximum amount of runs to play nice
 
                 # Make sure we do not schedule more than the maximum amount of run
-                if runs > max_run_count:
-                    runs = max_run_count - cur_runs
+                if len(e.result.data) + runs > max_run_count:
+                    runs = max_run_count - len(e.result.data)
                     if runs == 0:
                         continue
 
