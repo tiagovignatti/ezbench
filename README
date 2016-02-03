@@ -3,11 +3,15 @@
 This repo contains a collection of tools to benchmark graphics-related
 patch-series.
 
+== Installation ==
+
+WIP
+
 == Core.sh ==
 
 WARNING: This tool can be used directly from the CLI but it is recommenced that
-you use ezbench in conjunction with ezbenchd which together support testing the
-kernel and which are much more robust to errors.
+you use ezbench in conjunction with ezbenchd which together support testing
+kernels and which can recover upon errors.
 
 This tool is responsible for collecting the data and generating logs that will
 be used by another tool to generate a visual report.
@@ -33,6 +37,7 @@ a new kernel to test a new commit.
 
  - A recent-enough version of bash
  - make
+ - git
  - awk
  - all the other typical binutils binaries
 
@@ -98,6 +103,7 @@ do exist so you are sure that the work can be executed when the time comes.
 
  - python3
  - numpy
+ - scipy
 
 === Examples ===
 
@@ -158,7 +164,26 @@ This command will automatically change the state of the report to "run".
 
 == utils/ezbenchd.py ==
 
-TODO
+This tool monitors the ezbench reports created using the "ezbench" command and
+runs them if their state is right (state == RUN). It also schedules improvements
+when the run is over before moving on to the next report. It thus allow for
+collaborative sharing of the machine by different reports, as long as they
+make sure not to change the global state.
+
+=== Dependencies ===
+
+ - ezbench.py
+
+=== Examples ===
+
+Simply running utils/ezbenchd.py is enough to run all reports which are
+currently in the state "RUN".
+
+    ./ezbench -p mesa mesa-tracking-pub-benchmarks
+    ./ezbench -r 2 -b GLB27:Egypt:offscreen -c HEAD mesa-tracking-pub-benchmarks
+    ./ezbench mesa-tracking-pub-benchmarks run
+    utils/ezbenchd.py
+
 
 == stats/gen_report.py ==
 
