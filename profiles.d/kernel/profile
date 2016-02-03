@@ -15,12 +15,26 @@ source "$ezBenchDir/profiles.d/utils/common.sh"
 # $testsList             [WO]: List of tests that should be ran in this profile
 # $testExcludeList       [WO]: List of tests that should be excluded in this profile
 
-function __compile__() {
+function __deploy__archlinux__() {
+    sudo cp arch/x86_64/boot/bzImage /boot/vmlinuz-linux-intel || return 72
+    sudo -n mkinitcpio -k "$kernel_id" -g /boot/initramfs-linux-intel.img || return 72
+    return 0
+}
+
+function __deploy__ubuntu__() {
+    sudo cp arch/x86_64/boot/bzImage /boot/vmlinuz-linux-intel || return 72
+    sudo update-initramfs -c -t -k "$kernel_id" || return 72
+    sudo mv /boot/initrd.img-$kernel_id /boot/vmlinuz-linux-intel_initrd.img || return 72
+    return 0
+}
+
+function __compile_and_deploy__() {
     # Return error codes:
     # 71: Compilation error
     # 72: Deployment error
 
     has_automatic_sudo_rights || return 72
+    has_binary lsb_release || return 72
 
     # Compile the kernel. If any question arises, the default choice will be taken
     # This part assumes that you have a working .config already set up. You can generate it using make localmodconfig.
@@ -30,15 +44,25 @@ function __compile__() {
     echo "$capture"
     kernel_id=$(echo "$capture" | grep DEPMOD | grep -o '[^ ]*$')
 
-    # Tweak this part for your distribution
-    sudo cp arch/x86_64/boot/bzImage /boot/vmlinuz-linux-intel || return 72
-    sudo -n mkinitcpio -k "$kernel_id" -g /boot/initramfs-linux-intel.img || return 72
+    # Check what is the current distro
+    distro=$(lsb_release -is)
+    case "$distro" in
+    "Arch")
+        kernel_id="$kernel_id" __deploy__archlinux__
+        ;;
+    "Ubuntu")
+        kernel_id="$kernel_id" __deploy__ubuntu__
+        ;;
+    *)
+        echo "WARNING: Unknown distribution '$distro'. Please add contact the authors of EzBench."
+        ;;
+    esac
 
     # Force grub to boot on the non-distro kernel that we just compiled
     #
     # WARNING: Make sure that grub reverts to the distro's kernel if the
     # computer crashes!
-    sudo -n grub-reboot 1 || return 72
+    sudo -n grub-reboot ezbench_kernel || return 72
 }
 
 function __default_make_and_deploy__() {
@@ -48,7 +72,7 @@ function __default_make_and_deploy__() {
 
     x_show_debug_info_start
 
-    __compile__
+    __compile_and_deploy__
     compile_error=$?
 
     x_show_debug_info_stop
