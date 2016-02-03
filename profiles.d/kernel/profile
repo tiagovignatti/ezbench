@@ -24,8 +24,7 @@ function __compile__() {
 
     # Compile the kernel. If any question arises, the default choice will be taken
     # This part assumes that you have a working .config already set up. You can generate it using make localmodconfig.
-    yes '
-     ' | make oldconfig || return 71
+    make olddefconfig || return 71
     make -j8 || return 71
     capture=$(sudo make modules_install)
     echo "$capture"
