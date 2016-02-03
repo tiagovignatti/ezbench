@@ -408,6 +408,8 @@ class SmartEzbench:
 
         if rounds is None:
             rounds = 3
+        else:
+            rounds = int(rounds)
 
         if benchmark not in self.state['commits'][commit]['benchmarks']:
             self.state['commits'][commit]['benchmarks'][benchmark] = dict()
@@ -429,6 +431,8 @@ class SmartEzbench:
     def force_benchmark_rounds(self, commit, benchmark, at_least):
         if at_least < 1:
             return 0
+        else:
+            at_least = int(at_least)
 
         self.__reload_state(keep_lock=True)
         if commit not in self.state['commits']:
