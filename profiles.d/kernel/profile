@@ -41,7 +41,7 @@ function __compile_and_deploy__() {
     make olddefconfig || return 71
     make -j8 || return 71
     capture=$(sudo make modules_install || return 71)
-    [ $? -neq 0 ] && { echo "$capture"; return 71; }
+    [ $? -ne 0 ] && { echo "$capture"; return 71; }
     echo "$capture"
     kernel_id=$(echo "$capture" | grep DEPMOD | grep -o '[^ ]*$')
 
@@ -50,12 +50,15 @@ function __compile_and_deploy__() {
     case "$distro" in
     "Arch")
         kernel_id="$kernel_id" __deploy__archlinux__
+        [ $? -ne 0 ] && return 72
         ;;
     "Ubuntu")
         kernel_id="$kernel_id" __deploy__ubuntu__
+        [ $? -ne 0 ] && return 72
         ;;
     *)
         echo "WARNING: Unknown distribution '$distro'. Please add contact the authors of EzBench."
+        return 70
         ;;
     esac
 
@@ -64,6 +67,8 @@ function __compile_and_deploy__() {
     # WARNING: Make sure that grub reverts to the distro's kernel if the
     # computer crashes!
     sudo -n grub-reboot ezbench_kernel || return 72
+
+    return 0
 }
 
 function __default_make_and_deploy__() {
