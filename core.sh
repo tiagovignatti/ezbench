@@ -277,7 +277,7 @@ function __ezbench_finish__ {
 
     if [ "$action" == "reboot" ]
     then
-        printf "Rebooting with error code $exitcode\n"
+        printf "Rebooting with error code 74\n"
         sudo reboot
     else
         printf "Exiting with error code $exitcode\n"
@@ -513,7 +513,6 @@ function compile_and_deploy {
         elif [ $exit_code -eq 72 ]; then
             component="Deployment"
         elif [ $exit_code -eq 74 ]; then
-            $?=$exit_code
             __ezbench_finish__ "reboot"
         else
             exit_code=70
