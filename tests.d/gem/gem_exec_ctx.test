@@ -5,7 +5,7 @@
 # better motif of fps).
 
 [ -e $IGT_BENCHMARKS/gem_exec_ctx ] || return 1
-sudo -n true || return 1
+sudo -n true > /dev/null 2>&1 || return 1
 
 for i in nop switch create; do
     name="gem:exec:ctx:$i"

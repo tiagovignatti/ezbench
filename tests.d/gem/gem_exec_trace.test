@@ -1,5 +1,5 @@
 [ -e $IGT_BENCHMARKS/gem_exec_trace ] || return 1
-sudo -n true || return 1
+sudo -n true > /dev/null 2>&1 || return 1
 
 function __trace__ {
     sudo $IGT_BENCHMARKS/gem_exec_trace $IGT_TRACES/$1.gem_exec_trace >/dev/null

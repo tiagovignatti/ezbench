@@ -3,7 +3,7 @@ test_invert=1
 test_unit="µs"
 
 [ -e $IGT_BENCHMARKS/gem_exec_reloc ] || return 1
-sudo -n true || return 1
+sudo -n true > /dev/null 2>&1 || return 1
 
 for i in old lut; do
     for j in busy cyclic fault skip none; do

@@ -3,7 +3,7 @@
 # The last value is for 4M, convert that to MiB/s for comparison
 
 [ -e $IGT_BENCHMARKS/gem_mmap ] || return 1
-sudo -n true || return 1
+sudo -n true > /dev/null 2>&1 || return 1
 
 for i in cpu gtt wc; do
     for j in fault clear write read; do

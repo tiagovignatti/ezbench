@@ -1,5 +1,5 @@
 [ -e $IGT_BENCHMARKS/kms_vblank ] || return 1
-sudo -n true || return 1
+sudo -n true > /dev/null 2>&1 || return 1
 
 for j in busy idle; do
     for i in query event; do

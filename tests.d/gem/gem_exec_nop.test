@@ -11,7 +11,7 @@ test_exec_time=18
 # though for the time being just one will suffice
 
 [ -e $IGT_BENCHMARKS/gem_exec_nop ] || return 1
-sudo -n true || return 1
+sudo -n true > /dev/null 2>&1 || return 1
 
 gem:exec:nop_run() { run_bench 0 sudo $IGT_BENCHMARKS/gem_exec_nop -e 1 -r 3; }
 gem:exec:nop_process() { bc -l <<< "1000000 / ${@: -1}"; }

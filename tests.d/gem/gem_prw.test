@@ -7,7 +7,7 @@
 # though for the time being just one will suffice
 
 [ -e $IGT_BENCHMARKS/gem_prw ] || return 1
-sudo -n true || return 1
+sudo -n true > /dev/null 2>&1 || return 1
 
 for j in read write; do
     for i in cpu gtt; do
