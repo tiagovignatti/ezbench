@@ -20,6 +20,8 @@ function __compile__() {
     # 71: Compilation error
     # 72: Deployment error
 
+    has_automatic_sudo_rights || return 72
+
     # Compile the kernel. If any question arises, the default choice will be taken
     # This part assumes that you have a working .config already set up. You can generate it using make localmodconfig.
     yes '
@@ -31,13 +33,13 @@ function __compile__() {
 
     # Tweak this part for your distribution
     sudo cp arch/x86_64/boot/bzImage /boot/vmlinuz-linux-intel || return 72
-    sudo mkinitcpio -k "$kernel_id" -g /boot/initramfs-linux-intel.img || return 72
+    sudo -n mkinitcpio -k "$kernel_id" -g /boot/initramfs-linux-intel.img || return 72
 
     # Force grub to boot on the non-distro kernel that we just compiled
     #
     # WARNING: Make sure that grub reverts to the distro's kernel if the
     # computer crashes!
-    sudo grub-reboot 1 || return 72
+    sudo -n grub-reboot 1 || return 72
 }
 
 function __default_make_and_deploy__() {
