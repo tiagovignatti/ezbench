@@ -336,6 +336,7 @@ last_commit=$(tail -1 "$commitListLog" 2>/dev/null | cut -f 1 -d ' ')
 # Generate the actual list of tests
 typeset -A testNames
 typeset -A testInvert
+typeset -A testUnit
 typeset -A testPrevFps
 typeset -A testFilter
 total_tests=0
@@ -640,7 +641,7 @@ do
         else
             color="$meh_color"
         fi
-        printf "%9.2f ($color%+.2f%%$c_reset): %s\n" "$result" "$fpsDiff" "$statistics"
+        printf "%9.2f ${testUnit[$t]} ($color%+.2f%%$c_reset): %s\n" "$result" "$fpsDiff" "$statistics"
         [ -z "$result" ] || fpsALL="$fpsALL $result"
     done
 
