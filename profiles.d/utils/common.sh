@@ -1,14 +1,43 @@
 source "$ezBenchDir/profiles.d/utils/sha1_db.sh"
 
-# Requires xset, chvt,X
+function has_automatic_sudo_rights() {
+    sudo -n /bin/true > /dev/null 2>&1
+    if [ $? != 0 ];
+    then
+        echo "WARNING: automatic sudo rights are missing for function '${FUNCNAME[1]}'"
+        return 1
+    fi
+    return 0
+}
+
+function has_binary() {
+    command -v $1 >/dev/null 2>&1
+    if [ $? != 0 ];
+    then
+        echo "WARNING: function '${FUNCNAME[1]}' requires the binary '$1'"
+        return 1
+    fi
+    return 0
+}
+
+# Requires xset, chvt,X,sudo rights without passwords
 function xserver_setup_start() {
-    [[ $dry_run -eq 1 ]] && return
+    [[ $dry_run -eq 1 ]] && return 1
+
+    # Check for dependencies
+    has_automatic_sudo_rights || return 1
+    has_binary chvt || return 1
+    has_binary fgconsole || return 1
+    has_binary Xorg || return 1
+    has_binary xset || return 1
+    has_binary sleep || return 1
+    has_binary kill || return 1 # Need by stop()
 
     export EZBENCH_VT_ORIG=$(sudo -n fgconsole)
 
     sudo -n chvt 5
     sleep 1 # Wait for the potential x-server running to release MASTER
-    x_pid=$(sudo -n $ezBenchDir/profiles.d/utils/_launch_background.sh Xorg -nolisten tcp -noreset :42 vt5 -auth /tmp/ezbench_XAuth 2> /tmp/lolo) # TODO: Save the xorg logs
+    x_pid=$(sudo -n $ezBenchDir/profiles.d/utils/_launch_background.sh Xorg -nolisten tcp -noreset :42 vt5 -auth /tmp/ezbench_XAuth 2> /dev/null) # TODO: Save the xorg logs
     export EZBENCH_X_PID=$x_pid
 
     export DISPLAY=:42
@@ -22,13 +51,20 @@ function xserver_setup_start() {
         sleep 0.1
     done
 
-    echo "ERROR: The X-Server still has not started after 5 seconds" >&2
+    echo "ERROR: The X-Server still has not started after 5 seconds. Abort..." >&2
     xserver_setup_stop
     return 1
 }
 
 function xserver_setup_stop() {
     [[ $dry_run -eq 1 ]] && return
+
+    # Check for dependencies
+    has_automatic_sudo_rights || return 1
+    has_binary chvt || return 1
+    has_binary kill || return 1
+    has_binary sleep || return 1
+    has_binary ps || return 1 # Needed by wait_random_pid
 
     sudo -n kill $EZBENCH_X_PID
     wait_random_pid $EZBENCH_X_PID
@@ -43,12 +79,21 @@ function xserver_setup_stop() {
 function xserver_reset() {
     [[ $dry_run -eq 1 ]] && return
 
+    # Check for dependencies
+    has_binary xrandr || return 1
+
     xrandr --auto
 }
 
 function x_show_debug_info_start() {
     [[ $dry_run -eq 1 ]] && return
-    [ -z $DISPLAY ] && return
+
+    # Check for dependencies
+    [ -z $DISPLAY ] && { echo "WARNING: Cannot display the debug information without X running"; return; }
+    has_binary twm || return 1
+    has_binary xterm || return 1
+    has_binary tail || return 1
+    has_binary kill || return 1 # Needed for stop()
 
     export EZBENCH_COMPILATION_LOGS=$compile_logs
     export EZBENCH_COMMIT_SHA1=$commit
@@ -62,20 +107,31 @@ function x_show_debug_info_start() {
 
 function x_show_debug_info_stop() {
     [[ $dry_run -eq 1 ]] && return
-    [ -z "$DISPLAY" ] && return
+
+    # Check for dependencies
     [ -z "$EZBENCH_DEBUG_SESSION_PID" ] && return
+    has_binary ps || return 1
 
     # Kill all the processes under the script
     # FIXME: Would be better with a session id of a pid namespace
-    kill $(ps -o pid= --ppid $EZBENCH_DEBUG_SESSION_PID)
+    kill $(ps -o pid= --ppid $EZBENCH_DEBUG_SESSION_PID) $EZBENCH_DEBUG_SESSION_PID 2> /dev/null
     unset EZBENCH_DEBUG_SESSION_PID
 }
 
 function cpu_id_max_get() {
+    # Check for dependencies
+    has_binary grep || return 1
+    has_binary tail || return 1
+    has_binary rev || return 1
+    has_binary cut || return 1
+
     grep "processor" /proc/cpuinfo | tail -n 1 | rev | cut -f 1 -d ' '
 }
 
 function cpu_reclocking_disable_start() {
+    # Check for dependencies
+    has_automatic_sudo_rights || return
+
     # Disable turbo (TODO: Fix it for other cpu schedulers)
     sudo -n sh -c "echo 1 > /sys/devices/system/cpu/intel_pstate/no_turbo"
 
@@ -90,6 +146,9 @@ function cpu_reclocking_disable_start() {
 }
 
 function cpu_reclocking_disable_stop() {
+    # Check for dependencies
+    has_automatic_sudo_rights || return
+
     # Re-enable turbo (TODO: Fix it for other cpu schedulers)
     sudo -n sh -c "echo 0 > /sys/devices/system/cpu/intel_pstate/no_turbo"
 
@@ -107,19 +166,31 @@ function cpu_reclocking_disable_stop() {
 }
 
 function aslr_disable_start() {
+    # Check for dependencies
+    has_automatic_sudo_rights || return
+
     sudo -n sh -c "echo 0 > /proc/sys/kernel/randomize_va_space"
 }
 
 function aslr_disable_stop() {
+    # Check for dependencies
+    has_automatic_sudo_rights || return
+
     sudo -n sh -c "echo 1 > /proc/sys/kernel/randomize_va_space"
 }
 
 function thp_disable_start() {
+    # Check for dependencies
+    has_automatic_sudo_rights || return
+
     sudo -n sh -c "echo never > /sys/kernel/mm/transparent_hugepage/enabled"
     sudo -n sh -c "echo never > /sys/kernel/mm/transparent_hugepage/defrag"
 }
 
 function thp_disable_stop() {
+    # Check for dependencies
+    has_automatic_sudo_rights || return
+
     sudo -n sh -c "echo always > /sys/kernel/mm/transparent_hugepage/enabled"
     sudo -n sh -c "echo always > /sys/kernel/mm/transparent_hugepage/defrag"
 }
