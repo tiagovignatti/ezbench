@@ -15,6 +15,22 @@ ENV_DUMP_FILE env. var., the default output file will be '/tmp/env_dump'.
 Please install the libcrypto and then type make in the directory containing this
 README. You should get a env_dump.so.
 
+== Runtime dependencies ==
+
+=== Env dump ===
+
+To operate, env dump requires:
+ - a libc supporting LD_PRELOAD
+
+=== Env dump extend ===
+
+To extend the report, env_dump_extend.sh may require the following dependencies:
+ - root privileges
+ - packagekit
+ - dmidecode
+ - lsb-release
+ - msr-tools
+
 == Usage ==
 
 === Running the application ===
