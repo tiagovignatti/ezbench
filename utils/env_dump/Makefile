@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -c -Wall -fPIC -g
+CFLAGS = -c -Wall -fPIC -g -O2
 LDFLAGS = -shared -g
 
 SHA1_DB ?= ../../SHA1_DB
