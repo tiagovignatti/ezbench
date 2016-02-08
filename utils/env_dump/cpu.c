@@ -48,10 +48,8 @@ _env_dump_read_file(const char *path, size_t len_max)
 		return NULL;
 
 	buf = calloc(len_max, sizeof(char));
-	if (!buf) {
-		fclose(file);
-		return buf;
-	}
+	if (!buf)
+		goto exit;
 
 	len = fread(buf, 1, len_max, file);
 
@@ -59,6 +57,8 @@ _env_dump_read_file(const char *path, size_t len_max)
 	if (len > 0 && buf[len - 1] == '\n')
 		buf[len - 1] = '\0';
 
+exit:
+	fclose(file);
 	return buf;
 }
 
