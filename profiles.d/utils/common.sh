@@ -139,8 +139,11 @@ function cpu_reclocking_disable_start() {
     [ -z "$WANTED_CPU_FREQ_kHZ" ] && return
     cpu_id_max=$(cpu_id_max_get)
     for (( i=0; i<=${cpu_id_max}; i++ )); do
+        # Since the kernel makes sure that min <= max and min may be > $WANTED_CPU_FREQ_kHZ,
+        # the first write to max may fail. The second is guaranteed to succeed though!
         sudo -n sh -c "echo $WANTED_CPU_FREQ_kHZ > /sys/devices/system/cpu/cpu${i}/cpufreq/scaling_max_freq"
         sudo -n sh -c "echo $WANTED_CPU_FREQ_kHZ > /sys/devices/system/cpu/cpu${i}/cpufreq/scaling_min_freq"
+        sudo -n sh -c "echo $WANTED_CPU_FREQ_kHZ > /sys/devices/system/cpu/cpu${i}/cpufreq/scaling_max_freq"
     done
     export EZBENCH_CPU_RECLOCKED=1
 }
