@@ -90,13 +90,19 @@ print_date_and_time()
 __attribute__((constructor))
 static void init() {
 	const char *base_path = getenv("ENV_DUMP_FILE");
-	char *path;
+	char *full_path, *restrict_binary, *path;
 	int fd;
 
 	if (base_path == NULL)
 		base_path = "/tmp/env_dump";
 
-	if (strcmp(base_path, "stderr") != 0) {
+	full_path = _env_dump_binary_fullpath(getpid());
+	restrict_binary = getenv("ENV_DUMP_RESTRICT_TO_BINARY");
+	if (full_path!= NULL && restrict_binary != NULL &&
+		strcmp(full_path, restrict_binary) != 0) {
+		printf("Env_dump: binary '%s' ignored...\n", full_path);
+		env_file = fopen("/dev/null", "w");
+	} else if (strcmp(base_path, "stderr") != 0) {
 		/* if the file asked by the user already exists, append the pid to the
 		* name. Otherwise, just use the name.
 		*/
@@ -118,6 +124,7 @@ static void init() {
 	} else {
 		env_file = stderr;
 	}
+	free(full_path);
 
 	/* handle some signals that would normally result in an exit without
 	 * calling the fini functions. This will hopefully be done before any

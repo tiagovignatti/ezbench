@@ -40,6 +40,11 @@ There are two possible ways:
  - $ LD_PRELOAD=$PWD/env_dump.so ENV_DUMP_FILE=report xonotic-glx # either this way
  - $ env_dump.sh report xonotic-glx # or this way, your call!
 
+NOTE: If the program you want to trace spawns other commands, you may want to
+set the ENV_DUMP_RESTRICT_TO_BINARY environment variable to the fullpath of the
+binary you are interested in. Otherwise, multiple environment files will be
+created.
+
 === SHA1 Database ===
 
 The SHA1 DB is meant to link the SHA1 of an executable to a release version or
