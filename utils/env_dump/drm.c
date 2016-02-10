@@ -38,7 +38,7 @@ read_drm_sysfs(const char *node, const char *file, size_t len_max)
 	char sysfs_path[101];
 
 	snprintf(sysfs_path, sizeof(sysfs_path), "/sys/class/drm/%s/%s", node, file);
-	return _env_dump_read_file(sysfs_path, len_max);
+	return _env_dump_read_file(sysfs_path, len_max, NULL);
 }
 
 static long

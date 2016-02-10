@@ -100,7 +100,7 @@ static void init() {
 		/* if the file asked by the user already exists, append the pid to the
 		* name. Otherwise, just use the name.
 		*/
-		fd = open(base_path, O_EXCL | O_CREAT | O_WRONLY, 0666);
+		fd = open(base_path, O_EXCL | O_CREAT | O_WRONLY | O_CLOEXEC, 0666);
 		if (fd >= 0) {
 			env_file = fdopen(fd, "w");
 			fprintf(stderr, "path = %s\n", base_path);

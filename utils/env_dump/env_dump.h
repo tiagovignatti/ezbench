@@ -64,7 +64,7 @@ void _env_dump_posix_env_fini();
 void _env_dump_compute_and_print_sha1(const char *full_path);
 void env_var_dump_binary_information(int pid);
 
-char *_env_dump_read_file(const char *path, size_t len_max);
+char *_env_dump_read_file(const char *path, size_t len_max, size_t *out_len);
 
 /* internal pointer-tracking mechanism */
 enum symbol_key_t {

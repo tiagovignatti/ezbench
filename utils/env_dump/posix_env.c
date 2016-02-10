@@ -37,12 +37,11 @@
 void
 env_var_dump_binary_information(int pid)
 {
-	size_t buflen = 4096, size;
-	char *buf = malloc(buflen), *cur;
+	size_t bin_path_len = 4096, size;
+	char *bin_path = malloc(bin_path_len), *cmdline, *cur;
 	char proc_path[22]; /* longest fd path is /proc/4194303/cmdline */
-	FILE *cmd_file;
 
-	if (!buf) {
+	if (!bin_path) {
 		fprintf(stderr, "Error, no memory left. Exit!");
 		exit(1);
 	}
@@ -52,27 +51,26 @@ env_var_dump_binary_information(int pid)
 
 	/* first read the url of the program */
 	snprintf(proc_path, sizeof(proc_path), "/proc/%i/exe", pid);
-	size = readlink(proc_path, buf, buflen);
+	size = readlink(proc_path, bin_path, bin_path_len);
 	if (size == -1) {
 		fprintf(env_file, "ERROR(%s),", strerror(errno));
 	} else {
-		buf[size] = '\0';
-		fprintf(env_file, "%s,", buf);
+		bin_path[size] = '\0';
+		fprintf(env_file, "%s,", bin_path);
 	}
+	free(bin_path);
 
 	/* then read the arguments */
 	snprintf(proc_path, sizeof(proc_path), "/proc/%i/cmdline", pid);
-	cmd_file = fopen(proc_path, "r");
-	if (cmd_file) {
-		size = fread(buf, 1, buflen, cmd_file);
-
+	cmdline = _env_dump_read_file(proc_path, 4096, &size);
+	if (cmdline && size > 0) {
 		/* the fields are separated by \0 characters, replace them by
 		 * spaces and add '' arounds them. The last field has two null
 		 * characters.
 		 */
-		cur = buf;
-		while (*cur && (cur - buf) < size) {
-			if (cur == buf)
+		cur = cmdline;
+		while (*cur && (cur - cmdline) < size) {
+			if (cur == cmdline)
 				fprintf(env_file, "'");
 			else if (*(cur - 1) == '\0')
 				fprintf(env_file, " '");
@@ -93,7 +91,7 @@ env_var_dump_binary_information(int pid)
 	snprintf(proc_path, sizeof(proc_path), "/proc/%i/exe", pid);
 	_env_dump_compute_and_print_sha1(proc_path);
 
-	free(buf);
+	free(cmdline);
 }
 
 static void

@@ -115,7 +115,7 @@ _env_dump_compute_and_print_sha1(const char *full_path)
 	if (libcrypto_resolve_symbols()) {
 		fprintf(env_file, "ERR_MISSING_LIBCRYPTO");
 	} else {
-		fd = open(full_path, O_RDONLY);
+		fd = open(full_path, O_RDONLY | O_CLOEXEC);
 		size = lseek(fd, 0, SEEK_END);
 		data = mmap (0, size, PROT_READ, MAP_PRIVATE, fd, 0);
 		if (data == MAP_FAILED) {
