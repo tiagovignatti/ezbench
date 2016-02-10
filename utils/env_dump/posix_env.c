@@ -34,30 +34,45 @@
 #include <errno.h>
 #include <link.h>
 
-void
-env_var_dump_binary_information(int pid)
+char *
+_env_dump_binary_fullpath(int pid)
 {
 	size_t bin_path_len = 4096, size;
-	char *bin_path = malloc(bin_path_len), *cmdline, *cur;
-	char proc_path[22]; /* longest fd path is /proc/4194303/cmdline */
+	char *bin_path = malloc(bin_path_len);
+	char proc_path[18]; /* longest fd path is /proc/4194303/exe */
 
 	if (!bin_path) {
 		fprintf(stderr, "Error, no memory left. Exit!");
 		exit(1);
 	}
 
+	snprintf(proc_path, sizeof(proc_path), "/proc/%i/exe", pid);
+	size = readlink(proc_path, bin_path, bin_path_len);
+	if (size == -1) {
+		free(bin_path);
+		return NULL;
+	} else {
+		bin_path[size] = '\0';
+		return bin_path;
+	}
+}
+
+void
+_env_var_dump_binary_information(int pid)
+{
+	char proc_path[22]; /* longest fd path is /proc/4194303/cmdline */
+	char *bin_path, *cmdline, *cur;
+	size_t size;
+
 	if (pid == 0)
 		pid = getpid();
 
 	/* first read the url of the program */
-	snprintf(proc_path, sizeof(proc_path), "/proc/%i/exe", pid);
-	size = readlink(proc_path, bin_path, bin_path_len);
-	if (size == -1) {
+	bin_path = _env_dump_binary_fullpath(pid);
+	if (!bin_path)
 		fprintf(env_file, "ERROR(%s),", strerror(errno));
-	} else {
-		bin_path[size] = '\0';
+	else
 		fprintf(env_file, "%s,", bin_path);
-	}
 	free(bin_path);
 
 	/* then read the arguments */
@@ -186,7 +201,7 @@ void
 _env_dump_posix_env_init()
 {
 	fprintf(env_file, "EXE,");
-	env_var_dump_binary_information(0);
+	_env_var_dump_binary_information(0);
 	fprintf(env_file, "\n");
 
 	dump_env_vars();

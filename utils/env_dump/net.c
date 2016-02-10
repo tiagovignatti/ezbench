@@ -62,7 +62,7 @@ connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
 
 		/* display a lot more information about the process! */
 		fprintf(env_file, "SOCKET_UNIX_CONNECT,%s,", filepath);
-		env_var_dump_binary_information(ucred.pid);
+		_env_var_dump_binary_information(ucred.pid);
 		fprintf(env_file, "\n");
 	}
 
