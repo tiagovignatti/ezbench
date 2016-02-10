@@ -1,5 +1,6 @@
 # https://github.com/cavazos-lab/FinanceBench
 
+[[ "${FINANCEBENCH_FOLDER}" == "" ]] && return 1
 test -d ${FINANCEBENCH_FOLDER} || return 1
 
 # Typical output (Black-Scholes):
