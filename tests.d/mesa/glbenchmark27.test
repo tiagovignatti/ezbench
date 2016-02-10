@@ -2,64 +2,59 @@ GLB27=${GLBENCHMARK27_PATH:-${GLBENCHMARK27_FOLDER}/build_x86_64/binaries/GLBenc
 GLB27_DATA=${GLBENCHMARK27_DATA:-${GLBENCHMARK27_FOLDER}/data}
 
 test -e ${GLB27} || return 1
-xdpyinfo >/dev/null 2>&1 || return 1
+hash unbuffer 2>/dev/null || return 1
 
 # Output:
 #    GLBenchmark 2.5 Egypt HD ETC1 - C24Z16 Onscreen Fixed timestep: 9340 msec (121 fps)
+#    GLBenchmark 2.7 T-Rex HD ETC1 - C24Z16 Onscreen: 4268 frames (76 fps)
 
-# Large versions, fullscreen with flipping (seems to be variable size)
-# 1 argument: $benchmark
-function __gl27fullscreen__ {
-    local W="${GLBENCHMARK27_WIDTH:-1920}"
-    local H="${GLBENCHMARK27_HEIGHT:-1080}"
+# 4 arguments: $benchmark $width $height $bench_time
+function __gl27__ {
+    cmdline="unbuffer ${GLB27} -data ${GLB27_DATA} -skip_load_frames \
+        -w $2 -h $3 -ow $2 -oh $3 -t $1"
 
-    read width height <<< $(xdpyinfo | sed '/dimensions/!d; s/.*dimensions:\(.*\)x\(.*\) pixels.*/\1 \2/')
-
-    run_bench 0 ${GLB27} -data ${GLB27_DATA} -skip_load_frames \
-        -w $width -h $height -ow $W -oh $H -t $1 | \
-        sed '/fps/!d; s#.*: \(.*\) msec.*#1000000 / \1#' | bc -l
+    if [ $4 -eq 0 ]
+    then
+        run_bench 0 $cmdline | sed '/fps/!d; s#.*: \(.*\) msec.*#1000000 / \1#' | bc -l
+    else
+        frames_count=$(run_bench 0 $cmdline | sed '/fps/!d; s#.*: \(.*\) frames.*#\1#')
+        echo "$frames_count / $4" | bc -l
+    fi
 }
 
+# 4 arguments: $benchmark $width $height $bench_time
 function __gl27window__ {
-# 1 argument: $benchmark
-    local W="${GLBENCHMARK27_WIDTH:-1920}"
-    local H="${GLBENCHMARK27_HEIGHT:-1080}"
-
-    read width height <<< $(xdpyinfo | sed '/dimensions/!d; s/.*dimensions:\(.*\)x\(.*\) pixels.*/\1 \2/')
-
-    run_bench 0 ${GLB27} -data ${GLB27_DATA} -skip_load_frames \
-        -w $(( $width / 2 )) -h $(( $height / 2 )) -ow $W -oh $H -t $1 | \
-        sed '/fps/!d; s#.*: \(.*\) msec.*#1000000 / \1#' | bc -l
+    __gl27__ $1 $2 $3 $4
 }
 
 # Large versions, offscreen so no flip overhead?
-# 1 argument: $benchmark
+# 4 arguments: $benchmark $width $height $bench_time
 function __gl27offscreen__ {
-    local W="${GLBENCHMARK27_WIDTH:-1920}"
-    local H="${GLBENCHMARK27_HEIGHT:-1080}"
-
-    run_bench 0 ${GLB27} -data ${GLB27_DATA} -skip_load_frames \
-        -w $W -h $H -ow $W -oh $H -t $1 | \
-        sed '/fps/!d; s#.*: \(.*\) msec.*#1000000 / \1#' | bc -l
+    __gl27__ $1_Offscreen $2 $3 $4
 }
 
-# Small versions, to exercise CPU overheads
-# 1 argument: $benchmark
-function __gl27cpu__ {
-    INTEL_NO_HW=1 run_bench 0 ${GLB27} -data ${GLB27_DATA} -skip_load_frames \
-        -w 16 -h 16 -ow 16 -oh 16 -t $1 | \
-        sed '/fps/!d; s#.*: \(.*\) msec.*#1000000 / \1#' | bc -l
-}
+while read bench_name benchmark_base fixed_postfix bench_time; do
+    for i in window offscreen; do
+        while read res_name width height; do
+            name="${bench_name}:${res_name}:${i}"
+            eval "${name}_run() { __gl27${i}__ ${benchmark_base} $width $height $bench_time; }"
+            test_name="$test_name ${name}"
 
-while read name benchmark; do
-   eval "${name}:fullscreen_run() { __gl27fullscreen__ \$1 $benchmark; }"
-   test_name="$test_name $name:fullscreen"
-   for i in window offscreen cpu; do
-       eval "${name}:${i}_run() { __gl27${i}__ \$1 ${benchmark}_Offscreen; }"
-       test_name="$test_name ${name}:${i}"
-   done
-done<<EOL
-        GLB27:Trex GLB27_TRex_C24Z16_FixedTimeStep
-        GLB27:Egypt GLB27_EgyptHD_inherited_C24Z16_FixedTime
-EOL
-test_exec_time=14
+            name="${bench_name}_fixed:${res_name}:${i}"
+            eval "${name}_run() { __gl27${i}__ ${benchmark_base}${fixed_postfix} $width $height 0; }"
+            test_name="$test_name ${name}"
+        done <<< "720p 1280 720
+                1080p 1920 1080"
+    done
+
+    name="${bench_name}:cpu"
+    eval "${name}_run() { INTEL_NO_HW=1 __gl27offscreen__ ${benchmark_base} 16 16 $bench_time; }"
+    test_name="$test_name ${name}"
+
+    name="${bench_name}_fixed:cpu"
+    eval "${name}_run() { INTEL_NO_HW=1 __gl27offscreen__ ${benchmark_base}${fixed_postfix} 16 16 0; }"
+    test_name="$test_name ${name}"
+done <<< "GLB27:Trex GLB27_TRex_C24Z16 _FixedTimeStep 56
+        GLB27:Egypt GLB27_EgyptHD_inherited_C24Z16 _FixedTime 113"
+
+test_exec_time=48
