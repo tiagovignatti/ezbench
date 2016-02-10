@@ -1,5 +1,5 @@
-GLB27=${GLBENCHMARK27_PATH:-${GLBENCHMARK27_FOLDER}/build_x86_64/binaries/GLBenchmark}
-GLB27_DATA=${GLBENCHMARK27_DATA:-${GLBENCHMARK27_FOLDER}/data}
+GLB27=$(realpath ${GLBENCHMARK27_PATH:-${GLBENCHMARK27_FOLDER}/build_x86_64/binaries/GLBenchmark})
+GLB27_DATA=$(realpath ${GLBENCHMARK27_DATA:-${GLBENCHMARK27_FOLDER}/data})
 
 test -e ${GLB27} || return 1
 hash unbuffer 2>/dev/null || return 1
@@ -15,9 +15,11 @@ function __gl27__ {
 
     if [ $4 -eq 0 ]
     then
+        ENV_DUMP_RESTRICT_TO_BINARY=${GLB27} \
         run_bench 0 $cmdline | sed '/fps/!d; s#.*: \(.*\) msec.*#1000000 / \1#' | bc -l
     else
-        frames_count=$(run_bench 0 $cmdline | sed '/fps/!d; s#.*: \(.*\) frames.*#\1#')
+        frames_count=$(ENV_DUMP_RESTRICT_TO_BINARY=${GLB27} \
+                       run_bench 0 $cmdline | sed '/fps/!d; s#.*: \(.*\) frames.*#\1#')
         echo "$frames_count / $4" | bc -l
     fi
 }
