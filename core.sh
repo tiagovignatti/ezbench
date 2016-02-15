@@ -458,7 +458,6 @@ function compile_and_deploy {
 
     # early exit if the deployed version is the wanted commit
     version=$(read_git_version_deployed)
-    [ $? -eq 0 ] && [[ "$version" =~ "$commit" ]] && return 0
 
     # Make sure we are in the right folder
     cd "$gitRepoDir" || exit 31
@@ -466,18 +465,22 @@ function compile_and_deploy {
     # Select the commit of interest
     if [ "$commit" == "$stash" ]
     then
+        echo "$commit" >> "$commitListLog"
+        [ $? -eq 0 ] && [[ "$version" =~ "$commit" ]] && return 0
+
         git reset --hard "$commit_head" > /dev/null
         git stash apply "$stash" > /dev/null
         echo -e "${c_bright_yellow}WIP${c_reset}"
-        echo "$commit" >> "$commitListLog"
         git diff > "$logsFolder/${commit}.patch"
     else
-        git reset --hard "$commit" > /dev/null
-        git show --format="%Cblue%h%Creset %Cgreen%s%Creset" -s
         if [ -z "$(grep ^"$commit" "$commitListLog" 2> /dev/null)" ]
         then
-            git show --format="%h %s" -s >> "$commitListLog"
+            git show --format="%h %s" -s "$commit" >> "$commitListLog"
         fi
+        [ $? -eq 0 ] && [[ "$version" =~ "$commit" ]] && return 0
+
+        git reset --hard "$commit" > /dev/null
+        git show --format="%Cblue%h%Creset %Cgreen%s%Creset" -s
         git format-patch HEAD~ --format=fuller --stdout > "$logsFolder/${commit}.patch" 2> /dev/null
     fi
 
