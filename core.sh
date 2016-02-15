@@ -478,7 +478,7 @@ function compile_and_deploy {
         then
             git show --format="%h %s" -s >> "$commitListLog"
         fi
-        git format-patch HEAD~ --format=fuller --stdout > "$logsFolder/${commit}.patch"
+        git format-patch HEAD~ --format=fuller --stdout > "$logsFolder/${commit}.patch" 2> /dev/null
     fi
 
     # Call the user-defined pre-compile hook
