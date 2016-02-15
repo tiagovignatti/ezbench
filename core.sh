@@ -192,7 +192,7 @@ fi
 
 # Default user options
 for conf in $profileDir/conf.d/**/*.conf; do
-    [ "$conf" = "$ezBenchDir/conf.d/**/*.conf" ] && continue
+    [ "$conf" = "$profileDir/conf.d/**/*.conf" ] && continue
     source "$conf"
 done
 source "$profileDir/profile"
