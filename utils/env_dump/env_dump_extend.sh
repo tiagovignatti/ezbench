@@ -93,7 +93,7 @@ function add_dmidecode_info() {
 	dimdecode=$(sudo -n dmidecode 2> /dev/null)
 
 	# test if dmidecode ran properly
-	[ $? -ne 0 ] && echo "WARNING; dmidecode is not present or not working..." && return 0
+	[ $? -ne 0 ] && echo "WARNING; dmidecode is not present or not working..." > &2 && return 0
 
 	# Motherboard information
 	mobo_info=$(echo "$dimdecode" | grep -A 3 "Base Board Information")
