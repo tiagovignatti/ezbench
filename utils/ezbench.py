@@ -732,10 +732,11 @@ class SmartEzbench:
                 event_prio = 1
 
                 bench_name_to_run = benchmark.full_name
-                runs = min(20, missing_runs) # cap the maximum amount of runs to play nice
+                additional_runs = min(20, missing_runs) # cap the maximum amount of runs to play nice
 
                 # Make sure we do not schedule more than the maximum amount of run
-                if len(e.result.data) + runs > max_run_count:
+                runs = len(e.result.data) + additional_runs
+                if runs > max_run_count:
                     runs = max_run_count - len(e.result.data)
                     if runs == 0:
                         continue
