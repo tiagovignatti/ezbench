@@ -645,7 +645,7 @@ ${btag}${r}: ${db["commits"][commit]['reports'][r][benchmark].average} ${output_
         <h2>Benchmarks</h2>
 
             % for benchmark in db["benchmarks"]:
-                <h3>${benchmark.capitalize()}</h3>
+                <h3>${benchmark}</h3>
 
                 <div class="css-treeview">
                     <%def name="outputtreenode(node, id, label, attr = '')">
