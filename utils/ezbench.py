@@ -1136,11 +1136,12 @@ class Report:
 
                     # If we are not $perf_diff_confidence sure that this is the
                     # same normal distribution, say that the performance changed
-                    if p < perf_diff_confidence and diff >= smallest_perf_change:
+                    confidence = 1 - p
+                    if confidence >= perf_diff_confidence and diff >= smallest_perf_change:
                         commit_range = EventCommitRange(bench_prev[bench].commit, commit)
                         self.events.append(EventPerfChange(result.benchmark,
                                                            commit_range,
-                                                           old_perf, perf, 1 - p))
+                                                           old_perf, perf, confidence))
                 bench_prev[bench] = result
 
             commit_prev = commit
