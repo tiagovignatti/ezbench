@@ -9,6 +9,10 @@ SHA1_DB=$ezBenchDir/SHA1_DB
 # Repo addresses
 REPO_MESA=/opt/git/mesa
 REPO_LINUX=/opt/git/linux
+REPO_PERF_BISECT='/opt/git/bisect-test' # git://people.freedesktop.org/~mperes/bisect-test
+
+# Install address of the perf_bisect benchmark
+PERF_BISECT='/usr/local/bin/ezbench_perf_bisect.py'
 
 # Libraries options
 LIBFRAMETIME64_SO=/usr/lib/libframetime.so
