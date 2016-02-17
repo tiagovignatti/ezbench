@@ -544,7 +544,7 @@ class SmartEzbench:
 
         if len(task_tree) == 0:
             self.__log(Criticality.II, "Nothing left to do, exit")
-            return
+            return False
 
         task_tree_str = pprint.pformat(task_tree)
         self.__log(Criticality.II, "Task list: {tsk_str}".format(tsk_str=task_tree_str))
