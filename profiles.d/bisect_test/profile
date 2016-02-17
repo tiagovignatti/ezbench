@@ -27,7 +27,7 @@ function __default_make_and_deploy__() {
 }
 
 function __git_version_deployed__() {
-	$PERF_BISECT -v
+	$PERF_BISECT -v 2> /dev/null
 }
 
 rounds=3
