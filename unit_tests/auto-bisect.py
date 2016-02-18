@@ -143,12 +143,12 @@ def commit_info(commit):
 def check_commit_variance(actual, measured, max_variance):
 	return abs(actual - measured) < max_variance * actual
 
-def do_stats(data):
+def do_stats(data, unit):
 	adata = array(data)
 	mean, var, std = stats.bayes_mvs(adata, alpha=0.95)
 	margin = (mean[1][1] - mean[1][0]) / 2 / mean[0]
-	msg = "{:.2f}%, +/- {:.2f} (std={:.2f}, min={:.2f}, max={:.2f})"
-	return msg.format(mean[0], margin, std[0], adata.min(), adata.max())
+	msg = "{:.2f}{}, +/- {:.2f} (std={:.2f}, min={:.2f}{}, max={:.2f}{})"
+	return msg.format(mean[0], unit, margin, std[0], adata.min(), unit, adata.max(), unit)
 
 # parse the options
 parser = argparse.ArgumentParser()
@@ -196,12 +196,26 @@ for commit in report.commits:
 	if commit.full_name.endswith("template"):
 		continue
 	for result in commit.results:
-		expected_perf = commit_info(commit)[0]
-		error = abs(expected_perf - result.result()) * 100.0 / expected_perf
+		# Check that the results are for the right benchmark
+		if result.benchmark.full_name != 'perf_bisect':
+			continue
+
+		e_perf, e_var, e_build, e_exec = commit_info(commit)
+
+		# if the commit was expected to fail running, force the performance to 0
+		if e_build or e_exec:
+			e_perf = 0
+
+		if e_perf > 0:
+			error = abs(e_perf - result.result()) * 100.0 / e_perf
+		else:
+			error = 0
+
 		sample_error.append(error)
 		if error > max_variance * 100:
+			msg = "Commit {}'s performance differs significantly from the target, {} vs {}"
+			print(msg.format(commit.sha1, result.result(), e_perf))
 			variance_too_high += 1
-
 
 false_positive = 0
 relative_error = []
@@ -223,8 +237,8 @@ for e in report.events:
 				false_positive += 1
 
 print("Stats (max error wanted = {:.2f}%):".format(max_variance * 100.0))
-print("	  Average sampling error: {}".format(do_stats(sample_error)))
-print("	Average perf. rel. error: {}".format(do_stats(relative_error)))
+print("	  Average sampling error: {}".format(do_stats(sample_error, '%')))
+print("	Average perf. rel. error: {}".format(do_stats(relative_error, '%')))
 print("")
 print("Tests:")
 print("	Too large variance: {} / {}".format(variance_too_high, len(sample_error)))
