@@ -20,6 +20,8 @@ function __default_make_and_deploy__() {
     # 71: Compilation error
     # 72: Deployment error
 
+    $REPO_PERF_BISECT/perf.py -b || return 71
+
     sha1=$(git rev-parse --short HEAD)
     mv $REPO_PERF_BISECT/perf.py $PERF_BISECT
     sed -i "s/{GIT_SHA1}/${sha1}/" $PERF_BISECT

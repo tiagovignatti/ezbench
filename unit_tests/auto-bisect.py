@@ -56,7 +56,8 @@ def create_new_commit(repo, ref, state):
 		values += "{} = {}\n".format(entry, state[entry])
 	data = template.decode().replace("#{OVERRIDE_VALUES_HERE}\n", values)
 
-	commit_msg = "{perf}, {variance}".format(perf=state['perf'], variance=state['variance'])
+	commit_msg = "{},{},{},{}".format(state['perf'], state['variance'],
+								state['build_broken'], state['exec_broken'])
 
 	data_oid = repo.create_blob(data)
 	tip = repo.revparse_single(ref)
@@ -76,9 +77,23 @@ def create_new_branch(repo, base_commit, branch_name, state, max_commits):
 	for i in range(0, max_commits):
 		# Treat every variable independently
 		changes = False
-		if random.random() > 0.9:
-			state['perf'] = int(state['perf'] * (1 + random.randn() / 10))
+		if random.random() > 0.98:
+			state['perf'] = int(state['perf'] * (1.0075 + random.randn() / 10))
 			changes = True
+		if not state['build_broken'] and random.random() > 0.995:
+			state['build_broken'] = True
+			changes = True
+		elif state['build_broken'] and random.random() > 0.75:
+			state['build_broken'] = False
+			changes = True
+
+		if not state['exec_broken'] and random.random() > 0.995:
+			state['exec_broken'] = True
+			changes = True
+		elif state['exec_broken'] and random.random() > 0.75:
+			state['exec_broken'] = False
+			changes = True
+
 		if not changes:
 			state['noise_commit'] += 1
 
@@ -87,15 +102,17 @@ def create_new_branch(repo, base_commit, branch_name, state, max_commits):
 	return last_commit
 
 def report_cleanup(report_name):
-    try:
-        shutil.rmtree('{ezbench_dir}/logs/{name}'.format(ezbench_dir=ezbench_dir,
+	try:
+		shutil.rmtree('{ezbench_dir}/logs/{name}'.format(ezbench_dir=ezbench_dir,
                                                          name=report_name))
-    except FileNotFoundError:
-            pass
+	except FileNotFoundError as e:
+		print(e)
+		pass
 
-def create_report(base_sha1, head_sha1):
+def create_report(base_sha1, head_sha1, max_variance = 0.025, reuse_data=True):
 	report_name = "unit_test"
-	#report_cleanup(report_name)
+	if not reuse_data:
+		report_cleanup(report_name)
 
 	# create the initial workload
 	sbench = SmartEzbench(ezbench_dir, report_name)
@@ -107,40 +124,110 @@ def create_report(base_sha1, head_sha1):
 	# Run until all the enhancements are made!
 	git_history = sbench.git_history()
 	while True:
-		sbench.schedule_enhancements(git_history)
+		sbench.schedule_enhancements(git_history, max_variance=max_variance)
 		if not sbench.run():
 			break
 
 	report = sbench.report(git_history)
 
-	#report_cleanup(report_name)
+	if not reuse_data:
+		report_cleanup(report_name)
 
 	return report
 
+def commit_info(commit):
+	# commit.full_name = '3c91150 162,1,False,False'
+	f = commit.full_name.split(' ')[1].split(',')
+	return int(f[0]), int(f[1]), bool(f[2]), bool(f[3])
+
+def check_commit_variance(actual, measured, max_variance):
+	return abs(actual - measured) < max_variance * actual
+
+def do_stats(data):
+	adata = array(data)
+	mean, var, std = stats.bayes_mvs(adata, alpha=0.95)
+	margin = (mean[1][1] - mean[1][0]) / 2 / mean[0]
+	msg = "{:.2f}%, +/- {:.2f} (std={:.2f}, min={:.2f}, max={:.2f})"
+	return msg.format(mean[0], margin, std[0], adata.min(), adata.max())
+
+# parse the options
+parser = argparse.ArgumentParser()
+parser.add_argument("-r", dest='reuse_data', action="store_true",
+					help="Do not reset the state")
+args = parser.parse_args()
+
 # Generate the git history
 repo = pygit2.Repository(perf_bisect_repo_dir())
-repo.checkout(repo.lookup_reference('refs/heads/master'))
-for branch in repo.listall_branches(pygit2.GIT_BRANCH_LOCAL):
-	if branch.startswith("tmp_"):
-		repo.lookup_branch(branch).delete() # Clean all the tmp branches we create
 initial_commit = next(repo.walk(repo.revparse_single('HEAD').oid, pygit2.GIT_SORT_REVERSE))
-branch_name = datetime.now().strftime('tmp_%Y-%m-%d_%H-%M-%S')
-template = repo[initial_commit.tree['perf.py'].id].data
 
-# Initial state
-state = dict()
-state['perf'] = 100
-state['sample_distribution_mode'] = 0
-state['variance'] = 1
-state['build_broken'] = False
-state['exec_broken'] = False
-state['noise_commit'] = 0
+if not args.reuse_data:
+	repo.checkout(repo.lookup_reference('refs/heads/master'))
+	for branch in repo.listall_branches(pygit2.GIT_BRANCH_LOCAL):
+		if branch.startswith("tmp_"):
+			repo.lookup_branch(branch).delete() # Clean all the tmp branches we create
+	branch_name = datetime.now().strftime('tmp_%Y-%m-%d_%H-%M-%S')
+	template = repo[initial_commit.tree['perf.py'].id].data
 
-# implement a state machine
-HEAD = create_new_branch(repo, initial_commit, branch_name, copy.deepcopy(state), 1000)
-repo.checkout('refs/heads/'+branch_name)
+	# Initial state
+	state = dict()
+	state['perf'] = 100
+	state['sample_distribution_mode'] = 0
+	state['variance'] = 1
+	state['build_broken'] = False
+	state['exec_broken'] = False
+	state['noise_commit'] = 0
+
+	# implement a state machine
+	HEAD = create_new_branch(repo, initial_commit, branch_name, copy.deepcopy(state), 1000)
+	repo.checkout('refs/heads/'+branch_name)
 
 # List the events
-report = create_report(initial_commit.hex[0:7], repo.revparse_single('HEAD').hex[0:7])
-for event in report.events:
-    print(event)
+max_variance = 0.025
+report = create_report(initial_commit.hex[0:7],
+                       repo.revparse_single('HEAD').hex[0:7],
+                       max_variance, args.reuse_data)
+
+# test the variance of every commit
+variance_too_high = 0
+sample_error = []
+for commit in report.commits:
+	# FIXME: instead of skipping this commit, replace the template commit by the
+	# actual first sample!
+	if commit.full_name.endswith("template"):
+		continue
+	for result in commit.results:
+		expected_perf = commit_info(commit)[0]
+		error = abs(expected_perf - result.result()) * 100.0 / expected_perf
+		sample_error.append(error)
+		if error > max_variance * 100:
+			variance_too_high += 1
+
+
+false_positive = 0
+relative_error = []
+for e in report.events:
+	if type(e) is EventPerfChange:
+		o_perf, o_variance, o_build, o_exec = commit_info(e.commit_range.old)
+		n_perf, n_variance, n_build, n_exec = commit_info(e.commit_range.new)
+		wanted = EventPerfChange(e.benchmark, e.commit_range, o_perf, n_perf, 1.0)
+
+		if not o_exec and n_exec:
+			if e.diff() != 1:
+				print("{} => Was a false positive, real perf was {} to {}".format(e, o_perf, n_perf))
+				false_positive += 1
+
+		rel_error = abs(wanted.diff() - e.diff()) * 100.0
+		relative_error.append(rel_error)
+		if o_perf == n_perf or rel_error > max_variance * 100.0:
+			print("{} => Was a false positive, real perf was {} to {}".format(e, o_perf, n_perf))
+			false_positive += 1
+
+print("Stats (max error wanted = {:.2f}%):".format(max_variance * 100.0))
+print("	  Average sampling error: {}".format(do_stats(sample_error)))
+print("	Average perf. rel. error: {}".format(do_stats(relative_error)))
+print("")
+print("Tests:")
+print("	Too large variance: {} / {}".format(variance_too_high, len(sample_error)))
+print("	   False positives: {} / {}".format(false_positive, len(report.events)))
+
+sys.exit(variance_too_high == 0 and false_positive == 0)
