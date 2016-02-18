@@ -646,7 +646,7 @@ class SmartEzbench:
 
     def schedule_enhancements(self, git_history=None, max_variance = 0.025,
                               perf_diff_confidence = 0.95, smallest_perf_change=0.005,
-                              max_run_count = 100):
+                              max_run_count = 100, commit_schedule_max = 1):
         self.__log(Criticality.II, "Start enhancing the report")
 
         # Generate the report, order commits based on the git history
@@ -746,10 +746,11 @@ class SmartEzbench:
 
             tasks.append((score, commit_sha1, bench_name_to_run, runs, e))
 
-        # Only schedule the commit with the biggest score to speed up bisecting
-        # of the most important issues
+        # If we are using the throttle mode, only schedule the commit with the
+        # biggest score to speed up bisecting of the most important issues
         tasks_sorted = sorted(tasks, key=lambda t: t[0])
-        while len(tasks_sorted) > 0:
+        scheduled_commits = 0
+        while len(tasks_sorted) > 0 and scheduled_commits < commit_schedule_max:
             commit = tasks_sorted[-1][1]
             self.__log(Criticality.DD, "Add all the tasks using commit {}".format(commit))
             added = 0
@@ -758,9 +759,10 @@ class SmartEzbench:
                     added += self.force_benchmark_rounds(t[1], t[2], t[3])
             if added > 0:
                 self.__log(Criticality.II, "{}".format(t[4]))
-                break
+                scheduled_commits += 1
+            else:
+                self.__log(Criticality.DD, "No work scheduled using commit {}, try another one".format(commit))
             del tasks_sorted[-1]
-            self.__log(Criticality.DD, "No work scheduled using commit {}, try another one".format(commit))
 
         self.__log(Criticality.II, "Done enhancing the report")
 

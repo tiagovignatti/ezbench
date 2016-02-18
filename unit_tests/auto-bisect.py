@@ -124,7 +124,7 @@ def create_report(base_sha1, head_sha1, max_variance = 0.025, reuse_data=True):
 	# Run until all the enhancements are made!
 	git_history = sbench.git_history()
 	while True:
-		sbench.schedule_enhancements(git_history, max_variance=max_variance)
+		sbench.schedule_enhancements(git_history, max_variance=max_variance, commit_schedule_max=100)
 		if not sbench.run():
 			break
 
