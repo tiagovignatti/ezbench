@@ -6,5 +6,5 @@ test_exec_time=1
 
 perf_bisect_run() {
     # Set $REPO_PERF_BISECT and $PERF_BISECT in user_parameters.sh
-    run_bench 0 $PERF_BISECT
+    ENV_DUMP_RESTRICT_TO_BINARY="no_dump_please" run_bench 0 $PERF_BISECT | grep -v "Env_dump:"
 }
