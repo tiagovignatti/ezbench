@@ -1246,6 +1246,7 @@ def genPerformanceReport(log_folder, silentMode = False):
         print ("Reading the results for {0} commits".format(len(commitsLines)))
     commits_txt = ""
     table_entries_txt = ""
+    files_list = os.listdir()
     for commitLine in commitsLines:
         full_name = commitLine.strip(' \t\n\r')
         sha1 = commitLine.split()[0]
@@ -1255,7 +1256,6 @@ def genPerformanceReport(log_folder, silentMode = False):
         commit = Commit(sha1, full_name, compile_log, patch, label)
 
         # find all the benchmarks
-        files_list = os.listdir()
         pattern = "{sha1}_bench".format(sha1=commit.sha1)
         benchFiles = [f for f in files_list if f.startswith(pattern)]
         benchs_txt = ""
