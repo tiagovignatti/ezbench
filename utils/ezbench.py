@@ -1134,7 +1134,10 @@ class Report:
                     t, p = stats.ttest_ind(bench_prev[bench].data, result.data, equal_var=True)
                     perf = result.result()
                     old_perf = bench_prev[bench].result()
-                    diff = abs(perf - old_perf) / old_perf
+                    if old_perf > 0:
+                        diff = abs(perf - old_perf) / old_perf
+                    else:
+                        diff = float('inf')
 
                     # If we are not $perf_diff_confidence sure that this is the
                     # same normal distribution, say that the performance changed
