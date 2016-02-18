@@ -1241,12 +1241,24 @@ def genPerformanceReport(log_folder, silentMode = False):
             sys.stderr.write("The commit_list file is empty\n")
         return Report(benchmarks, commits, notes)
 
+    # Find all the result files and sort them by sha1
+    files_list = os.listdir()
+    benchFiles = dict()
+    commit_bench_file_re = re.compile(r'^([0-9a-f]+)_bench_[^\.]+$')
+    for f in files_list:
+        m = commit_bench_file_re.match(f)
+        if m is not None:
+            sha1 = m.groups(1)[0]
+            if sha1 not in benchFiles:
+                benchFiles[sha1] = []
+            benchFiles[sha1].append(f)
+    files_list = None
+
     # Gather all the information from the commits
     if not silentMode:
         print ("Reading the results for {0} commits".format(len(commitsLines)))
     commits_txt = ""
     table_entries_txt = ""
-    files_list = os.listdir()
     for commitLine in commitsLines:
         full_name = commitLine.strip(' \t\n\r')
         sha1 = commitLine.split()[0]
@@ -1255,11 +1267,16 @@ def genPerformanceReport(log_folder, silentMode = False):
         label = labels.get(sha1, sha1)
         commit = Commit(sha1, full_name, compile_log, patch, label)
 
+        # Add the commit to the list of commits
+        commit.results = sorted(commit.results, key=lambda res: res.benchmark.full_name)
+        commits.append(commit)
+
+        # If there are no results, just continue
+        if sha1 not in benchFiles:
+            continue
+
         # find all the benchmarks
-        pattern = "{sha1}_bench".format(sha1=commit.sha1)
-        benchFiles = [f for f in files_list if f.startswith(pattern)]
-        benchs_txt = ""
-        for benchFile in benchFiles:
+        for benchFile in benchFiles[sha1]:
             # Skip when the file is a run file (finishes by #XX)
             if re.search(r'#\d+$', benchFile) is not None:
                 continue
@@ -1298,7 +1315,7 @@ def genPerformanceReport(log_folder, silentMode = False):
 
             # Look for the runs
             run_re = re.compile(r'^{benchFile}#[0-9]+$'.format(benchFile=benchFile))
-            runsFiles = [f for f in benchFiles if run_re.search(f)]
+            runsFiles = [f for f in benchFiles[sha1] if run_re.search(f)]
             runsFiles.sort(key=lambda x: '{0:0>100}'.format(x).lower()) # Sort the runs in natural order
             for runFile in runsFiles:
                 data, unit, more_is_better = readCsv(runFile)
@@ -1315,10 +1332,6 @@ def genPerformanceReport(log_folder, silentMode = False):
             # Add the result to the commit's results
             commit.results.append(result)
             commit.compil_exit_code = EzbenchExitCode.NO_ERROR # The deployment must have been successful if there is data
-
-        # Add the commit to the list of commits
-        commit.results = sorted(commit.results, key=lambda res: res.benchmark.full_name)
-        commits.append(commit)
 
     # Sort the list of benchmarks
     benchmarks = sorted(benchmarks, key=lambda bench: bench.full_name)
