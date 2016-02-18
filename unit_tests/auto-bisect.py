@@ -138,7 +138,7 @@ def create_report(base_sha1, head_sha1, max_variance = 0.025, reuse_data=True):
 def commit_info(commit):
 	# commit.full_name = '3c91150 162,1,False,False'
 	f = commit.full_name.split(' ')[1].split(',')
-	return int(f[0]), int(f[1]), bool(f[2]), bool(f[3])
+	return int(f[0]), int(f[1]), f[2] == "True", f[3] == "True"
 
 def check_commit_variance(actual, measured, max_variance):
 	return abs(actual - measured) < max_variance * actual
@@ -211,16 +211,16 @@ for e in report.events:
 		n_perf, n_variance, n_build, n_exec = commit_info(e.commit_range.new)
 		wanted = EventPerfChange(e.benchmark, e.commit_range, o_perf, n_perf, 1.0)
 
-		if not o_exec and n_exec:
-			if e.diff() != 1:
+		if (not o_exec and n_exec) or (o_exec and not n_exec):
+			if e.diff() != -1 and e.diff() != float("+inf"):
 				print("{} => Was a false positive, real perf was {} to {}".format(e, o_perf, n_perf))
 				false_positive += 1
-
-		rel_error = abs(wanted.diff() - e.diff()) * 100.0
-		relative_error.append(rel_error)
-		if o_perf == n_perf or rel_error > max_variance * 100.0:
-			print("{} => Was a false positive, real perf was {} to {}".format(e, o_perf, n_perf))
-			false_positive += 1
+		else:
+			rel_error = abs(wanted.diff() - e.diff()) * 100.0
+			relative_error.append(rel_error)
+			if o_perf == n_perf or rel_error > max_variance * 100.0:
+				print("{} => Was a false positive, real perf was {} to {}".format(e, o_perf, n_perf))
+				false_positive += 1
 
 print("Stats (max error wanted = {:.2f}%):".format(max_variance * 100.0))
 print("	  Average sampling error: {}".format(do_stats(sample_error)))
