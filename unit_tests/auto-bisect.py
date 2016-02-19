@@ -135,10 +135,13 @@ def create_report(base_sha1, head_sha1, max_variance = 0.025, reuse_data=True):
 
 	return report
 
-def commit_info(commit):
-	# commit.full_name = '3c91150 162,1,False,False'
-	f = commit.full_name.split(' ')[1].split(',')
+def parse_commit_title(title):
+	# title = '3c91150 162,1,False,False'
+	f = title.split(',')
 	return int(f[0]), int(f[1]), f[2] == "True", f[3] == "True"
+
+def commit_info(commit):
+	return parse_commit_title(commit.full_name.split(' ')[1])
 
 def check_commit_variance(actual, measured, max_variance):
 	return abs(actual - measured) < max_variance * actual
@@ -149,6 +152,24 @@ def do_stats(data, unit):
 	margin = (mean[1][1] - mean[1][0]) / 2 / mean[0]
 	msg = "{:.2f}{}, +/- {:.2f} (std={:.2f}, min={:.2f}{}, max={:.2f}{})"
 	return msg.format(mean[0], unit, margin, std[0], adata.min(), unit, adata.max(), unit)
+
+def find_event_from_commit(repo, report, type_event, sha1):
+	for e in report.events:
+		if type(e) is not type_event:
+			continue
+		if e.benchmark.full_name != 'perf_bisect':
+			continue
+
+		# If the range is one commit, we can easily find the commit by just
+		# comparing strings
+		if e.commit_range.distance() == 1:
+			if repo.revparse_single(e.commit_range.new.sha1).hex == sha1:
+				return e
+		else:
+			# XXX: Fixme
+			print("find_event_from_commit: commit ranges of more than 1 commit are not supported yet")
+
+	return None
 
 # parse the options
 parser = argparse.ArgumentParser()
@@ -222,20 +243,52 @@ false_positive = 0
 relative_error = []
 for e in report.events:
 	if type(e) is EventPerfChange:
+		if result.benchmark.full_name != 'perf_bisect':
+			continue
+
 		o_perf, o_variance, o_build, o_exec = commit_info(e.commit_range.old)
 		n_perf, n_variance, n_build, n_exec = commit_info(e.commit_range.new)
 		wanted = EventPerfChange(e.benchmark, e.commit_range, o_perf, n_perf, 1.0)
 
 		if (not o_exec and n_exec) or (o_exec and not n_exec):
 			if e.diff() != -1 and e.diff() != float("+inf"):
-				print("{} => Was a false positive, real perf was {} to {}".format(e, o_perf, n_perf))
+				print("False positive: {} => real perf change was {} to {}".format(e, o_perf, n_perf))
 				false_positive += 1
 		else:
 			rel_error = abs(wanted.diff() - e.diff()) * 100.0
 			relative_error.append(rel_error)
 			if o_perf == n_perf or rel_error > max_variance * 100.0:
-				print("{} => Was a false positive, real perf was {} to {}".format(e, o_perf, n_perf))
+				print("False positive: {} => real perf change was {} to {}".format(e, o_perf, n_perf))
 				false_positive += 1
+
+total_changes = 0
+false_negatives = 0
+p_perf = 100
+p_build = False
+p_exec = False
+r = 0
+HEAD = repo.revparse_single('HEAD')
+for commit in repo.walk(HEAD.oid, pygit2.GIT_SORT_REVERSE):
+	# Skip the first commit
+	if commit.message == "template\n":
+		continue
+
+	c_perf, c_var, c_build, c_exec = parse_commit_title(commit.message)
+
+	if p_perf != c_perf:
+		e = find_event_from_commit(repo, report, EventPerfChange, commit.hex)
+		if not e:
+			print("False negative: commit {} changed perf from {} to {}".format(commit.hex, p_perf, c_perf))
+			false_negatives += 1
+		total_changes += 1
+
+	#if (not p_exec and c_perf) or (p_exec and not c_perf):
+
+
+	# Copy the new values to the previous ones before iterating
+	p_perf = c_perf
+	p_build = c_build
+	p_exec = c_exec
 
 print("Stats (max error wanted = {:.2f}%):".format(max_variance * 100.0))
 print("	  Average sampling error: {}".format(do_stats(sample_error, '%')))
@@ -244,5 +297,6 @@ print("")
 print("Tests:")
 print("	Too large variance: {} / {}".format(variance_too_high, len(sample_error)))
 print("	   False positives: {} / {}".format(false_positive, len(report.events)))
+print("	   False negatives: {} / {}".format(false_negatives, total_changes))
 
 sys.exit(variance_too_high == 0 and false_positive == 0)
