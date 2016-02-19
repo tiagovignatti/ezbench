@@ -161,6 +161,7 @@ repo = pygit2.Repository(perf_bisect_repo_dir())
 initial_commit = next(repo.walk(repo.revparse_single('HEAD').oid, pygit2.GIT_SORT_REVERSE))
 
 if not args.reuse_data:
+	random.seed(42)
 	repo.checkout(repo.lookup_reference('refs/heads/master'))
 	for branch in repo.listall_branches(pygit2.GIT_BRANCH_LOCAL):
 		if branch.startswith("tmp_"):
