@@ -1,4 +1,6 @@
 source "$ezBenchDir/profiles.d/utils/common.sh"
+source "$ezBenchDir/profiles.d/utils/git-repo.sh"
+source "$ezBenchDir/profiles.d/utils/auto-deploy.sh"
 
 # Accessible variables
 # $ezBenchDir            [RO]: Directory of the ezbench
@@ -12,32 +14,34 @@ source "$ezBenchDir/profiles.d/utils/common.sh"
 # $testsList             [WO]: List of tests that should be ran in this profile
 # $testExcludeList       [WO]: List of tests that should be excluded in this profile
 
-function __compile__() {
+# MANDATORY: Print the currently-deployed version of the repo
+# Inputs:
+#   - $repoDir
+function profile_repo_deployed_version() {
+    glxinfo 2> /dev/null | sed -n 's/.*(git-\(.*\)).*/\1/p' | head -1
+}
+
+# MANDATORY: Compile the version of the repo found in the current working
+# directory and install it to $(profile_repo_deployment_version_dir).
+# Inputs:
+#   - CWD: Set inside the repo at the right version
+#   - $repoDir
+# Outputs:
+#   - Print the build command line (echo "BUILD_INFO: build command: $cmd")
+#   - configure, compile and install to the prefix $(profile_repo_deployment_version_dir)
+#   - Fill the SHA1-db with all the information about the build when applicable
+function repo_compile_version() {
+    prefix_dir=$(profile_repo_deployment_version_dir)
+    mkdir -p $prefix_dir
+
+    ARGS=${REPO_MESA_PARAMETERS//\$REPO_MESA_PREFIX/$prefix_dir}
+    echo "BUILD_INFO: build command: ./autogen.sh $ARGS"
+    ./autogen.sh $ARGS || return 71
+
     make -j8 || return 71
     make_install_sha1_dump || return 72
     return 0
 }
 
-function __default_make_and_deploy__() {
-    # Return error codes:
-    # 71: Compilation error
-    # 72: Deployment error
-
-    x_show_debug_info_start
-
-    __compile__
-    compile_error=$?
-
-    x_show_debug_info_stop
-
-    return $compile_error
-}
-
-function __git_version_deployed__() {
-    glxinfo 2> /dev/null | sed -n 's/.*(git-\(.*\)).*/\1/p' | head -1
-}
-
 rounds=3
-makeAndDeployCmd="__default_make_and_deploy__"
 repoDir="$REPO_MESA"
-gitVersionDeployedCmd="__git_version_deployed__"

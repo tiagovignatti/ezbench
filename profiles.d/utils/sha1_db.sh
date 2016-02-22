@@ -1,6 +1,6 @@
 function make_install_sha1_dump() {
     # First, install to the right folder
-    make install || exit 72
+    make install-strip || exit 72
 
     [ -z "$SHA1_DB" ] && echo "Error: No SHA1_DB specified" && return 0
 

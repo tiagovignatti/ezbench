@@ -116,6 +116,13 @@ function run_bench {
     fi
 }
 
+function display_repo_info() {
+    local type=$(profile_repo_type)
+    local vh=$(profile_repo_version)
+    local dv=$(profile_repo_deployed_version)
+    echo "Repo type = $type, directory = $repoDir, version = $vh, deployed version = $dv"
+}
+
 # parse the options
 function available_tests {
     # Generate the list of available tests
@@ -196,6 +203,14 @@ for conf in $profileDir/conf.d/**/*.conf; do
 done
 source "$profileDir/profile"
 
+# Now, let's use the deployed-versions of everything
+PROFILE_TMP_BUILD_DIR="$DEPLOY_BASE_DIR/$profile/tmp"
+PROFILE_DEPLOY_BASE_DIR="$DEPLOY_BASE_DIR/$profile/builds"
+PROFILE_DEPLOY_DIR="$DEPLOY_BASE_DIR/$profile/cur"
+
+export LD_LIBRARY_PATH="$PROFILE_DEPLOY_DIR/lib":$LD_LIBRARY_PATH
+export PATH="$PROFILE_DEPLOY_DIR/bin":$PATH
+
 # Start again the argument parsing, this time with every option
 unset OPTIND
 while getopts "$optString" opt; do
@@ -236,6 +251,10 @@ while getopts "$optString" opt; do
 done
 shift $((OPTIND-1))
 
+# Check the repo and display information about it
+profile_repo_check
+display_repo_info
+
 # redirect the output to both a log file and stdout
 if [ -z "$dry_run" ]
 then
@@ -245,26 +264,10 @@ then
     exec 2>&1
 fi
 
-function read_git_version_deployed() {
-    if [ -n "$gitVersionDeployedCmd" ]
-    then
-        eval "$gitVersionDeployedCmd"
-        return $?
-    fi
-    return 1
-}
-
 # functions to call on exit
-function __ezbench_reset_git_state__ {
-    git reset --hard "$version_head" 2> /dev/null
-}
-
 function __ezbench_finish__ {
     exitcode=$?
     action=$1
-
-    # to be executed on exit, possibly twice!
-    __ezbench_reset_git_state__
 
     # Execute the user-defined post hook
     callIfDefined ezbench_post_hook
@@ -284,35 +287,7 @@ trap __ezbench_finish__ INT # Needed for zsh
 # Execute the user-defined pre hook
 callIfDefined ezbench_pre_hook
 
-# Check the git repo, saving then displaying the HEAD commit
-if [ -z "$repoDir" ]
-then
-    echo "ERROR: You did not specify a git repository path (-p). Aborting..."
-    exit 14
-fi
-cd "$repoDir" || exit 1
-version_head=$(git rev-parse HEAD 2>/dev/null)
-if [ $? -ne 0 ]
-then
-    echo "ERROR: The path '$repoDir' does not contain a valid git repository. Aborting..."
-    exit 1
-fi
-printf "Repo = $repoDir, Version = $version_head"
-
-deployedVersion=$(read_git_version_deployed)
-[ $? -eq 0 ] && printf ", deployed version = $deployedVersion"
-echo
-
-versionList=
-for id in "$@"; do
-    if [[ $id =~ \.\. ]]; then
-        versionList+=$(git rev-list --abbrev-commit --reverse "$id" 2> /dev/null)
-    else
-        versionList+=$(git rev-list --abbrev-commit -n 1 "$(git rev-parse "$id" 2> /dev/null)" 2> /dev/null)
-    fi
-    [ $? -ne 0 ] && printf "ERROR: Invalid commit ID '$id'\n" && exit 50
-    commitList+=" "
-done
+versionList=$(profile_get_version_list $@)
 
 # Seed the results with the last round?
 versionListLog="$logsFolder/commit_list"
@@ -407,7 +382,7 @@ then
         versionList=$deployedVersion
     fi
 else
-    avgBuildTime=$(git config --get ezbench.average-build-time 2>/dev/null || echo 30)
+    avgBuildTime=$(profile_repo_compilation_time)
 fi
 
 # finish computing the list of versions
@@ -434,35 +409,28 @@ meh_color=$c_bright_yellow
 
 function compile_and_deploy {
     # Accessible variables
-    # $version    [RO]: SHA1 id of the current version
+    # $version     [RO]: SHA1 id of the current version
     # $versionName [RO]: Name of the version
 
     # early exit if the deployed version is the wanted version
-    version=$(read_git_version_deployed)
-
-    # Make sure we are in the right folder
-    cd "$repoDir" || exit 31
+    deployed_version=$(profile_repo_deployed_version)
 
     # Select the version of interest
-	if [ -z "$(grep ^"$version" "$versionListLog" 2> /dev/null)" ]
-	then
-		git show --format="%h %s" -s "$version" >> "$versionListLog"
-	fi
-	[ $? -eq 0 ] && [[ "$version" =~ "$version" ]] && return 0
+    human_name=$(profile_repo_version_to_human "$version")
+    if [ -z "$(grep ^"$version" "$versionListLog" 2> /dev/null)" ]
+    then
+        echo "$human_name" >> "$versionListLog"
+    fi
+    echo "$human_name"
+    [ $? -eq 0 ] && [[ "$deployed_version" =~ "$version" ]] && return 0
 
-	git reset --hard "$version" > /dev/null
-	git show --format="%Cblue%h%Creset %Cgreen%s%Creset" -s
-	git format-patch HEAD~ --format=fuller --stdout > "$logsFolder/${version}.patch" 2> /dev/null
+    compile_logs=$logsFolder/${version}_compile_log
 
-    # Call the user-defined pre-compile hook
-    callIfDefined compile_pre_hook
+    profile_repo_get_patch $version > "$logsFolder/$1.patch"
 
     # Compile the version and check for failure. If it failed, go to the next version.
-    compile_logs=$logsFolder/${version}_compile_log
-    compile_start=$(date +%s)
-    eval "$makeAndDeployCmd" > "$compile_logs" 2>&1
+    eval "$makeAndDeployCmd" >> "$compile_logs" 2>&1
     local exit_code=$?
-    compile_end=$(date +%s)
 
     # The exit code 74 actually means everything is fine but we need to reboot
     if [ $exit_code -eq 74 ]
@@ -471,12 +439,6 @@ function compile_and_deploy {
     else
         printf "Exiting with error code $exit_code\n" >> "$compile_logs"
     fi
-
-    # Reset to the original version early
-   __ezbench_reset_git_state__
-
-    # Call the user-defined post-compile hook
-    callIfDefined compile_post_hook
 
     # Check for compilation errors
     if [ "$exit_code" -ne '0' ]; then
@@ -495,15 +457,11 @@ function compile_and_deploy {
         exit $exit_code
     fi
 
-    # Update our build time estimator
-    avgBuildTime=$(bc <<< "0.75*$avgBuildTime + 0.25*($compile_end - $compile_start)")
-    git config --replace-all ezbench.average-build-time "$(printf "%.0f" "$avgBuildTime")"
-
     # Check that the deployed image is the right one
-    version=$(read_git_version_deployed)
-    if [ $? -eq 0 ] && [[ ! "$version" =~ "$version" ]]
+    deployed_version=$(profile_repo_deployed_version)
+    if [ $? -eq 0 ] && [[ ! "$deployed_version" =~ "$version" ]]
     then
-        printf "    ${c_bright_red}ERROR${c_reset}: The deployed version ($version) does not match the wanted one($version)\n"
+        printf "    ${c_bright_red}ERROR${c_reset}: The deployed version ($deployed_version) does not match the wanted one($version)\n"
         exit 73
     fi
 }

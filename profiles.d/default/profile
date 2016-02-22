@@ -1,4 +1,5 @@
 source "$ezBenchDir/profiles.d/utils/common.sh"
+source "$ezBenchDir/profiles.d/utils/git-repo.sh"
 
 # Accessible variables
 # $ezBenchDir            [RO]: Directory of the ezbench
@@ -17,11 +18,43 @@ function __default_make_and_deploy__() {
     # 71: Compilation error
     # 72: Deployment error
 
-    make -j8 || exit 71
-    make_install_sha1_dump || exit 72
+    # move to the repo's directory
+    cwd=$(pwd)
+    cd $repoDir
+
+    echo "$(date +"%m-%d-%Y-%T"): Start compiling version $version"
+    compile_start=$(date +%s)
+
+    # Call the user-defined pre-compile hook
+    callIfDefined compile_pre_hook
+
+    make -j8 || return 71
+    make_install_sha1_dump || return 72
+    export PROFILE_DEFAULT_LAST_COMPILED_VERSION=$version
+
+    # Call the user-defined post-compile hook
+    callIfDefined compile_post_hook
+
+    # compute the compilation time
+    compile_end=$(date +%s)
+    build_time=$(($compile_end-$compile_start))
+    echo "$(date +"%m-%d-%Y-%T"): Done compiling version $version. Build time = $build_time."
+
+    # Update our build time estimator
+    max_build_time=$(profile_repo_compilation_time)
+    [[ "$build_time" -gt "$max_build_time" ]] && profile_repo_set_compilation_time $build_time
+
+    # move back where we were
+    cd $cwd
+}
+
+# MANDATORY: Print the currently-deployed version of the repo
+# Inputs:
+#   - $repoDir
+function profile_repo_deployed_version() {
+	echo $PROFILE_DEFAULT_LAST_COMPILED_VERSION
 }
 
 rounds=3
 makeAndDeployCmd="__default_make_and_deploy__"
 repoDir=''
-gitVersionDeployedCmd=''

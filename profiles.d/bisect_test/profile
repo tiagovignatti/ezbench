@@ -1,4 +1,6 @@
 source "$ezBenchDir/profiles.d/utils/common.sh"
+source "$ezBenchDir/profiles.d/utils/git-repo.sh"
+source "$ezBenchDir/profiles.d/utils/auto-deploy.sh"
 
 # Accessible variables
 # $ezBenchDir            [RO]: Directory of the ezbench
@@ -12,24 +14,26 @@ source "$ezBenchDir/profiles.d/utils/common.sh"
 # $testsList             [WO]: List of tests that should be ran in this profile
 # $testExcludeList       [WO]: List of tests that should be excluded in this profile
 
-function __default_make_and_deploy__() {
+function repo_compile_version() {
     # Return error codes:
     # 71: Compilation error
     # 72: Deployment error
 
-    $REPO_PERF_BISECT/perf.py -b || return 71
+    deploy_dir="$(profile_repo_deployment_version_dir)/bin"
+    mkdir -p $deploy_dir
+    ./perf.py -b || return 71
 
     sha1=$(git rev-parse --short HEAD)
-    mv $REPO_PERF_BISECT/perf.py $PERF_BISECT
-    sed -i "s/{GIT_SHA1}/${sha1}/" $PERF_BISECT
+    deploy_name="$deploy_dir/perf.py"
+
+    cp ./perf.py "$deploy_name"
+    sed -i "s/{GIT_SHA1}/${sha1}/" $deploy_name
     return 0
 }
 
-function __git_version_deployed__() {
-	$PERF_BISECT -v 2> /dev/null
+function profile_repo_deployed_version() {
+	perf.py -v 2> /dev/null
 }
 
 rounds=3
-makeAndDeployCmd="__default_make_and_deploy__"
 repoDir="$REPO_PERF_BISECT"
-gitVersionDeployedCmd="__git_version_deployed__"

@@ -1,4 +1,5 @@
 source "$ezBenchDir/profiles.d/utils/common.sh"
+source "$ezBenchDir/profiles.d/utils/git-repo.sh"
 
 # Accessible variables
 # $ezBenchDir            [RO]: Directory of the ezbench
@@ -12,20 +13,35 @@ source "$ezBenchDir/profiles.d/utils/common.sh"
 # $testsList             [WO]: List of tests that should be ran in this profile
 # $testExcludeList       [WO]: List of tests that should be excluded in this profile
 
-function __deploy__archlinux__() {
-    sudo cp arch/x86_64/boot/bzImage /boot/vmlinuz-linux-intel || return 72
-    sudo -n mkinitcpio -k "$kernel_id" -g /boot/initramfs-linux-intel.img || return 72
+function profile_repo_deployment_version_dir() {
+    echo "$PROFILE_DEPLOY_BASE_DIR/$version"
+}
+
+function __compile__archlinux__() {
+    deploy_dir="$(profile_repo_deployment_version_dir)"
+    sudo cp arch/x86_64/boot/bzImage "$deploy_dir/boot/vmlinuz-linux-ezbench" || return 71
+    sudo -n mkinitcpio -k "$kernel_id" -g "$deploy_dir/boot/initramfs-linux-ezbench.img" || return 71
     return 0
 }
 
-function __deploy__ubuntu__() {
-    sudo cp arch/x86_64/boot/bzImage /boot/vmlinuz-linux-intel || return 72
+function __compile__ubuntu__() {
+    deploy_dir="$(profile_repo_deployment_version_dir)"
+    sudo cp arch/x86_64/boot/bzImage "$deploy_dir/boot/vmlinuz-linux-ezbench" || return 72
     sudo update-initramfs -c -t -k "$kernel_id" || return 72
-    sudo mv /boot/initrd.img-$kernel_id /boot/vmlinuz-linux-intel_initrd.img || return 72
+    sudo mv /boot/initrd.img-$kernel_id "$deploy_dir/boot/vmlinuz-linux-ezbench_initrd.img" || return 72
     return 0
 }
 
-function __compile_and_deploy__() {
+# MANDATORY: Compile the version of the repo found in the current working
+# directory and install it to $(profile_repo_deployment_version_dir).
+# Inputs:
+#   - CWD: Set inside the repo at the right version
+#   - $repoDir
+# Outputs:
+#   - Print the build command line (echo "BUILD_INFO: build command: $cmd")
+#   - configure, compile and install to the prefix $(profile_repo_deployment_version_dir)
+#   - Fill the SHA1-db with all the information about the build when applicable
+function repo_compile_version() {
     # Return error codes:
     # 71: Compilation error
     # 72: Deployment error
@@ -33,37 +49,44 @@ function __compile_and_deploy__() {
     has_automatic_sudo_rights || return 72
     has_binary lsb_release || return 72
 
+    # Get the modules' install dir
+    deploy_dir="$(profile_repo_deployment_version_dir)"
+    mkdir -p "$deploy_dir/boot" || return 71
+
+    # Get the config file from the user_parameter file
+    cp "$REPO_LINUX_CONFIG" .config || return 71
+    echo "BUILD_INFO: build command: Using config '$REPO_LINUX_CONFIG' ($(sha1sum $REPO_LINUX_CONFIG))"
+
     # Compile the kernel. If any question arises, the default choice will be taken
     # This part assumes that you have a working .config already set up. You can generate it using make localmodconfig.
     make olddefconfig || return 71
     make -j8 || return 71
-    capture=$(sudo make modules_install || return 71)
+    #capture=$(sudo -n "INSTALL_MOD_PATH=$deploy_dir" make modules_install || return 71)
+    capture=$(sudo -n make modules_install || return 71)
     [ $? -ne 0 ] && { echo "$capture"; return 71; }
     echo "$capture"
     kernel_id=$(echo "$capture" | grep DEPMOD | grep -o '[^ ]*$')
+
+    # Add a symlink to the modules (FIXME: it does not work for some reasons)
+    #sudo -n rm "/lib/modules/$kernel_id" 2> /dev/null
+    #sudo -n ln -s "$deploy_dir/lib/modules/$kernel_id" "/lib/modules/$kernel_id"
 
     # Check what is the current distro
     distro=$(lsb_release -is)
     case "$distro" in
     "Arch")
-        kernel_id="$kernel_id" __deploy__archlinux__
-        [ $? -ne 0 ] && return 72
+        kernel_id="$kernel_id" __compile__archlinux__
+        [ $? -ne 0 ] && return 71
         ;;
     "Ubuntu")
-        kernel_id="$kernel_id" __deploy__ubuntu__
-        [ $? -ne 0 ] && return 72
+        kernel_id="$kernel_id" __compile__ubuntu__
+        [ $? -ne 0 ] && return 71
         ;;
     *)
-        echo "WARNING: Unknown distribution '$distro'. Please add contact the authors of EzBench."
+        echo "WARNING: Unknown distribution '$distro'. Please contact the authors of EzBench."
         return 70
         ;;
     esac
-
-    # Force grub to boot on the non-distro kernel that we just compiled
-    #
-    # WARNING: Make sure that grub reverts to the distro's kernel if the
-    # computer crashes!
-    sudo -n grub-reboot ezbench_kernel || return 72
 
     return 0
 }
@@ -73,20 +96,63 @@ function __default_make_and_deploy__() {
     # 71: Compilation error
     # 72: Deployment error
 
-    x_show_debug_info_start
+    has_automatic_sudo_rights || return 72
 
-    __compile_and_deploy__
-    compile_error=$?
+    if [ ! -d "$(profile_repo_deployment_version_dir)" ]
+    then
+        echo "$(date +"%m-%d-%Y-%T"): Start compiling version $version"
+        local compile_start=$(date +%s)
 
-    x_show_debug_info_stop
+        profile_repo_compile_start $version
 
-    [ "$compile_error" -ne 0 ] && return $compile_error
+        # Call the user-defined pre-compile hook
+        callIfDefined compile_pre_hook
+
+        repo_compile_version
+        compile_error=$?
+
+        # Call the user-defined post-compile hook
+        callIfDefined compile_post_hook
+
+        profile_repo_compile_stop
+
+        # compute the compilation time
+        local compile_end=$(date +%s)
+        local build_time=$(($compile_end-$compile_start))
+        echo "$(date +"%m-%d-%Y-%T"): Done compiling version $version. Build time = $build_time."
+
+        # Update our build time estimator
+        local avgBuildTime=$(profile_repo_compilation_time)
+        local avgBuildTime=$(bc <<< "0.75*$avgBuildTime + 0.25*$build_time")
+        profile_repo_set_compilation_time $avgBuildTime
+
+        # Exit now, if there were some compilation errors
+        if [ "$compile_error" -ne 0 ]
+        then
+            sudo rm -rf "$(profile_repo_deployment_version_dir)"
+            return $compile_error
+        fi
+    else
+        echo "$(date +"%m-%d-%Y-%T"): Found a cached version of the compilation, re-use it!"
+    fi
+
+    # Copy the initramfs and kernel over!
+    sudo -n cp "$(profile_repo_deployment_version_dir)"/boot/* /boot/ || return 72
+
+    # Force grub to boot on the non-distro kernel that we just compiled
+    #
+    # WARNING: Make sure that grub reverts to the distro's kernel if the
+    # computer crashes!
+    sudo -n grub-reboot ezbench_kernel || return 72
 
     # Return that a reboot is necessary
     return 74
 }
 
-function __git_version_deployed__() {
+# MANDATORY: Print the currently-deployed version of the repo
+# Inputs:
+#   - $repoDir
+function profile_repo_deployed_version() {
     # Transforms 4.3.0-rc2-10901-gbcb183d into bcb183d
     # This requires CONFIG_LOCALVERSION_AUTO=y
     uname -r | cut -d 'g' -f 2
@@ -95,4 +161,3 @@ function __git_version_deployed__() {
 rounds=3
 makeAndDeployCmd="__default_make_and_deploy__"
 repoDir="$REPO_LINUX"
-gitVersionDeployedCmd="__git_version_deployed__"

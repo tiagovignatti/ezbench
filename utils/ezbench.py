@@ -67,10 +67,11 @@ class EzbenchExitCode(Enum):
     UNK_ERROR = 255
 
 class EzbenchRun:
-    def __init__(self, commits, benchmarks, predicted_execution_time, repo_dir, repo_head, deployed_commit, exit_code):
+    def __init__(self, commits, benchmarks, predicted_execution_time, repo_type, repo_dir, repo_head, deployed_commit, exit_code):
         self.commits = commits
         self.benchmarks = benchmarks
         self.predicted_execution_time = predicted_execution_time
+        self.repo_type = repo_type
         self.repo_dir = repo_dir
         self.repo_head = repo_head
         self.deployed_commit = deployed_commit
@@ -146,7 +147,7 @@ class Ezbench:
         repo_dir = ""
         head_commit = ""
         re_commit_list = re.compile('^Testing \d+ versions: ')
-        re_repo = re.compile('^Repo = (.*), Version = (.*), deployed version = (.*)$')
+        re_repo = re.compile('^Repo type = (.*), directory = (.*), version = (.*), deployed version = (.*)$')
         for line in output.split("\n"):
             m_commit_list = re_commit_list.match(line)
             m_repo = re_repo.match(line)
@@ -157,7 +158,7 @@ class Ezbench:
             elif line.find("estimated finish date:") >= 0:
                 pred_exec_time = ""
             elif m_repo is not None:
-                repo_dir, head_commit, deployed_commit = m_repo.groups()
+                repo_type, repo_dir, head_commit, deployed_commit = m_repo.groups()
             elif m_commit_list is not None:
                 commits = line[m_commit_list.end():].split(" ")
                 while '' in commits:
@@ -168,7 +169,7 @@ class Ezbench:
         if exit_code != EzbenchExitCode.NO_ERROR:
             print("\n\nERROR: The following command '{}' failed with the error code {}. Here is its output:\n\n'{}'".format(" ".join(cmd), exit_code, output))
 
-        return EzbenchRun(commits, benchmarks, pred_exec_time, repo_dir, head_commit, deployed_commit, exit_code)
+        return EzbenchRun(commits, benchmarks, pred_exec_time, repo_type, repo_dir, head_commit, deployed_commit, exit_code)
 
     def run_commits(self, commits, benchmarks, benchmark_excludes = [],
                     rounds = None, dry_run = False, verbose = False):
