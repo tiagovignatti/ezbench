@@ -180,15 +180,6 @@ class Ezbench:
 
         return self.__run_ezbench(ezbench_cmd, dry_run, verbose)
 
-    def run_commit_range(self, head, commit_count, benchmarks, benchmark_excludes = [],
-                         rounds = None, dry_run = False, verbose = False):
-        ezbench_cmd = self.__ezbench_cmd_base(benchmarks, benchmark_excludes, rounds, dry_run)
-
-        ezbench_cmd.append("-H"); ezbench_cmd.append(head)
-        ezbench_cmd.append("-n"); ezbench_cmd.append(commit_count)
-
-        return self.__run_ezbench(ezbench_cmd, dry_run, verbose)
-
 # Smart-ezbench-related classes
 class Criticality(Enum):
     II = 0

@@ -153,8 +153,6 @@ function show_help {
     echo "        -r <benchmarking rounds> (default: 3)"
     echo "        -b <benchmark regexp> include these benchmarks to run"
     echo "        -B <benchmark regexp> exclude these benchamrks from running"
-    echo "        -H <git-commit-id> benchmark the commits preceeding this one"
-    echo "        -n <last n commits>"
     echo "        -m <make and deploy command> (default: 'make -j8 install', '' to skip the compilation)"
     echo "        -N <log folder's name> (default: current date and time)"
     echo "        -T <path> source the test definitions from this folder"
@@ -207,11 +205,7 @@ while getopts "$optString" opt; do
         ;;
     p)  gitRepoDir=$OPTARG
         ;;
-    n)  lastNCommits=$OPTARG
-        ;;
     N)  reportName=$OPTARG
-        ;;
-    H)  uptoCommit=$OPTARG
         ;;
     r)  rounds=$OPTARG
         ;;
@@ -426,10 +420,6 @@ else
 fi
 
 # finish computing the list of commits
-if [ -z "$commitList" ]; then
-    commitList=$(git rev-list --abbrev-commit --reverse -n "${lastNCommits}" "${uptoCommit}")
-    [ "${uptoCommit}" == "HEAD" ] && commitList="${commitList} ${stash}"
-fi
 num_commits=$(wc -w <<< $commitList)
 printf "Testing %d commits: %s\n" $num_commits "$(echo "$commitList" | tr '\n' ' ')"
 
