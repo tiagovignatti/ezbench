@@ -43,8 +43,7 @@
 #       - 32: Cannot move to the repo directory
 #
 #   Git:
-#       - 50: Unable to preserve dirty state of the repository
-#       - 51: Invalid commit ID
+#       - 50: Invalid commit ID
 #
 #   Compilation & deployment:
 #       - 70: Compilation or deployment failed
@@ -256,7 +255,6 @@ function read_git_version_deployed() {
 # functions to call on exit
 function __ezbench_reset_git_state__ {
     git reset --hard "$commit_head" 2> /dev/null
-    [ -n "$stash" ] && git stash apply "$stash" > /dev/null
 }
 
 function __ezbench_finish__ {
@@ -303,15 +301,6 @@ deployedVersion=$(read_git_version_deployed)
 [ $? -eq 0 ] && printf ", deployed version = $deployedVersion"
 echo
 
-# Preserve any local modifications
-stash=$(git stash create)
-if [ $? -ne 0 ]
-then
-    echo "ERROR: Unable to preserve dirty state in '$repoDir'. Aborting..."
-    exit 50
-fi
-[ -n "$stash" ] && echo "Preserving work-in-progress"
-
 commitList=
 for id in "$@"; do
     if [[ $id =~ \.\. ]]; then
@@ -319,7 +308,7 @@ for id in "$@"; do
     else
         commitList+=$(git rev-list --abbrev-commit -n 1 "$(git rev-parse "$id" 2> /dev/null)" 2> /dev/null)
     fi
-    [ $? -ne 0 ] && printf "ERROR: Invalid commit ID '$id'\n" && exit 51
+    [ $? -ne 0 ] && printf "ERROR: Invalid commit ID '$id'\n" && exit 50
     commitList+=" "
 done
 
@@ -453,26 +442,15 @@ function compile_and_deploy {
     cd "$repoDir" || exit 31
 
     # Select the commit of interest
-    if [ "$commit" == "$stash" ]
-    then
-        echo "$commit" >> "$commitListLog"
-        [ $? -eq 0 ] && [[ "$version" =~ "$commit" ]] && return 0
+	if [ -z "$(grep ^"$commit" "$commitListLog" 2> /dev/null)" ]
+	then
+		git show --format="%h %s" -s "$commit" >> "$commitListLog"
+	fi
+	[ $? -eq 0 ] && [[ "$version" =~ "$commit" ]] && return 0
 
-        git reset --hard "$commit_head" > /dev/null
-        git stash apply "$stash" > /dev/null
-        echo -e "${c_bright_yellow}WIP${c_reset}"
-        git diff > "$logsFolder/${commit}.patch"
-    else
-        if [ -z "$(grep ^"$commit" "$commitListLog" 2> /dev/null)" ]
-        then
-            git show --format="%h %s" -s "$commit" >> "$commitListLog"
-        fi
-        [ $? -eq 0 ] && [[ "$version" =~ "$commit" ]] && return 0
-
-        git reset --hard "$commit" > /dev/null
-        git show --format="%Cblue%h%Creset %Cgreen%s%Creset" -s
-        git format-patch HEAD~ --format=fuller --stdout > "$logsFolder/${commit}.patch" 2> /dev/null
-    fi
+	git reset --hard "$commit" > /dev/null
+	git show --format="%Cblue%h%Creset %Cgreen%s%Creset" -s
+	git format-patch HEAD~ --format=fuller --stdout > "$logsFolder/${commit}.patch" 2> /dev/null
 
     # Call the user-defined pre-compile hook
     callIfDefined compile_pre_hook
