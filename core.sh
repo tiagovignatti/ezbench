@@ -35,12 +35,12 @@
 #       - 11: Need a profile name after the -P option
 #       - 12: The profile does not exist
 #       - 13: Missing optarg after a parameter
-#       - 14: Missing git repository directory
+#       - 14: Missing repository directory
 #
 #   OS:
 #       - 30: The shell does not support globstat
 #       - 31: Cannot create the log folder
-#       - 32: Cannot move to the git repo directory
+#       - 32: Cannot move to the repo directory
 #
 #   Git:
 #       - 50: Unable to preserve dirty state of the repository
@@ -149,7 +149,7 @@ function show_help {
     echo ""
     echo "    Optional arguments:"
     echo "        -P <profile name>"
-    echo "        -p <path_git_repo>"
+    echo "        -p <path_repo>"
     echo "        -r <benchmarking rounds> (default: 3)"
     echo "        -b <benchmark regexp> include these benchmarks to run"
     echo "        -B <benchmark regexp> exclude these benchamrks from running"
@@ -203,7 +203,7 @@ while getopts "$optString" opt; do
         show_help
         exit 0
         ;;
-    p)  gitRepoDir=$OPTARG
+    p)  repoDir=$OPTARG
         ;;
     N)  reportName=$OPTARG
         ;;
@@ -285,19 +285,19 @@ trap __ezbench_finish__ INT # Needed for zsh
 callIfDefined ezbench_pre_hook
 
 # Check the git repo, saving then displaying the HEAD commit
-if [ -z "$gitRepoDir" ]
+if [ -z "$repoDir" ]
 then
     echo "ERROR: You did not specify a git repository path (-p). Aborting..."
     exit 14
 fi
-cd "$gitRepoDir" || exit 1
+cd "$repoDir" || exit 1
 commit_head=$(git rev-parse HEAD 2>/dev/null)
 if [ $? -ne 0 ]
 then
-    echo "ERROR: The path '$gitRepoDir' does not contain a valid git repository. Aborting..."
+    echo "ERROR: The path '$repoDir' does not contain a valid git repository. Aborting..."
     exit 1
 fi
-printf "Repo = $gitRepoDir, HEAD = $commit_head"
+printf "Repo = $repoDir, HEAD = $commit_head"
 
 deployedVersion=$(read_git_version_deployed)
 [ $? -eq 0 ] && printf ", deployed version = $deployedVersion"
@@ -307,7 +307,7 @@ echo
 stash=$(git stash create)
 if [ $? -ne 0 ]
 then
-    echo "ERROR: Unable to preserve dirty state in '$gitRepoDir'. Aborting..."
+    echo "ERROR: Unable to preserve dirty state in '$repoDir'. Aborting..."
     exit 50
 fi
 [ -n "$stash" ] && echo "Preserving work-in-progress"
@@ -450,7 +450,7 @@ function compile_and_deploy {
     version=$(read_git_version_deployed)
 
     # Make sure we are in the right folder
-    cd "$gitRepoDir" || exit 31
+    cd "$repoDir" || exit 31
 
     # Select the commit of interest
     if [ "$commit" == "$stash" ]
