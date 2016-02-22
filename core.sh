@@ -43,7 +43,7 @@
 #       - 32: Cannot move to the repo directory
 #
 #   Git:
-#       - 50: Invalid commit ID
+#       - 50: Invalid version ID
 #
 #   Compilation & deployment:
 #       - 70: Compilation or deployment failed
@@ -155,7 +155,7 @@ function show_help {
     echo "        -m <make and deploy command> (default: 'make -j8 install', '' to skip the compilation)"
     echo "        -N <log folder's name> (default: current date and time)"
     echo "        -T <path> source the test definitions from this folder"
-    echo "        -k dry run, do not compile any commit or execute any benchmark"
+    echo "        -k dry run, do not compile any version or execute any benchmark"
     echo "        -c configuration shell script to be run after user_parameters.sh"
     echo ""
     echo "    Other actions:"
@@ -254,7 +254,7 @@ function read_git_version_deployed() {
 
 # functions to call on exit
 function __ezbench_reset_git_state__ {
-    git reset --hard "$commit_head" 2> /dev/null
+    git reset --hard "$version_head" 2> /dev/null
 }
 
 function __ezbench_finish__ {
@@ -289,32 +289,32 @@ then
     exit 14
 fi
 cd "$repoDir" || exit 1
-commit_head=$(git rev-parse HEAD 2>/dev/null)
+version_head=$(git rev-parse HEAD 2>/dev/null)
 if [ $? -ne 0 ]
 then
     echo "ERROR: The path '$repoDir' does not contain a valid git repository. Aborting..."
     exit 1
 fi
-printf "Repo = $repoDir, HEAD = $commit_head"
+printf "Repo = $repoDir, Version = $version_head"
 
 deployedVersion=$(read_git_version_deployed)
 [ $? -eq 0 ] && printf ", deployed version = $deployedVersion"
 echo
 
-commitList=
+versionList=
 for id in "$@"; do
     if [[ $id =~ \.\. ]]; then
-        commitList+=$(git rev-list --abbrev-commit --reverse "$id" 2> /dev/null)
+        versionList+=$(git rev-list --abbrev-commit --reverse "$id" 2> /dev/null)
     else
-        commitList+=$(git rev-list --abbrev-commit -n 1 "$(git rev-parse "$id" 2> /dev/null)" 2> /dev/null)
+        versionList+=$(git rev-list --abbrev-commit -n 1 "$(git rev-parse "$id" 2> /dev/null)" 2> /dev/null)
     fi
     [ $? -ne 0 ] && printf "ERROR: Invalid commit ID '$id'\n" && exit 50
     commitList+=" "
 done
 
 # Seed the results with the last round?
-commitListLog="$logsFolder/commit_list"
-last_commit=$(tail -1 "$commitListLog" 2>/dev/null | cut -f 1 -d ' ')
+versionListLog="$logsFolder/commit_list"
+last_version=$(tail -1 "$versionListLog" 2>/dev/null | cut -f 1 -d ' ')
 
 # Generate the actual list of tests
 typeset -A testNames
@@ -365,8 +365,8 @@ for test_dir in ${testsDir:-$ezBenchDir/tests.d}; do
             testUnit[$total_tests]=$test_unit
             testInvert[$total_tests]=$test_invert
 
-            last_result="$logsFolder/${last_commit}_result_${t}"
-            if [ -e "$logsFolder/${last_commit}_result_${t}" ]; then
+            last_result="$logsFolder/${last_version}_result_${t}"
+            if [ -e "$logsFolder/${last_version}_result_${t}" ]; then
                 testPrevFps[$total_tests]=$(cat "$last_result")
             fi
             unset last_result
@@ -380,7 +380,7 @@ for test_dir in ${testsDir:-$ezBenchDir/tests.d}; do
 done
 total_round_time=${total_round_time%.*}
 echo
-unset last_commit
+unset last_version
 
 missing_tests=
 for t in $testsList; do
@@ -401,19 +401,19 @@ then
     # currently deployed
     if [ -n "$deployedVersion" ]
     then
-        printf "WARNING: Cannot deploy new versions, forcing the commit list to $deployedVersion\n"
-        commitList=$deployedVersion
+        printf "WARNING: Cannot deploy new versions, forcing the version list to $deployedVersion\n"
+        versionList=$deployedVersion
     fi
 else
     avgBuildTime=$(git config --get ezbench.average-build-time 2>/dev/null || echo 30)
 fi
 
-# finish computing the list of commits
-num_commits=$(wc -w <<< $commitList)
-printf "Testing %d commits: %s\n" $num_commits "$(echo "$commitList" | tr '\n' ' ')"
+# finish computing the list of versions
+num_versions=$(wc -w <<< $versionList)
+printf "Testing %d versions: %s\n" $num_versions "$(echo "$versionList" | tr '\n' ' ')"
 
 # Estimate the execution time
-secs=$(( ($total_round_time * $rounds + $avgBuildTime) * $num_commits))
+secs=$(( ($total_round_time * $rounds + $avgBuildTime) * $num_versions))
 finishDate=$(date +"%y-%m-%d - %T" --date="$secs seconds")
 printf "Estimated finish date: $finishDate (%02dh:%02dm:%02ds)\n\n" $(($secs/3600)) $(($secs%3600/60)) $(($secs%60))
 startTime=`date +%s`
@@ -432,31 +432,31 @@ meh_color=$c_bright_yellow
 
 function compile_and_deploy {
     # Accessible variables
-    # $commit     [RO]: SHA1 id of the current commit
-    # $commitName [RO]: Name of the commit
+    # $version    [RO]: SHA1 id of the current version
+    # $versionName [RO]: Name of the version
 
-    # early exit if the deployed version is the wanted commit
+    # early exit if the deployed version is the wanted version
     version=$(read_git_version_deployed)
 
     # Make sure we are in the right folder
     cd "$repoDir" || exit 31
 
-    # Select the commit of interest
-	if [ -z "$(grep ^"$commit" "$commitListLog" 2> /dev/null)" ]
+    # Select the version of interest
+	if [ -z "$(grep ^"$version" "$versionListLog" 2> /dev/null)" ]
 	then
-		git show --format="%h %s" -s "$commit" >> "$commitListLog"
+		git show --format="%h %s" -s "$version" >> "$versionListLog"
 	fi
-	[ $? -eq 0 ] && [[ "$version" =~ "$commit" ]] && return 0
+	[ $? -eq 0 ] && [[ "$version" =~ "$version" ]] && return 0
 
-	git reset --hard "$commit" > /dev/null
+	git reset --hard "$version" > /dev/null
 	git show --format="%Cblue%h%Creset %Cgreen%s%Creset" -s
-	git format-patch HEAD~ --format=fuller --stdout > "$logsFolder/${commit}.patch" 2> /dev/null
+	git format-patch HEAD~ --format=fuller --stdout > "$logsFolder/${version}.patch" 2> /dev/null
 
     # Call the user-defined pre-compile hook
     callIfDefined compile_pre_hook
 
-    # Compile the commit and check for failure. If it failed, go to the next commit.
-    compile_logs=$logsFolder/${commit}_compile_log
+    # Compile the version and check for failure. If it failed, go to the next version.
+    compile_logs=$logsFolder/${version}_compile_log
     compile_start=$(date +%s)
     eval "$makeAndDeployCmd" > "$compile_logs" 2>&1
     local exit_code=$?
@@ -470,7 +470,7 @@ function compile_and_deploy {
         printf "Exiting with error code $exit_code\n" >> "$compile_logs"
     fi
 
-    # Reset to the original commit early
+    # Reset to the original version early
    __ezbench_reset_git_state__
 
     # Call the user-defined post-compile hook
@@ -499,9 +499,9 @@ function compile_and_deploy {
 
     # Check that the deployed image is the right one
     version=$(read_git_version_deployed)
-    if [ $? -eq 0 ] && [[ ! "$version" =~ "$commit" ]]
+    if [ $? -eq 0 ] && [[ ! "$version" =~ "$version" ]]
     then
-        printf "    ${c_bright_red}ERROR${c_reset}: The deployed version ($version) does not match the wanted one($commit)\n"
+        printf "    ${c_bright_red}ERROR${c_reset}: The deployed version ($version) does not match the wanted one($version)\n"
         exit 73
     fi
 }
@@ -518,11 +518,11 @@ then
     exit 0
 fi
 
-# Iterate through the commits
-for commit in $commitList
+# Iterate through the versions
+for version in $versionList
 do
-    # compile and deploy the commit
-    compile_and_deploy $commit
+    # compile and deploy the version
+    compile_and_deploy $version
 
     # Iterate through the tests
     fpsALL=""
@@ -531,7 +531,7 @@ do
         benchName=${testNames[$t]}
 
         # Generate the logs file names
-        fps_logs=$logsFolder/${commit}_bench_${testNames[$t]}
+        fps_logs=$logsFolder/${version}_bench_${testNames[$t]}
         error_logs=${fps_logs}.errors
 
         # Find the first run id available
@@ -548,7 +548,7 @@ do
             else
                 direction="less is better"
             fi
-            echo "# ${testUnit[$t]} ($direction) of '${testNames[$t]}' using commit ${commit}" > "$fps_logs"
+            echo "# ${testUnit[$t]} ($direction) of '${testNames[$t]}' using version ${version}" > "$fps_logs"
             run=0
         fi
 
@@ -594,7 +594,7 @@ do
             result=$(echo "$statistics" | cut -d ' ' -f 1)
             statistics=$(echo "$statistics" | cut -d ' ' -f 2-)
         }
-        echo $result > $logsFolder/${commit}_result_${testNames[$t]}
+        echo $result > $logsFolder/${version}_result_${testNames[$t]}
         if [ -z "${testPrevFps[$t]}" ]; then
             testPrevFps[$t]=$result
         fi

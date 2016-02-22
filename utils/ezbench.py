@@ -145,8 +145,8 @@ class Ezbench:
         deployed_commit = ""
         repo_dir = ""
         head_commit = ""
-        re_commit_list = re.compile('^Testing \d+ commits: ')
-        re_repo = re.compile('^Repo = (.*), HEAD = (.*), deployed version = (.*)$')
+        re_commit_list = re.compile('^Testing \d+ versions: ')
+        re_repo = re.compile('^Repo = (.*), Version = (.*), deployed version = (.*)$')
         for line in output.split("\n"):
             m_commit_list = re_commit_list.match(line)
             m_repo = re_repo.match(line)
