@@ -86,7 +86,7 @@ function db_add_git() {
     git status > /dev/null 2>&1 || exit_error "Error: the folder '$git_repo' is not a git repo."
 
     git_sha1=$(git rev-parse --short HEAD)
-    tracked_branch=$(git branch -vv --no-color | grep --color=never "^*" | cut -d '[' -f 2 | cut -d ']' -f 1)
+    tracked_branch=$(git branch -vv --no-color | grep --color=never "^*" | cut -d '[' -f 2 | cut -d ']' -f 1 | cut -d : -f 1)
     remote=$(echo "$tracked_branch" | cut -d '/' -f 1)
     branch=$(echo "$tracked_branch" | cut -d '/' -f 2)
 
