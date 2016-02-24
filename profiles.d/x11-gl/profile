@@ -1,0 +1,28 @@
+source "$ezBenchDir/profiles.d/utils/common.sh"
+source "$ezBenchDir/profiles.d/utils/no-repo.sh"
+
+# Accessible variables
+# $ezBenchDir            [RO]: Directory of the ezbench
+# ------------------
+# $rounds                [WO]: Default number of rounds
+# $makeAndDeployCmd      [WO]: Command to compile and deploy the current git HEAD
+# $gitVersionDeployedCmd [WO]: Command to print out the sha1 of the version currently deployed
+# $lastNCommits          [WO]: Specifies how many commits back should be benchmarked
+# $uptoCommit            [WO]: Define starting from which commit $lastNCommits should count
+# $uptoCommit            [WO]: Define starting from which commit $lastNCommits should count
+# $gitRepoDir            [WO]: Path to the git repo to use for this profile
+# $reportName            [WO]: Name to give to your report
+# $testsDir              [WO]: List of pathes to the directories containing the tests for this profile
+# $testsList             [WO]: List of tests that should be ran in this profile
+# $testExcludeList       [WO]: List of tests that should be excluded in this profile
+
+function profile_repo_deployed_version() {
+    version=$(glxinfo | grep "OpenGL core profile version string:" | cut -d : -f 2 | cut -d ' ' -f 2-)
+    version="${version// /_}"
+    version="${version//./_}"
+    version="${version//\(/}"
+    version="${version//\)/}"
+    printf %q "$version"
+}
+
+rounds=3
