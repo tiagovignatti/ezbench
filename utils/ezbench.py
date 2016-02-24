@@ -1240,7 +1240,7 @@ def genPerformanceReport(log_folder, silentMode = False):
     # Find all the result files and sort them by sha1
     files_list = os.listdir()
     benchFiles = dict()
-    commit_bench_file_re = re.compile(r'^([0-9a-f]+)_bench_[^\.]+$')
+    commit_bench_file_re = re.compile(r'^(.+)_bench_[^\.]+$')
     for f in files_list:
         m = commit_bench_file_re.match(f)
         if m is not None:

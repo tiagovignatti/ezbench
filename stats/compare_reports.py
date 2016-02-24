@@ -713,19 +713,21 @@ ${btag}${r}: ${db["commits"][commit]['reports'][r][benchmark].average} ${output_
 
 </html>
 """
-
-
-# Create the html file
-print("Generating the HTML")
-
-if args.title is not None:
-    title = args.title
+# Check that we have commits
+if len(db["commits"]) == 0:
+	print("No commits were found, cancelling...")
 else:
-    title = "Performance report on the run named '{run_name}'".format(run_name=report_name)
+	# Create the html file
+	print("Generating the HTML")
 
-html = Template(html_template).render(title=title, db=db, output_unit=output_unit,
-				      default_commit=list(db["commits"])[-1])
+	if args.title is not None:
+		title = args.title
+	else:
+		title = "Performance report on the run named '{run_name}'".format(run_name=report_name)
 
-with open(args.output, 'w') as f:
-    f.write(html)
-    print("Output HTML generated at: {0}".format(args.output))
+	html = Template(html_template).render(title=title, db=db, output_unit=output_unit,
+						default_commit=list(db["commits"])[-1])
+
+	with open(args.output, 'w') as f:
+		f.write(html)
+		print("Output HTML generated at: {0}".format(args.output))
