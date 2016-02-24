@@ -1298,6 +1298,9 @@ def genPerformanceReport(log_folder, silentMode = False):
             if len(result.data) == 0:
                 continue
 
+            if result.unit_str is None:
+                result.unit_str = "FPS"
+
             # Check that the result file has the same default v
             if benchmark.unit_str != result.unit_str:
                 if benchmark.unit_str != "undefined":
