@@ -98,7 +98,9 @@ function run_bench {
     fi
 
     callIfDefined run_bench_pre_hook
+    export REPO_COMPILE_AND_DEPLOY_VERSION=$version
     eval $cmd
+    undef REPO_COMPILE_AND_DEPLOY_VERSION
     callIfDefined run_bench_post_hook
 
     if [ -f "$env_dump_path" ]; then
