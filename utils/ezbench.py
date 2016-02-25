@@ -518,8 +518,7 @@ class SmartEzbench:
             self.__log(Criticality.EE, "You cannot change the configuration script of a report that already has results. Start a new one.")
         self.__release_lock()
 
-    def add_benchmark(self, commit, benchmark, rounds = None):
-        self.__reload_state(keep_lock=True)
+    def __add_benchmark_unlocked__(self, commit, benchmark, rounds = None):
         if commit not in self.state['commits']:
             self.state['commits'][commit] = dict()
             self.state['commits'][commit]["benchmarks"] = dict()
@@ -542,6 +541,24 @@ class SmartEzbench:
         # Delete a commit that has no benchmark
         if len(self.state['commits'][commit]['benchmarks']) == 0:
             del self.state['commits'][commit]
+
+    def add_benchmark(self, commit, benchmark, rounds = None):
+        self.__reload_state(keep_lock=True)
+        self.__add_benchmark_unlocked__(commit, benchmark, rounds)
+        self.__save_state()
+        self.__release_lock()
+
+    def add_testset(self, commit, testset, rounds = None):
+        self.__reload_state(keep_lock=True)
+
+        if rounds is None:
+            rounds = 1
+        else:
+            rounds = int(rounds)
+
+        for benchmark in sorted(testset.tests.keys()):
+            self.__add_benchmark_unlocked__(commit, benchmark,
+                                            testset.tests[benchmark] * rounds)
 
         self.__save_state()
         self.__release_lock()
