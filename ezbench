@@ -55,17 +55,62 @@ parser.add_argument("-b", dest='benchmarks', help="<benchmark regexp> include th
                     action="append")
 parser.add_argument("-B", dest='benchmarks_exclude', help="<benchmark regexp> exclude these benchamrks from running",
                     action="append")
+parser.add_argument("-t", dest='testsets', help="Test sets to run", action="append")
+parser.add_argument("-T", dest='list_testsets', help="List the available testsets", action="store_true")
 parser.add_argument("-c", dest='commits', help="Commits to run the benchmarks on",
                     action="append")
 parser.add_argument("-r", dest='rounds', help="Number of execution rounds",
                     action="store", type=int, nargs='?')
 parser.add_argument("-p", dest='profile', help="Profile to be used by ezbench",
                     action="store")
-parser.add_argument("report_name")
+parser.add_argument("report_name", nargs='?')
 parser.add_argument("command", help="Command to execute", nargs='?',
                     choices=('start', 'run', 'pause', 'abort', 'status'))
 args = parser.parse_args()
 
+if args.list_testsets:
+    testsets = Testset.list(ezbench_dir)
+    if len(testsets) > 0:
+        print("Available test sets:")
+        for testset in testsets:
+            if testset.parse(None, silent=False):
+                print(" * {}\n\t{}".format(testset.name, testset.description))
+            else:
+                print(" * {}: invalid because of one or more errors".format(testset.name))
+    else:
+        print("No test sets are available")
+    sys.exit(0)
+
+if args.testsets is not None:
+     # remove duplicates in the lists
+    testsets = list(set(break_lists(args.testsets)))
+
+    ezbench = Ezbench(ezbench_path=ezbench_dir + "/core.sh")
+    benchmarks = ezbench.available_benchmarks()
+
+    # Check all the testsets
+    testsets_to_be_added = []
+    for name in testsets:
+        testset = Testset.open(ezbench_dir, name)
+        if testset is None:
+            print("Cannot find a test set named '{}'".format(name))
+            sys.exit(1)
+        if not testset.parse(benchmarks):
+            print("Invalid test set named {}, abort...".format(name))
+            sys.exit(1)
+
+        if args.report_name is None:
+            print("The test set '{}' contains the following tests:".format(name))
+            for test in sorted(testset.tests.keys()):
+                print("\t{} --> {} rounds".format(test, testset.tests[test]))
+            print("")
+            sys.exit(0)
+
+        testsets_to_be_added.append(testset)
+
+if args.report_name is None:
+    print("Error: The report name is missing")
+    sys.exit(1)
 sbench = SmartEzbench(ezbench_dir, args.report_name)
 
 if sbench.profile() is None and args.profile is not None:
@@ -96,6 +141,28 @@ if args.commits is not None and args.benchmarks is not None:
         for bench in run_info.benchmarks:
             print("add {count} runs to {bench} on {commit}".format(count=args.rounds, bench=bench, commit=commit))
             sbench.add_benchmark(commit, bench, args.rounds)
+
+if args.commits is not None and len(testsets_to_be_added) > 0:
+    # remove duplicates in the lists
+    commits = list(set(break_lists(args.commits)))
+
+    # we cannot fetch the git sha1 without a profile/git repo
+    if sbench.profile() is None:
+        print("No profile is set, set one first with -p before adding benchmark runs")
+        sys.exit(1)
+
+    # get the list of benchmarks that actually need to be ran
+    ezbench = Ezbench(ezbench_path=ezbench_dir + "/core.sh",
+                  profile=sbench.profile(),
+                  report_name="tmp")
+    run_info = ezbench.run_commits(commits, [], dry_run=True)
+    if not run_info.success():
+        sys.exit(1)
+
+    # Add the testsets specified
+    for commit in run_info.commits:
+        for testset in testsets_to_be_added:
+            sbench.add_testset(commit, testset, args.rounds)
 
 if args.command is not None:
     if args.command == "start":
