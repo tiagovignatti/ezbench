@@ -92,9 +92,13 @@ class Ezbench:
         self.tests_folder = tests_folder
         self.run_config_script = run_config_script
 
-    def __ezbench_cmd_base(self, benchmarks, benchmark_excludes = [], rounds = None, dry_run = False):
+    def __ezbench_cmd_base(self, benchmarks = [], benchmark_excludes = [], rounds = None, dry_run = False, list_benchmarks = False):
         ezbench_cmd = []
         ezbench_cmd.append(self.ezbench_path)
+
+        if list_benchmarks:
+            ezbench_cmd.append("-l")
+            return ezbench_cmd
 
         if self.profile is not None:
             ezbench_cmd.append("-P"); ezbench_cmd.append(self.profile)
@@ -154,8 +158,8 @@ class Ezbench:
             m_repo = re_repo.match(line)
             if line.startswith("Tests that will be run:"):
                 benchmarks = line[24:].split(" ")
-                if benchmarks[-1] == '':
-                    benchmarks.pop(-1)
+            elif line.startswith("Available tests:"):
+                benchmarks = line[17:].split(" ")
             elif line.find("estimated finish date:") >= 0:
                 pred_exec_time = ""
             elif m_repo is not None:
@@ -166,6 +170,9 @@ class Ezbench:
                     commits.remove('')
             elif exit_code == EzbenchExitCode.TEST_INVALID_NAME and line.endswith("do not exist"):
                 print(line)
+
+        if len(benchmarks) > 0 and benchmarks[-1] == '':
+            benchmarks.pop(-1)
 
         if exit_code != EzbenchExitCode.NO_ERROR:
             print("\n\nERROR: The following command '{}' failed with the error code {}. Here is its output:\n\n'{}'".format(" ".join(cmd), exit_code, output))
@@ -180,6 +187,10 @@ class Ezbench:
             ezbench_cmd.append(commit)
 
         return self.__run_ezbench(ezbench_cmd, dry_run, verbose)
+
+    def available_benchmarks(self):
+        ezbench_cmd = self.__ezbench_cmd_base(list_benchmarks = True)
+        return self.__run_ezbench(ezbench_cmd).benchmarks
 
 # Smart-ezbench-related classes
 class Criticality(Enum):
