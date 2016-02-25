@@ -81,6 +81,7 @@ if args.commits is not None and args.benchmarks is not None:
     # we cannot fetch the git sha1 without a profile/git repo
     if sbench.profile() is None:
         print("No profile is set, set one first with -p before adding benchmark runs")
+        sys.exit(1)
 
     # get the list of benchmarks that actually need to be ran
     ezbench = Ezbench(ezbench_path=ezbench_dir + "/core.sh",
