@@ -192,6 +192,121 @@ class Ezbench:
         ezbench_cmd = self.__ezbench_cmd_base(list_benchmarks = True)
         return self.__run_ezbench(ezbench_cmd).benchmarks
 
+# Test sets, needed by SmartEzbench
+class Testset:
+    def __init__(self, filepath, name):
+        self.filepath = filepath
+        self.name = name
+        self.description = "No description"
+        self.tests = dict()
+
+        self._ln = -1
+
+    def __print__(self, msg, silent = False):
+        if not silent:
+            print("At {}:{}, {}".format(self.filepath, self._ln, msg))
+
+    def __include_set__(self, availableTestSet, reg_exp, rounds, silent = False):
+        # Convert the rounds number to integer and validate it
+        try:
+            rounds = int(rounds)
+            if rounds < 0:
+                self.__print__("the number of rounds cannot be negative ({})".format(rounds), silent)
+                return False
+        except ValueError:
+            self.__print__("the number of rounds is invalid ({})".format(rounds), silent)
+            return False
+
+        # Now add the tests needed
+        try:
+            inc_re = re.compile(reg_exp)
+        except Exception as e:
+            self.__print__("invalid regular expression --> {}".format(e), silent)
+        tests_added = 0
+        for test in availableTestSet:
+            if inc_re.search(test):
+                self.tests[test] = rounds
+                tests_added += 1
+
+        if tests_added == 0:
+            self.__print__("no benchmarks got added", silent)
+            return False
+        else:
+            return True
+
+    def __exclude_set__(self, reg_exp, silent = False):
+        # Now remove the tests needed
+        try:
+            inc_re = re.compile(reg_exp)
+        except Exception as e:
+            self.__print__("invalid regular expression --> {}".format(e), silent)
+
+        to_remove = []
+        for test in self.tests:
+            if inc_re.search(test):
+                to_remove.append(test)
+
+        if len(to_remove) > 0:
+            for entry in to_remove:
+                del self.tests[entry]
+        else:
+            self.__print__("exclude '{}' has no effect".format(reg_exp), silent)
+
+        return True
+
+    def parse(self, availableTestSet, silent = False):
+        try:
+            with open(self.filepath) as f:
+                self._ln = 1
+                for line in f.readlines():
+                    fields = line.split(" ")
+                    if fields[0] == "description":
+                        if len(fields) < 2:
+                            self.__print__("description takes 1 argument", silent)
+                            return False
+                        self.description = " ".join(fields[1:])
+                    elif fields[0] == "include":
+                        if availableTestSet is None:
+                            continue
+                        if len(fields) != 3:
+                            self.__print__("include takes 2 arguments", silent)
+                            return False
+                        if not self.__include_set__(availableTestSet, fields[1], fields[2], silent):
+                            return False
+                    elif fields[0] == "exclude":
+                        if availableTestSet is None:
+                            continue
+                        if len(fields) != 2:
+                            self.__print__("exclude takes 1 argument", silent)
+                            return False
+                        if not self.__exclude_set__(fields[1].strip(), silent):
+                            return False
+                    elif fields[0] != "\n" and fields[0][0] != "#":
+                        self.__print__("invalid line", silent)
+                    self._ln += 1
+
+                return True
+        except EnvironmentError:
+            return False
+
+    @classmethod
+    def list(cls, ezbench_dir):
+        testsets = []
+        for root, dirs, files in os.walk(ezbench_dir + '/testsets.d/'):
+            for f in files:
+                if f.endswith(".testset"):
+                    testsets.append(cls(root + f, f[0:-8]))
+
+        return testsets
+
+    @classmethod
+    def open(cls, ezbench_dir, name):
+        filename = name + ".testset"
+        for root, dirs, files in os.walk(ezbench_dir + '/testsets.d/'):
+            if filename in files:
+                return cls(root + filename, name)
+        return None
+
 # Smart-ezbench-related classes
 class Criticality(Enum):
     II = 0
