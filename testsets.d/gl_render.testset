@@ -1,0 +1,30 @@
+# Ezbench testset file
+#
+# This file is parsed linearly and every line is modifying the set of tests.
+#
+# Accepted lines:
+# description "Description of what the testset is for."
+# include test_name_or_reg_exp run_count
+# exclude test_name_or_reg_exp
+#
+# If an include line did not add any test, the testset is considered invalid.
+# If an exclude line did not delete any test, a warning is issued.
+
+description Benchmarks to be run every night to test the rendering speed
+
+# Do not use the window mode to avoid compositing cost
+include GLB27:.*:1080p:offscreen 3
+include GLB30:.*:fullscreen 3
+
+include unigine:.*:fullscreen 3
+
+include gputest:.*:fullscreen 3
+exclude gputest:tess_x16:fullscreen
+exclude gputest:tess_x32:fullscreen
+
+include lightsmark 3
+
+include xonotic:1080p:fullscreen 3
+
+# We do not want CPU tests
+exclude cpu
