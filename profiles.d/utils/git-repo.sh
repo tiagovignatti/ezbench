@@ -127,6 +127,7 @@ function profile_repo_set_compilation_time() {
 #   - $1 = version that needs to be prepared for compilation
 function profile_repo_compile_start() {
     [ -z "$1" ] && { echo "ERROR: No version specified"; return 71; }
+    [ ! -d "$DEPLOY_BASE_DIR" ] && { echo "ERROR: DEPLOY_BASE_DIR($DEPLOY_BASE_DIR) is not a folder"; return 71; }
 
     # Get information about the upstream
     cd "$repoDir" || return 71
