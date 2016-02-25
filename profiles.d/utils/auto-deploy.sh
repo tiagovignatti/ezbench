@@ -44,6 +44,8 @@ function auto_deploy_make_and_deploy() {
         local compile_start=$(date +%s)
 
         profile_repo_compile_start $version
+        local exit_code=$?
+        [ $exit_code -ne 0 ] && return $exit_code
 
         # Call the user-defined pre-compile hook
         callIfDefined compile_pre_hook
@@ -55,6 +57,8 @@ function auto_deploy_make_and_deploy() {
         callIfDefined compile_post_hook
 
         profile_repo_compile_stop
+        local exit_code=$?
+        [ $exit_code -ne 0 ] && return $exit_code
 
         # compute the compilation time
         local compile_end=$(date +%s)
