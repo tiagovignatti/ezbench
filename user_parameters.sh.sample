@@ -7,9 +7,9 @@ SHA1_DB=$ezBenchDir/SHA1_DB
 #WANTED_CPU_FREQ_kHZ=2000000
 
 # Repo addresses
-REPO_MESA=/opt/git/mesa
-REPO_LINUX=/opt/git/linux
-REPO_PERF_BISECT='/opt/git/bisect-test' # git://people.freedesktop.org/~mperes/bisect-test
+REPO_MESA=/opt/source/mesa
+REPO_LINUX=/opt/source/linux
+REPO_PERF_BISECT='/opt/source/bisect-test' # git://people.freedesktop.org/~mperes/bisect-test
 
 # Repo compilation parameters
 REPO_MESA_PARAMETERS='--prefix=$REPO_MESA_PREFIX \
@@ -38,8 +38,8 @@ REPO_MESA_PARAMETERS='--prefix=$REPO_MESA_PREFIX \
     --with-clang-libdir=/usr/lib'
 REPO_LINUX_CONFIG=/path/to/linux/.config
 
-# Install address of the perf_bisect benchmark
-PERF_BISECT='/usr/local/bin/ezbench_perf_bisect.py'
+# folder that will receive the different builds
+DEPLOY_BASE_DIR=$ezBenchDir/builds
 
 # Libraries options
 LIBFRAMETIME64_SO=/usr/lib/libframetime.so
