@@ -12,8 +12,8 @@ REPO_LINUX=/opt/source/linux
 REPO_PERF_BISECT='/opt/source/bisect-test' # git://people.freedesktop.org/~mperes/bisect-test
 
 # Repo compilation parameters
-REPO_MESA_PARAMETERS='--prefix=$REPO_MESA_PREFIX \
-    --with-dri-driverdir=$REPO_MESA_PREFIX/lib/dri \
+REPO_MESA_PARAMETERS="--prefix=\$REPO_MESA_PREFIX \
+    --with-dri-driverdir=\$REPO_MESA_PREFIX/lib/dri \
     --with-gallium-drivers=r300,r600,radeonsi,nouveau,svga,swrast \
     --with-dri-drivers=i915,i965,r200,radeon,nouveau,swrast \
     --with-egl-platforms=x11,drm,wayland \
@@ -35,7 +35,7 @@ REPO_MESA_PARAMETERS='--prefix=$REPO_MESA_PREFIX \
     --enable-omx \
     --enable-nine \
     --enable-opencl --enable-opencl-icd \
-    --with-clang-libdir=/usr/lib'
+    --with-clang-libdir=/usr/lib"
 REPO_LINUX_CONFIG=/path/to/linux/.config
 
 # folder that will receive the different builds
