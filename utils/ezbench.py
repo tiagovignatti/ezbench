@@ -144,6 +144,7 @@ class Ezbench:
         benchmarks = []
         pred_exec_time = 0
         deployed_commit = ""
+        repo_type = ""
         repo_dir = ""
         head_commit = ""
         re_commit_list = re.compile('^Testing \d+ versions: ')
