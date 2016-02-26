@@ -184,6 +184,23 @@ currently in the state "RUN".
     ./ezbench mesa-tracking-pub-benchmarks run
     utils/ezbenchd.py
 
+=== Systemd integration ===
+
+Here is an example of systemd unit you can use to run ezbenchd as a daemon. This is
+needed if you want to test the kernel as you need to reboot.
+
+	[Unit]
+	Description=Ezbench's daemon that executes the runs
+	Conflicts=getty@tty5.service
+	After=systemd-user-sessions.service getty@tty1.service plymouth-quit.service
+
+	[Service]
+	ExecStart=/.../ezbench/utils/ezbenchd.py
+	User=$USER
+	Group=$USER
+
+	[Install]
+	WantedBy=multi-user.target
 
 == stats/gen_report.py ==
 
