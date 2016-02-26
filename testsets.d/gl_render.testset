@@ -16,7 +16,7 @@ description Benchmarks to be run every night to test the rendering speed
 include GLB27:.*:1080p:offscreen 3
 include GLB30:.*:fullscreen 3
 
-include unigine:.*:fullscreen 3
+include unigine:.*:1080p:fullscreen 3
 
 include gputest:.*:fullscreen 3
 exclude gputest:tess_x16:fullscreen
