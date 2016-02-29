@@ -1549,23 +1549,29 @@ def convert_unit(value, input_unit, output_type):
 	if input_unit == output_type:
 		return value
 
+	if input_unit.lower() == "fps":
+		ir_fps = value
+	elif value == 0:
+		return 0
+
 	if input_unit == "ms":
 		ir_fps = 1.0e3 / value
 	elif input_unit == "us":
 		ir_fps = 1.0e6 / value
-	elif input_unit.lower() == "fps":
-		ir_fps = value
 
 	if ir_fps == -1:
 		print("convert_unit: Unknown input type " + input_type)
 		return value
 
+	if output_type.lower() == "fps":
+		return ir_fps
+	elif ir_fps == 0:
+		return float('+inf')
+
 	if output_type == "ms":
 		return 1.0e3 / ir_fps
 	elif output_type == "us":
 		return 1.0e6 / ir_fps
-	elif output_type.lower() == "fps":
-		return ir_fps
 
 	print("convert_unit: Unknown output type " + output_type)
 	return value
