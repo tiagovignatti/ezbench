@@ -47,7 +47,7 @@ html_name="index.html"
 # parse the options
 parser = argparse.ArgumentParser()
 parser.add_argument("--title", help="Set the title for the report")
-parser.add_argument("--unit", help="Set the output unit (Default: ms)")
+parser.add_argument("--unit", help="Set the output unit (Default: fps)")
 parser.add_argument("--output", help="Report html file path", required=True)
 parser.add_argument("--commit_url", help="HTTP URL pattern, {commit} contains the SHA1")
 parser.add_argument("--verbose", help="Be more verbose when generating the report", action="store_true")
@@ -58,7 +58,7 @@ args = parser.parse_args()
 if args.unit is not None:
 	output_unit = args.unit
 else:
-	output_unit = "ms"
+	output_unit = "fps"
 
 # Parse the results and then create one report with the following structure:
 # commit -> report_name -> benchmark -> bench results
