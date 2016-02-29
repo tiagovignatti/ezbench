@@ -141,7 +141,7 @@ for log_folder in args.log_folder:
 			# Compare to the target
 			if (not result.benchmark.full_name in db["targets"] or
 			   db["targets"][result.benchmark.full_name] == 0):
-				db["targets"][result.benchmark.full_name] = average
+				db["targets"][result.benchmark.full_name] = result.average
 
 			# Environment
 			if result.benchmark.full_name not in human_envs:
