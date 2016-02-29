@@ -139,7 +139,8 @@ for log_folder in args.log_folder:
 			result.margin_str = float("{0:.2f}".format(result.margin() * 100))
 
 			# Compare to the target
-			if not result.benchmark.full_name in db["targets"]:
+			if (not result.benchmark.full_name in db["targets"] or
+			   db["targets"][result.benchmark.full_name] == 0):
 				db["targets"][result.benchmark.full_name] = average
 
 			# Environment
@@ -445,7 +446,11 @@ html_template="""
                         % if benchmark in db["commits"][commit]['reports'][report]:
 <%
     result = db["commits"][commit]['reports'][report][benchmark]
-    diff_target = result.average * 100 / db['targets'][benchmark]
+    target = db['targets'][benchmark]
+    if target != 0:
+        diff_target = result.average * 100.0 / target
+    else:
+        diff_target = 100
     diff_target = "{0:.2f}".format(diff_target)
 %>\\
 , ${diff_target}, "${tooltip_commit_table(commit)}<h4>Perf</h4><table><tr><td><b>Target</b></td><td>${diff_target} %</td></tr><tr><td><b>Raw value</b></td><td>${result.average} ${output_unit} +/- ${result.margin_str}% (n=${len(result.data)})</td></tr></table>"\\
