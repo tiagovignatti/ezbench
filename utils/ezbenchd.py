@@ -58,6 +58,7 @@ signal.signal(signal.SIGINT, stop_handler)
 signal.signal(signal.SIGHUP, reload_conf_handler)
 
 reportStateModDate = dict()
+sbenches = dict()
 
 lastPoll = 0
 while not stop_requested:
@@ -65,7 +66,11 @@ while not stop_requested:
     reports = list_smart_ezbench_report_names(ezbench_dir, lastPoll)
     lastPoll = futureLastPoll
     for report_name in reports:
-        sbench = SmartEzbench(ezbench_dir, report_name)
+        if report_name not in sbenches:
+            sbench = SmartEzbench(ezbench_dir, report_name)
+            sbenches[report_name] = sbench
+        else:
+            sbench = sbenches[report_name]
         if sbench.running_mode() == RunningMode.RUN:
             sbench.run()
             sbench.schedule_enhancements()
