@@ -350,6 +350,7 @@ class SmartEzbench:
         self.smart_ezbench_state = self.log_folder + "/smartezbench.state"
         self.smart_ezbench_lock = self.log_folder + "/smartezbench.lock"
         self.smart_ezbench_log = self.log_folder + "/smartezbench.log"
+        self._report_cached = None
 
         self.state = dict()
         self.state['report_name'] = report_name
@@ -750,7 +751,10 @@ class SmartEzbench:
 
         return git_history
 
-    def report(self, git_history=list(), reorder_commits = True):
+    def report(self, git_history=list(), reorder_commits = True, cached_only = False):
+        if cached_only:
+            return self._report_cached
+
         if reorder_commits and git_history is None:
             git_history = self.git_history()
 
@@ -791,6 +795,11 @@ class SmartEzbench:
         r = genPerformanceReport(self.log_folder, silentMode = True)
         r.enhance_report(commits_rev_order, max_variance, perf_diff_confidence,
                          smallest_perf_change)
+
+        # FIXME: Have a proper tracking of state changes to say if this cache
+        # is up to date or not. This could be used later to avoid parsing the
+        # report every time.
+        self._report_cached = r
 
         # Check all events
         tasks = []
