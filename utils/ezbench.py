@@ -461,6 +461,9 @@ class SmartEzbench:
         else:
             return RunningMode(self.state['mode'])
 
+    def report_name(self):
+       return self.state['report_name']
+
     def set_running_mode(self, mode):
         self.__reload_state(keep_lock=True)
         if 'mode' not in self.state or self.state['mode'] != mode.value:
