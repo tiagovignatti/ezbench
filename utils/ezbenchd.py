@@ -54,6 +54,7 @@ args = parser.parse_args()
 
 # handle the signals systemd asks us to
 signal.signal(signal.SIGTERM, stop_handler)
+signal.signal(signal.SIGINT, stop_handler)
 signal.signal(signal.SIGHUP, reload_conf_handler)
 
 reportStateModDate = dict()
