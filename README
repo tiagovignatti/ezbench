@@ -189,6 +189,7 @@ currently in the state "RUN".
 Here is an example of systemd unit you can use to run ezbenchd as a daemon. This is
 needed if you want to test the kernel as you need to reboot.
 
+/etc/systemd/system/ezbenchd.service:
 	[Unit]
 	Description=Ezbench's daemon that executes the runs
 	Conflicts=getty@tty5.service
@@ -201,6 +202,51 @@ needed if you want to test the kernel as you need to reboot.
 
 	[Install]
 	WantedBy=multi-user.target
+
+=== Nightly tests ===
+
+There is currently no real support for nightly tests on ezbench. However, it is
+quite trivial to use systemd to schedule updates to the repos and schedule runs
+using ezbench's CLI interface.
+
+/etc/systemd/system/ezbenchd_repo_update.timer:
+	[Unit]
+	Description=Run this timer every day to update repos and schedule runs
+	[Timer]
+	OnCalendar=*-*-* 20:30:00
+	Persistent=true
+
+	[Install]
+	WantedBy=timers.target
+
+/etc/systemd/system/ezbenchd_repo_update.service:
+	[Unit]
+	Description=Task to update the source repos and schedule more runs
+
+	[Service]
+	Type=oneshot
+	WorkingDirectory=/.../ezbench
+	ExecStart=/bin/bash repo_update.sh
+	User=$USER
+	Group=$USER
+
+/.../ezbench/repo_update.sh:
+	#!/bin/bash
+
+	ezbench_dir=$(pwd)
+	source user_parameters.sh
+
+	set -x
+
+	if [ -n "$REPO_MESA" ]
+	then
+			cd "$REPO_MESA"
+			git fetch
+			git reset --hard origin/master
+
+			cd $ezbench_dir
+			./ezbench -t gl_render -c HEAD -p mesa mesa_nightly run
+	fi
 
 == stats/gen_report.py ==
 
