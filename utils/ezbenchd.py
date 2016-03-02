@@ -33,6 +33,162 @@ import signal
 import time
 import os
 
+def setup_http_server(bind_ip = "0.0.0.0", port = 8080):
+    from mako.template import Template
+    import http.server
+    import socket
+    import threading
+    import socketserver
+
+    list_template = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Ezbenchd: Status page</title>
+</head>
+
+<body>
+    <h1>Ezbenchd: Status page</h1>
+    <h2>Reports</h2>
+    <p>Here is the list of available reports</p>
+    <ul>
+        % for sbench in sbenches:
+        <%
+            sbench = sbenches[sbench]
+            report_name = sbench.report_name()
+        %>
+        <li>${report_name}: <a href="/report/${report_name}/">report</a>, <a href="/status/${report_name}/">status</a> (${sbench.running_mode().name})</li>
+        % endfor
+    </ul>
+</body>
+</html>
+"""
+
+    status_template = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Ezbenchd: Status page</title>
+<style>
+    a.button {
+        -webkit-appearance: button;
+        -moz-appearance: button;
+        appearance: button;
+
+        text-decoration: none;
+        color: initial;
+        padding: 3px;
+    }
+</style>
+</head>
+
+<%
+    report = sbench.report(cached_only = True)
+    mode = sbench.running_mode().name
+%>
+
+<body>
+    <h1>Ezbenchd report '${report_name}'</h1>
+    <h2>Status</h2>
+    <p>General information about the report</p>
+    <table>
+        <tr><th>Name</th><th>Value</th><th>Actions</th></tr>
+        <tr><td>Report name</td><td>${report_name}</td><td></td></tr>
+        <tr><td>Running mode</td><td>${mode}</td><td>
+            % if mode != "RUN":
+            <a href="/mode/${report_name}/run" class="button">Run</a>
+            % else:
+            <a href="/mode/${report_name}/pause" class="button">Pause</a>
+            % endif
+        </td></tr>
+        <tr><td>Log file</td><td></td><td><a href="/file/${report_name}/smartezbench.log" class="button">View</a></td></tr>
+    </table>
+    <h2>Events</h2>
+    <ul>
+        % if report is not None:
+            % for event in report.events:
+        <li>${event}</li>
+            % endfor
+        % else:
+            <li>No events</li>
+        % endif
+    </ul>
+</body>
+</html>
+"""
+
+    class CustomHTTPHandler(http.server.SimpleHTTPRequestHandler):
+        def parse_request(self, *args, **kwargs):
+            return super().parse_request(*args, **kwargs)
+
+        def do_GET(self):
+            response = 200
+            loc = ""
+            html = ""
+            m = re.search("^/([a-z]+)/(.*)/(.*)$", self.path)
+            if m is not None and len(m.groups()) >= 2:
+                cmd = m.groups()[0]
+                report_name = m.groups()[1]
+                args = m.groups()[2]
+
+                if cmd != "" and report_name != "":
+                    if cmd == "report":
+                        self.path = "/logs/" + report_name + "/index.html"
+                        return super().do_GET()
+                    if cmd == "file":
+                        self.path = "/logs/" + report_name + "/" + args
+                        return super().do_GET()
+                    elif cmd == "mode" or cmd == "status":
+                        sbench = sbenches[report_name]
+                        if cmd == "mode":
+                            if args == "run":
+                                sbench.set_running_mode(RunningMode.RUN)
+                                loc = "/status/{}/".format(report_name)
+                            elif args == "pause":
+                                sbench.set_running_mode(RunningMode.PAUSE)
+                                loc = "/status/{}/".format(report_name)
+                            else:
+                                html = "Invalid mode '{}'".format(args)
+
+                        html = Template(status_template).render(sbench=sbench,
+                                                                report_name=report_name)
+                else:
+                    response = 404
+                    html = "Report name '{}' does not exist".format(report_name)
+
+            if html == "" and loc == "":
+                html = Template(list_template).render(sbenches=sbenches)
+
+            if loc != "":
+                self.send_response(302)
+                self.send_header('Location', loc)
+            else:
+                self.send_response(response)
+                self.send_header("Content-type", "text/html")
+                self.send_header("Content-length", len(html))
+                self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+                self.send_header("Pragma", "no-cache")
+                self.send_header("Expires", "0")
+            self.end_headers()
+            self.wfile.write(str.encode(html))
+
+    class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+        pass
+
+    server = ThreadedTCPServer((bind_ip, port), CustomHTTPHandler)
+    server_thread = threading.Thread(target=server.serve_forever)
+    server_thread.daemon = True
+    server_thread.start()
+
+    setup_http_server.server = server
+    setup_http_server.server_thread = server_thread
+
+def teardown_htttp_server():
+    setup_http_server.server.shutdown()
+    setup_http_server.server.server_close()
+
 ezbench_dir = os.path.abspath(sys.path[0] + "/../")
 stop_requested = False
 
@@ -50,7 +206,13 @@ def reload_conf_handler(signum, frame):
 
 # parse the options
 parser = argparse.ArgumentParser()
+parser.add_argument("--http_server", help="Generate an HTTP interface to show the status of the reports. Format: listen_ip:port")
 args = parser.parse_args()
+
+# Set up the http server
+if args.http_server is not None:
+    fields = args.http_server.split(":")
+    setup_http_server(fields[0], int(fields[1]))
 
 # handle the signals systemd asks us to
 signal.signal(signal.SIGTERM, stop_handler)
@@ -77,3 +239,7 @@ while not stop_requested:
 
     # TODO: Replace this by inotify
     time.sleep(1)
+
+# Tear down the http server
+if args.http_server is not None:
+    teardown_htttp_server()
