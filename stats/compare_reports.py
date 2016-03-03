@@ -61,7 +61,7 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 	db["targets"] = dict()
 	human_envs = dict()
 	for report in reports:
-		db["reports"].append(report_name)
+		db["reports"].append(report.name)
 
 		# drop the no-op benchmark
 		report.benchmarks = list(filter(lambda b: b.full_name != "no-op", report.benchmarks))
@@ -70,7 +70,7 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 		for benchmark in report.benchmarks:
 			db["envs"][benchmark.full_name] = dict()
 
-		db["events"][report_name] = list()
+		db["events"][report.name] = list()
 		for event in report.events:
 			if type(event) is EventBuildBroken:
 				event.commit_range.new.annotation = event.commit_range.new.sha1 + ": build broken"
@@ -83,7 +83,7 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 					if result.benchmark.full_name != event.benchmark.full_name:
 						continue
 					result.annotation = str(event)
-			db["events"][report_name].append(event)
+			db["events"][report.name].append(event)
 
 		# add all the commits
 		for commit in report.commits:
@@ -101,7 +101,7 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 				else:
 					db["commits"][commit.sha1]['build_color'] = "#FF0000"
 				db["commits"][commit.sha1]['build_error'] = str(EzbenchExitCode(commit.compil_exit_code)).split('.')[1]
-			db["commits"][commit.sha1]['reports'][report_name] = dict()
+			db["commits"][commit.sha1]['reports'][report.name] = dict()
 
 			# Add the results and perform some stats
 			score_sum = 0
@@ -109,7 +109,7 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 			for result in commit.results:
 				if not result.benchmark.full_name in db["benchmarks"]:
 					db["benchmarks"].append(result.benchmark.full_name)
-				db["commits"][commit.sha1]['reports'][report_name][result.benchmark.full_name] = result
+				db["commits"][commit.sha1]['reports'][report.name][result.benchmark.full_name] = result
 				average = convert_unit(result.result(), result.unit_str, output_unit)
 				score_sum += average
 				count += 1
@@ -125,7 +125,8 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 				if result.benchmark.full_name not in human_envs:
 					for envfile in result.env_files:
 						if envfile is not None:
-							human_envs[result.benchmark.full_name] = EnvDumpReport(log_folder + "/" + envfile, True)
+							fullpath = report.log_folder + "/" + envfile
+							human_envs[result.benchmark.full_name] = EnvDumpReport(fullpath, True)
 				if result.benchmark.full_name not in db['env_sets']:
 					db['env_sets'][result.benchmark.full_name] = list()
 				for e in range(0, len(result.env_files)):
@@ -134,23 +135,24 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 					if envfile is None:
 						continue
 
-					r = EnvDumpReport(log_folder + "/" + envfile, False).to_set(['^DATE',
-																				'^ENV.ENV_DUMP_FILE',
-																				'^ENV.EZBENCH_PERFMETER_PID',
-																				'^ENV.EZBENCH_X_PID',
-																				'SHA1$',
-																				'extension count$',
-																				'window id$'])
+					fullpath = report.log_folder + "/" + envfile
+					r = EnvDumpReport(fullpath, False).to_set(['^DATE',
+					                                           '^ENV.ENV_DUMP_FILE',
+					                                           '^ENV.EZBENCH_PERFMETER_PID',
+					                                           '^ENV.EZBENCH_X_PID',
+					                                           'SHA1$',
+					                                           'extension count$',
+					                                           'window id$'])
 					tup = dict()
-					tup['log_folder'] = report_name
+					tup['log_folder'] = report.name
 					tup['commit'] = commit
 					tup['run'] = e
 
 					# Compare the set to existing ones
 					found = False
-					for report in db['env_sets'][result.benchmark.full_name]:
-						if r  == report['set']:
-							report['users'].append(tup)
+					for r_set in db['env_sets'][result.benchmark.full_name]:
+						if r  == r_set['set']:
+							r_set['users'].append(tup)
 							found = True
 
 					# Add the report
@@ -165,8 +167,8 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 				avg = score_sum / count
 			else:
 				avg = 0
-			db["commits"][commit.sha1]['reports'][report_name]["average"] = float("{0:.2f}".format(avg))
-			db["commits"][commit.sha1]['reports'][report_name]["average_unit"] = output_unit
+			db["commits"][commit.sha1]['reports'][report.name]["average"] = float("{0:.2f}".format(avg))
+			db["commits"][commit.sha1]['reports'][report.name]["average_unit"] = output_unit
 
 	# Generate the environment
 	for bench in human_envs:
@@ -702,7 +704,8 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 			print("Generating the HTML")
 
 		if title is None:
-			title = "Performance report on the run named '{run_name}'".format(run_name=report_name)
+			report_names = [r.name for r in reports]
+			title = "Performance report on the runs named '{run_name}'".format(run_name=report_names)
 
 		html = Template(html_template).render(title=title, db=db, output_unit=output_unit,
 							default_commit=list(db["commits"])[-1])
@@ -728,7 +731,7 @@ if __name__ == "__main__":
 	reports = []
 	git_history = None
 	for log_folder in args.log_folder:
-		report_name = [x for x in log_folder.split('/') if x][-1]
+		report_name = [x for x in log_folder.split(os.sep) if x][-1]
 		try:
 			sbench = SmartEzbench(ezbench_dir, report_name, readonly=True)
 			if git_history is None:
