@@ -154,6 +154,7 @@ def setup_http_server(bind_ip = "0.0.0.0", port = 8080):
                             if not data:
                                 break
                             self.wfile.write(data)
+                        return
                 except Exception as e:
                     print("WARNING: An exception got raised while reading file '{}': {}".format(real_path, e))
                     msg = "Invalid file name"
