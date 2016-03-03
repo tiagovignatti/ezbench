@@ -56,12 +56,12 @@ connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
 
 		len = sizeof(struct ucred);
 		if(getsockopt(sockfd, SOL_SOCKET, SO_PEERCRED, &ucred, &len) < 0){
-			fprintf(env_file, "SOCKET_UNIX_CONNECT,%s,,%s\n", filepath, strerror(errno));
+			fprintf(env_file, "SOCKET_UNIX_CONNECT,%s,-1,%s\n", filepath, strerror(errno));
 			return ret;
 		}
 
 		/* display a lot more information about the process! */
-		fprintf(env_file, "SOCKET_UNIX_CONNECT,%s,", filepath);
+		fprintf(env_file, "SOCKET_UNIX_CONNECT,%s,%i,", filepath, ucred.pid);
 		_env_var_dump_binary_information(ucred.pid);
 		fprintf(env_file, "\n");
 	}
