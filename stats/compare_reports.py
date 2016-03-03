@@ -142,6 +142,7 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 					                                           '^ENV.EZBENCH_X_PID',
 					                                           'SHA1$',
 					                                           '.pid$',
+					                                           'X\'s pid$',
 					                                           'extension count$',
 					                                           'window id$'])
 					tup = dict()

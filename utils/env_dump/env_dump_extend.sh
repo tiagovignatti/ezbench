@@ -86,6 +86,15 @@ function resolve_SHA1() {
 		sed -i "s\`$line\`$line,$version\`g" $dump_file
 	done
 
+	# resolve the SHA1 of a ddx
+	grep -e '^XORG_DDX,' $dump_file | while read line
+	do
+		filename=$(echo "$line" | cut -d ',' -f 3)
+		sha1=$(echo "$line" | cut -d ',' -f 4)
+		version=$(get_binary_version "$filename" "$sha1")
+		sed -i "s\`$line\`$line,$version\`g" $dump_file
+	done
+
 	return 0
 }
 
@@ -183,10 +192,27 @@ function resolve_gpu_name() {
 	esac
 }
 
+function xorg_get_ddx_list() {
+	dump_file="$1"
+
+	pid_x=$(grep -e ^SOCKET_UNIX_CONNECT "$dump_file" | grep Xorg | cut -d ',' -f 3)
+	maps=$(sudo -n cat /proc/$pid_x/maps)
+
+	# List the DDX and make sure the order is always the same
+	x_ddx=$(echo "$maps" | grep -e _drv.so$ | rev | cut -d ' ' -f 1 | rev | sort -u)
+	while read ddx; do
+		[ ! -e "$ddx" ] && return
+		sha1=$(sha1sum "$ddx" 2> /dev/null | cut -d ' ' -f 1)
+		line="XORG_DDX,$pid_x,$ddx,$sha1\n"
+		sed -i "s\`^-- Env dump end --\`${line}-- Env dump end --\`g" $dump_file
+	done <<< "$x_ddx"
+}
+
 # Try to load the MSR module to query MSRs
 sudo -n modprobe msr
 msr_loaded=$(test -z "$(grep ^msr /proc/modules)" ; echo $?)
 
+xorg_get_ddx_list "$dump_file"
 resolve_SHA1 "$SHA1_DB" "$dump_file"
 add_dmidecode_info "$dump_file"
 resolve_gpu_name "$dump_file"

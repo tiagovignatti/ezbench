@@ -31,6 +31,8 @@
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <X11/extensions/Xrandr.h>
+#include <xcb/dri3.h>
+#include <xcb/dri2.h>
 #include <stdlib.h>
 #include <string.h>
 #include <link.h>
@@ -208,3 +210,37 @@ XResizeWindow(Display *display, Window w, unsigned int width, unsigned int heigh
 /* WARNING: No need to hook the connect close and createwindow functions because
  * the libxcb calls the original xlib functions which are already hook!
  */
+
+int *
+xcb_dri3_open_reply_fds(xcb_connection_t *c, xcb_dri3_open_reply_t *reply)
+{
+	int *(*orig_xcb_dri3_open_reply_fds)(xcb_connection_t *c,
+	                                    xcb_dri3_open_reply_t *reply);
+	int* ret;
+
+	orig_xcb_dri3_open_reply_fds = _env_dump_resolve_symbol_by_name("xcb_dri3_open_reply_fds");
+
+	ret = orig_xcb_dri3_open_reply_fds(c, reply);
+	if (ret && ret[0] >= 0)
+		fprintf(env_file, "XCB_CONNECTION,DRI3,unknown\n");
+
+	return ret;
+}
+
+xcb_dri2_connect_reply_t *
+xcb_dri2_connect_reply(xcb_connection_t *c, xcb_dri2_connect_cookie_t cookie,
+                       xcb_generic_error_t **e)
+{
+	xcb_dri2_connect_reply_t*
+	(*orig_xcb_dri2_connect_reply)(xcb_connection_t *c,
+	                               xcb_dri2_connect_cookie_t cookie,
+	                               xcb_generic_error_t **e);
+	xcb_dri2_connect_reply_t* ret;
+
+	orig_xcb_dri2_connect_reply = _env_dump_resolve_symbol_by_name("xcb_dri2_connect_reply");
+	ret = orig_xcb_dri2_connect_reply(c, cookie, e);
+	if (ret)
+		fprintf(env_file, "XCB_CONNECTION,DRI2,%s\n", xcb_dri2_connect_driver_name(ret));
+
+	return ret;
+}

@@ -16,6 +16,9 @@ CFLAGS += `pkg-config --cflags libcrypto`
 # libxrandr
 CFLAGS += `pkg-config --cflags xrandr`
 
+# libxcb
+CFLAGS += `pkg-config --cflags xcb-dri2 xcb-dri3`
+
 # libxrandr
 CFLAGS += `pkg-config --cflags libdrm`
 
