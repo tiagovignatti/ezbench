@@ -84,13 +84,18 @@ Display *
 XOpenDisplay(const char *display_name)
 {
 	Display *(*orig_xopendisplay)(const char *);
+	char *(*orig_xservervendor)(Display*);
+	int (*orig_xvendorrelease)(Display*);
 	Display *dpy;
 	int i;
 
 	orig_xopendisplay = _env_dump_resolve_symbol_by_name("XOpenDisplay");
+	orig_xservervendor = _env_dump_resolve_symbol_by_name("XServerVendor");
+	orig_xvendorrelease = _env_dump_resolve_symbol_by_name("XVendorRelease");
 	dpy = orig_xopendisplay(display_name);
 	if (dpy) {
-		fprintf(env_file, "XORG_SESSION_OPENED,%s\n", display_name);
+		fprintf(env_file, "XORG_SESSION_OPENED,%s,%s,%i\n", display_name,
+				orig_xservervendor(dpy), orig_xvendorrelease(dpy));
 		for (i = 0; i < ScreenCount(dpy); i++) {
 			char *wm = _env_dump_xlib_compositor(dpy, i);
 

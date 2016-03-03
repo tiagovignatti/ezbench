@@ -59,7 +59,7 @@ class EnvDumpReport:
         ['THROTTLING', 'cpu count', 'package', 'cpu list', 'cpu0', 'cpu1', 'cpu2', 'cpu3', 'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'cpu10', 'cpu11'],
         ['XORG_CLOSE', 'display'],
         ['XORG_DISPLAY', 'screen id', 'compositor', 'width', 'height', 'depth'],
-        ['XORG_SESSION_OPENED', 'display name'],
+        ['XORG_SESSION_OPENED', 'display name', 'vendor name', 'version'],
         ['XORG_WINDOW_CREATE', 'parent window id', 'window id', 'width', 'height', 'depth'],
         ['XORG_WINDOW_RESIZE', 'window id', 'width', 'height'],
     ]
@@ -101,7 +101,7 @@ class EnvDumpReport:
         ['THROTTLING', 'HW: Throttling events', 'package=${package}, CPUs=[${cpu0}, ${cpu1}, ${cpu2}, ${cpu3}, ${cpu4}, ${cpu5}, ${cpu6}, ${cpu7}, ${cpu8}, ${cpu9}, ${cpu10}, ${cpu11}]'],
         ['XORG_CLOSE', 'OS: X display closed', '${display}'],
         ['XORG_DISPLAY', 'OS: X display', 'Screen id ${screen id} (${width}x${height}x${depth}) with compositor ${compositor}'],
-        ['XORG_SESSION_OPENED', 'OS: X display opened', '${display name}'],
+        ['XORG_SESSION_OPENED', 'OS: X display opened', '${display name}, vendor=\'${vendor name}\', version=${version}'],
         ['XORG_WINDOW_CREATE', 'OS: X window created', '${width}x${height}x${depth}, id=${window id} (parent=${parent window id})'],
         ['XORG_WINDOW_RESIZE', 'OS: X window resized', 'id=${window id} to ${width}x${height}'],
     ]
