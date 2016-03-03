@@ -523,6 +523,13 @@ class SmartEzbench:
     def report_name(self):
         return self.__read_attribute__('report_name')
 
+    def commit_url(self):
+        return self.__read_attribute__('commit_url')
+
+    def set_commit_url(self, commit_url):
+        self.__write_attribute__('commit_url', commit_url, allow_updates = True)
+        self.__log(Criticality.II, "Report commit URL has been changed to '{}'".format(commit_url))
+
     def __add_benchmark_unlocked__(self, commit, benchmark, rounds = None):
         if commit not in self.state['commits']:
             self.state['commits'][commit] = dict()
