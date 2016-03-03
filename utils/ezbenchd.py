@@ -128,6 +128,47 @@ def setup_http_server(bind_ip = "0.0.0.0", port = 8080):
         def parse_request(self, *args, **kwargs):
             return super().parse_request(*args, **kwargs)
 
+        def __serve_file__(self, report_name, filename, content_type = "text/plain"):
+            msg = "unknown error"
+
+            chroot_folder = "{}/logs/{}".format(ezbench_dir, report_name)
+            path = "{}/{}".format(chroot_folder, filename)
+            real_path = os.path.realpath(path)
+            if real_path.startswith(chroot_folder):
+                try:
+                    with open(real_path, 'rb') as f:
+                        f.seek(0, os.SEEK_END)
+                        size = f.tell()
+                        f.seek(0, os.SEEK_SET)
+
+                        self.send_response(200)
+                        self.send_header("Content-type", content_type)
+                        self.send_header("Content-length", size)
+                        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+                        self.send_header("Pragma", "no-cache")
+                        self.send_header("Expires", "0")
+                        self.end_headers()
+
+                        while True:
+                            data = f.read(1024)
+                            if not data:
+                                break
+                            self.wfile.write(data)
+                except Exception as e:
+                    print("WARNING: An exception got raised while reading file '{}': {}".format(real_path, e))
+                    msg = "Invalid file name"
+                    pass
+            else:
+                print("WARNING: Tried to serve a file ('{}') outside of our chroot ('{}')".format(real_path, chroot_folder))
+                msg = "Invalid path"
+
+            array = str.encode(msg)
+            self.send_response(404)
+            self.send_header("Content-type", content_type)
+            self.send_header("Content-length", len(array))
+            self.end_headers()
+            self.wfile.write(array)
+
         def do_GET(self):
             response = 200
             loc = ""
@@ -140,11 +181,9 @@ def setup_http_server(bind_ip = "0.0.0.0", port = 8080):
 
                 if cmd != "" and report_name != "":
                     if cmd == "report":
-                        self.path = "/logs/" + report_name + "/index.html"
-                        return super().do_GET()
+                        return self.__serve_file__(report_name, "index.html", "text/html")
                     if cmd == "file":
-                        self.path = "/logs/" + report_name + "/" + args
-                        return super().do_GET()
+                        return self.__serve_file__(report_name, args)
                     elif cmd == "mode" or cmd == "status":
                         sbench = sbenches[report_name]
                         if cmd == "mode":
