@@ -454,15 +454,15 @@ class SmartEzbench:
         return Ezbench(ezbench_path = ezbench_path, profile = profile,
                        report_name = report_name)
 
-    def running_mode(self):
+    def __read_attribute__(self, attr, default = None):
         self.__reload_state(keep_lock=False)
-        if 'mode' not in self.state:
-            return RunningMode.INITIAL
+        if attr in self.state:
+            return self.state[attr]
         else:
-            return RunningMode(self.state['mode'])
+            return default
 
-    def report_name(self):
-       return self.state['report_name']
+    def running_mode(self):
+        return RunningMode(self.__read_attribute__('mode', RunningMode.INITIAL.value))
 
     def set_running_mode(self, mode):
         self.__reload_state(keep_lock=True)
@@ -473,11 +473,7 @@ class SmartEzbench:
         self.__release_lock()
 
     def profile(self):
-        self.__reload_state(keep_lock=False)
-        if "profile" in self.state:
-            return self.state['profile']
-        else:
-            return None
+        return self.__read_attribute__('profile')
 
     def set_profile(self, profile):
         self.__reload_state(keep_lock=True)
@@ -521,6 +517,9 @@ class SmartEzbench:
         else:
             self.__log(Criticality.EE, "You cannot change the configuration script of a report that already has results. Start a new one.")
         self.__release_lock()
+
+    def report_name(self):
+        return self.__read_attribute__('report_name')
 
     def __add_benchmark_unlocked__(self, commit, benchmark, rounds = None):
         if commit not in self.state['commits']:
