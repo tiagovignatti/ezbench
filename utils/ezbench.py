@@ -1222,7 +1222,9 @@ class EventInsufficientSignificance:
                           margin * 100, self.wanted_margin * 100, wanted_n)
 
 class Report:
-    def __init__(self, benchmarks, commits, notes):
+    def __init__(self, log_folder, benchmarks, commits, notes):
+        self.log_folder = log_folder
+        self.name = log_folder.split(os.sep)[-1]
         self.benchmarks = benchmarks
         self.commits = commits
         self.notes = notes
@@ -1390,7 +1392,7 @@ def genPerformanceReport(log_folder, silentMode = False):
     except IOError:
         if not silentMode:
             sys.stderr.write("The log folder '{0}' does not contain a commit_list file\n".format(log_folder))
-        return Report(benchmarks, commits, notes)
+        return Report(log_folder, benchmarks, commits, notes)
 
     # Read all the commits' labels
     labels = readCommitLabels()
@@ -1399,7 +1401,7 @@ def genPerformanceReport(log_folder, silentMode = False):
     if (len(commitsLines) == 0):
         if not silentMode:
             sys.stderr.write("The commit_list file is empty\n")
-        return Report(benchmarks, commits, notes)
+        return Report(log_folder, benchmarks, commits, notes)
 
     # Find all the result files and sort them by sha1
     files_list = os.listdir()
@@ -1505,7 +1507,7 @@ def genPerformanceReport(log_folder, silentMode = False):
     # Go back to the original folder
     os.chdir(cwd)
 
-    return Report(benchmarks, commits, notes)
+    return Report(log_folder, benchmarks, commits, notes)
 
 def getPerformanceResultsCommitBenchmark(commit, benchmark):
     for result in commit.results:
