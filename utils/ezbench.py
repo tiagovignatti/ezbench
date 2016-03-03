@@ -304,7 +304,7 @@ class Testset:
         filename = name + ".testset"
         for root, dirs, files in os.walk(ezbench_dir + '/testsets.d/'):
             if filename in files:
-                return cls(root + filename, name)
+                return cls(root + '/' + filename, name)
         return None
 
 # Smart-ezbench-related classes
