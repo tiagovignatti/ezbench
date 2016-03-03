@@ -729,14 +729,11 @@ if __name__ == "__main__":
 	args = parser.parse_args()
 
 	reports = []
-	git_history = None
 	for log_folder in args.log_folder:
 		report_name = [x for x in log_folder.split(os.sep) if x][-1]
 		try:
 			sbench = SmartEzbench(ezbench_dir, report_name, readonly=True)
-			if git_history is None:
-				git_history = sbench.git_history()
-			report = sbench.report(git_history=git_history)
+			report = sbench.report()
 		except RuntimeError:
 			report = genPerformanceReport(log_folder)
 		reports.append(report)
