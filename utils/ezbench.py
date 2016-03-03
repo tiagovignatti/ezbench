@@ -461,16 +461,22 @@ class SmartEzbench:
         else:
             return default
 
+    def __write_attribute__(self, attr, value, allow_updates = False):
+        ret = False
+        self.__reload_state(keep_lock=True)
+        if allow_updates or attr not in self.state or self.state['beenRunBefore'] == False:
+            self.state[attr] = value
+            ret = True
+            self.__save_state()
+        self.__release_lock()
+        return ret
+
     def running_mode(self):
         return RunningMode(self.__read_attribute__('mode', RunningMode.INITIAL.value))
 
     def set_running_mode(self, mode):
-        self.__reload_state(keep_lock=True)
-        if 'mode' not in self.state or self.state['mode'] != mode.value:
-            self.state['mode'] = mode.value
-            self.__log(Criticality.II, "Ezbench running mode set to '{mode}'".format(mode=mode.name))
-            self.__save_state()
-        self.__release_lock()
+        self.__write_attribute__('mode', mode.value, allow_updates = True)
+        self.__log(Criticality.II, "Ezbench running mode set to '{mode}'".format(mode=mode.name))
 
     def profile(self):
         return self.__read_attribute__('profile')
@@ -509,14 +515,10 @@ class SmartEzbench:
             return None
 
     def set_conf_script(self, conf_script):
-        self.__reload_state(keep_lock=True)
-        if 'beenRunBefore' not in self.state or self.state['beenRunBefore'] == False:
-            self.state['conf_script'] = conf_script
+        if self.__write_attribute__('mode', mode, allow_updates = False):
             self.__log(Criticality.II, "Ezbench profile configuration script set to '{0}'".format(conf_script))
-            self.__save_state()
         else:
             self.__log(Criticality.EE, "You cannot change the configuration script of a report that already has results. Start a new one.")
-        self.__release_lock()
 
     def report_name(self):
         return self.__read_attribute__('report_name')
