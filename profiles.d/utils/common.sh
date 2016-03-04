@@ -29,13 +29,11 @@ function vt_switch_start() {
     export EZBENCH_VT_ORIG=$(sudo -n fgconsole)
     sudo -n chvt 5
     sleep 1 # Wait for the potential x-server running to release MASTER
+
+    return 0
 }
 function vt_switch_stop() {
-    has_automatic_sudo_rights || return 1
-    has_binary chvt || return 1
-    has_binary sleep || return 1
-
-    [[ -z "$EZBENCH_VT_ORIG" ]] && return 1
+    [[ -z "$EZBENCH_VT_ORIG" ]] && return
 
     sudo -n chvt $EZBENCH_VT_ORIG
     unset EZBENCH_VT_ORIG
@@ -52,6 +50,7 @@ function xserver_setup_start() {
     has_binary xset || return 1
     has_binary sleep || return 1
     has_binary kill || return 1 # Need by stop()
+    has_binary ps || return 1 # Will be needed when tearing down the xserver
 
     vt_switch_start || return 1
 
@@ -85,7 +84,7 @@ function xserver_setup_stop() {
 
 # Requires xrandr
 function xserver_reset() {
-    [[ $dry_run -eq 1 ]] && return 1
+    [[ $dry_run -eq 1 ]] && return 0
 
     # Check for dependencies
     has_binary xrandr || return 1
@@ -96,7 +95,7 @@ function xserver_reset() {
 }
 
 function gui_start() {
-    [[ $dry_run -eq 1 ]] && return 1
+    [[ $dry_run -eq 1 ]] && return 0
 
     # Start X or not?
     if [[ "$EZBENCH_CONF_X11" != "0" ]]; then
@@ -125,11 +124,13 @@ function gui_stop() {
 }
 
 function gui_reset() {
-    [[ $dry_run -eq 1 ]] && return
+    [[ $dry_run -eq 1 ]] && return 0
 
     if [[ "$EZBENCH_CONF_X11" != "0" ]]; then
         xserver_reset || return 1
     fi
+
+    return 0
 }
 
 function x_show_debug_info_start() {
