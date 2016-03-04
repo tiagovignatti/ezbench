@@ -63,7 +63,7 @@ _env_dump_xlib_compositor(Display *dpy, int screen)
 	stringType = orig_xinternatom(dpy, "UTF8_STRING", True);
 
 	if (wmCheckAtom == None || wmName == None || stringType == None)
-		return strdup("UNKOWN");
+		return strdup("UNKNOWN");
 
 	root = RootWindow(dpy, screen);
 	if (!(orig_xgetwindowproperty(dpy, root, wmCheckAtom, 0, 1024, False,
