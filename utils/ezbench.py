@@ -515,7 +515,7 @@ class SmartEzbench:
             return None
 
     def set_conf_script(self, conf_script):
-        if self.__write_attribute__('mode', mode, allow_updates = False):
+        if self.__write_attribute__('conf_script', conf_script, allow_updates = False):
             self.__log(Criticality.II, "Ezbench profile configuration script set to '{0}'".format(conf_script))
         else:
             self.__log(Criticality.EE, "You cannot change the configuration script of a report that already has results. Start a new one.")
