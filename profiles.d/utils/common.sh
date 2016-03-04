@@ -77,14 +77,7 @@ function xserver_setup_start() {
 function xserver_setup_stop() {
     [[ $dry_run -eq 1 ]] && return
 
-    # Check for dependencies
-    has_automatic_sudo_rights || return 1
-    has_binary kill || return 1
-    has_binary sleep || return 1
-    has_binary ps || return 1 # Needed by wait_random_pid
-
-    sudo -n kill $EZBENCH_X_PID
-    wait_random_pid $EZBENCH_X_PID
+    kill_random_pid $EZBENCH_X_PID
     unset EZBENCH_X_PID
 
     vt_switch_stop
@@ -265,13 +258,21 @@ function thp_disable_stop() {
 #     done
 # }
 
-function wait_random_pid() {
-    # This is generally unsafe, but better than waiting a random amount of time
+function kill_random_pid() {
+    loop_watchdog=500 # 5 seconds
 
+    # Send a term signal
+    sudo -n kill $1
+
+    # This is generally unsafe, but better than waiting a random amount of time
     ps -p $1 > /dev/null 2> /dev/null
-    while [[ ${?} == 0 ]]
+    while [[ ${?} == 0 && $loop_watchdog > 0 ]]
     do
+        loop_watchdog=$((loop_watchdog - 1))
         sleep .01
         ps -p $1 > /dev/null 2> /dev/null
     done
+
+    # Stop waiting, just kill it!
+    sudo -n kill -9 $1
 }
