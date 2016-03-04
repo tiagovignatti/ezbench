@@ -23,16 +23,8 @@ More investigation needs to be made.
  - Add auto-deployment support which would download from the git repo of
  interest and setup ezbench to make use of it.
 
- - Create a new repo every time we are about to compile, this should be very
- cheap and would guarantee that we do not destroy the current state of the repo.
-
  - Add information about how to create working URLs for every commit SHA1, this
  is useful when creating reports.
-
-==== Kernel ====
-
-Make the default kernel profile work on ubuntu and not just archlinux by
-supporting the initramfs creation tool from ubuntu.
 
 === Tests ===
 
