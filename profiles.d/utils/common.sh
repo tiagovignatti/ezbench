@@ -77,12 +77,51 @@ function xserver_setup_stop() {
 
 # Requires xrandr
 function xserver_reset() {
-    [[ $dry_run -eq 1 ]] && return
+    [[ $dry_run -eq 1 ]] && return 1
 
     # Check for dependencies
     has_binary xrandr || return 1
 
     xrandr --auto
+
+    return 0
+}
+
+function gui_start() {
+    [[ $dry_run -eq 1 ]] && return 1
+
+    # Start X or not?
+    if [[ "$EZBENCH_CONF_X11" != "0" ]]; then
+        xserver_setup_start || return 1
+    fi
+
+    # Start the compositor
+    if [ -n "$EZBENCH_CONF_COMPOSITOR" ]; then
+        has_binary "${EZBENCH_CONF_COMPOSITOR}" || return 1
+        eval "${EZBENCH_CONF_COMPOSITOR} $EZBENCH_CONF_COMPOSITOR_ARGS&" 2> /dev/null > /dev/null
+        sleep 0.25
+    fi
+
+    return 0
+}
+
+function gui_stop() {
+    [[ $dry_run -eq 1 ]] && return
+
+    # Stop our X server
+    xserver_setup_stop
+
+    # Nothing else to do until we have support for Wayland
+
+    return 0
+}
+
+function gui_reset() {
+    [[ $dry_run -eq 1 ]] && return
+
+    if [[ "$EZBENCH_CONF_X11" != "0" ]]; then
+        xserver_reset || return 1
+    fi
 }
 
 function x_show_debug_info_start() {

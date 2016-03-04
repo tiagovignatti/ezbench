@@ -54,6 +54,10 @@ Another important note about core.sh is that it is highly modular and
 hook-based. Have a look at profiles.d/$profile/conf.d/README for the
 documentation about the different hooks.
 
+It is possible to adjust the execution environnement of the benchmarks by asking
+core.sh to execute one or multiple scripts before running anything else. This
+for example allows users to specify which compositor should be used.
+
 === Examples ===
 
 ==== Testing every patchset of a series ====
@@ -74,6 +78,12 @@ To use the mesa profile, which has the advantage of checking that the deployment
 was successful, you may achieve the same result by running:
 
     ./core.sh -P mesa -b synmark:Gl21Batch2$ -r 3 HEAD~5 HEAD~2 HEAD~10
+
+You may also tell core.sh that you want to use a certain compositor, set
+environnement variables for the run or set any other option exposed by the
+profile you are using. To do so, use -c like in the following example:
+
+    ./core.sh -P mesa -b synmark:Gl21Batch2$ -r 3 -c confs.d/x11_comp/kwin HEAD
 
 ==== Retrospectives ====
 

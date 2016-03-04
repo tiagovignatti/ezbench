@@ -213,6 +213,7 @@ export PATH="$PROFILE_DEPLOY_DIR/bin":$PATH
 
 # Start again the argument parsing, this time with every option
 unset OPTIND
+conf_scripts=""
 while getopts "$optString" opt; do
     case "$opt" in
     h|\?)
@@ -242,6 +243,7 @@ while getopts "$optString" opt; do
         ;;
     c)
         source "$OPTARG"
+        conf_scripts="$conf_scripts $OPTARG"
         ;;
     :)
       echo "Option -$OPTARG requires an argument." >&2
@@ -250,6 +252,9 @@ while getopts "$optString" opt; do
     esac
 done
 shift $((OPTIND-1))
+
+# Show the configuration scripts used
+echo "Configuration scripts used: $conf_scripts"
 
 # Check the repo and display information about it
 profile_repo_check
