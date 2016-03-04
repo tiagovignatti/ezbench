@@ -108,9 +108,9 @@ if not args.reuse_data:
 
 # List the events
 max_variance = 0.025
-report = create_report(initial_commit.hex[0:7],
-                       repo.revparse_single('HEAD').hex[0:7],
-                       max_variance, args.reuse_data)
+task_list=[(initial_commit.hex[0:7], 3),
+		   (repo.revparse_single('HEAD').hex[0:7], 3)]
+report = create_report(task_list, max_variance, args.reuse_data)
 
 # test the variance of every commit
 variance_too_high = 0
