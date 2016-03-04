@@ -10,6 +10,9 @@ fi
 SHA1_DB="$1"
 dump_file="$2"
 
+# Early exit to avoid as much cost as possible when the dump is not present
+[ -e "$dump_file" ] || exit 0
+
 root_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 function get_binary_version() {
