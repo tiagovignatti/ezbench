@@ -268,9 +268,8 @@ then
     exec > >(tee -a $logsFolder/results)
     exec 2>&1
 
-    # delete the early-exit file
+    # generate the early-exit filename
     abortFile="$logsFolder/requestExit"
-    rm $abortFile 2> /dev/null
 fi
 
 # functions to call on exit
@@ -490,6 +489,9 @@ fi
 # Iterate through the versions
 for version in $versionList
 do
+    # Exit if asked to
+    [ -e "$abortFile" ] && continue
+
     # compile and deploy the version
     compile_and_deploy $version
 
@@ -609,6 +611,11 @@ do
     fi
     echo
 done
+
+rm $abortFile 2> /dev/null
+if [ $? -eq 0 ]; then
+	echo "Early exit requested"
+fi
 
 endTime=$(date +%s)
 runtime=$((endTime-startTime))
