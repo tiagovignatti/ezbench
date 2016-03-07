@@ -58,6 +58,9 @@ It is possible to adjust the execution environnement of the benchmarks by asking
 core.sh to execute one or multiple scripts before running anything else. This
 for example allows users to specify which compositor should be used.
 
+If core.sh is currently running and you want to stop its execution after the next
+test, you can create a file named 'requestExit' in the log folder.
+
 === Examples ===
 
 ==== Testing every patchset of a series ====

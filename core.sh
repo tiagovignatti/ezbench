@@ -267,6 +267,10 @@ then
     [ -d $logsFolder ] || mkdir -p $logsFolder || exit 30
     exec > >(tee -a $logsFolder/results)
     exec 2>&1
+
+    # delete the early-exit file
+    abortFile="$logsFolder/requestExit"
+    rm $abortFile 2> /dev/null
 fi
 
 # functions to call on exit
@@ -529,6 +533,9 @@ do
         # Run the benchmark
         for (( c=$run; c<$run+$rounds; c++ ))
         do
+            # Exit if asked to
+            [ -e "$abortFile" ] && continue
+
             run_log_file="${fps_logs}#$c"
 
             callIfDefined "$preHookFuncName"
