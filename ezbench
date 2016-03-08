@@ -81,6 +81,7 @@ if args.list_testsets:
         print("No test sets are available")
     sys.exit(0)
 
+testsets_to_be_added = []
 if args.testsets is not None:
      # remove duplicates in the lists
     testsets = list(set(break_lists(args.testsets)))
@@ -89,7 +90,6 @@ if args.testsets is not None:
     benchmarks = ezbench.available_benchmarks()
 
     # Check all the testsets
-    testsets_to_be_added = []
     for name in testsets:
         testset = Testset.open(ezbench_dir, name)
         if testset is None:

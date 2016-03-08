@@ -102,7 +102,7 @@ def setup_http_server(bind_ip = "0.0.0.0", port = 8080):
         <tr><th>Name</th><th>Value</th><th>Actions</th></tr>
         <tr><td>Report name</td><td>${report_name}</td><td></td></tr>
         <tr><td>Running mode</td><td>${mode}</td><td>
-            % if mode != "RUN":
+            % if mode != "RUN" and mode != "RUNNING":
             <a href="/mode/${report_name}/run" class="button">Run</a>
             % else:
             <a href="/mode/${report_name}/pause" class="button">Pause</a>
