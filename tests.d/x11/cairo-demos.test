@@ -1,22 +1,20 @@
 # Download cairo-demos at
 # http://www.phoronix-test-suite.com/benchmark-files/cairo-demos-20120130.tar.bz2
 
-xdpyinfo >/dev/null 2>&1 || return 1
 [ ! -d "$CAIRO_DEMOS" ] && return 1
 
 # fish: 99.999 fps
 
 function __xlib__ {
     cd $CAIRO_DEMOS
-    for (( c=0; c<$1; c++ )); do
-        run_bench 20 ./$2-demo --benchmark --xlib | sed -e '/fps/!d; s/.*: \(.*\) fps.*/\1/'
-    done
+    # This does not work for some demos, but we can fix that later!
+    run_bench 23 ./$1-demo --benchmark --xlib | sed -e '/fps/!d; s/.*: \(.*\) fps.*/\1/'
 }
 
 for i in $CAIRO_DEMOS/*-demo; do
     demo=$(basename $i -demo)
     name="x11:cairo:demo:$demo"
     test_name="$test_name $name"
-    eval "${name}_run() { __xlib__ \$1 $demo; }"
+    eval "${name}_run() { __xlib__ $demo; }"
 done
 test_exec_time=20
