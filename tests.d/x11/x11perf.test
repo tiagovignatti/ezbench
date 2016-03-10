@@ -1,7 +1,6 @@
 test_exec_time=10
 
 which x11perf >/dev/null 2>&1 || return 1
-xdpyinfo >/dev/null 2>&1 || return 1
 
 function __x11perf__ {
     run_bench 0 x11perf -time 10 -repeat 1 $1 | sed -e '/reps/!d; s#.*(\(.*\)/sec.*#\1#'
@@ -21,7 +20,7 @@ for i in \
     ;
 do
     grep -q -w -e "-$i" <<< $x11perf_help || continue
-    test_name="$test_name x11:$i"
-    eval "x11:${i}_run() { __x11perf__ -$i; }"
+    test_name="$test_name x11:x11perf:$i"
+    eval "x11:x11perf:${i}_run() { __x11perf__ -$i; }"
 done
 unset x11perf_help
