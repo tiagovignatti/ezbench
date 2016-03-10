@@ -1,0 +1,31 @@
+hash "$TELEMETRY_FOLDER/run_benchmark" 2> /dev/null || return 1
+
+function __telemetry__ {
+    cd $TELEMETRY_FOLDER
+    run_bench 0 ./run_benchmark --browser=stable --use-live-sites \
+    --extra-browser-args="--disable-gpu-vsync" -d $1 | \
+    grep "^RESULT $2:" | cut -d '=' -f 2 | cut -d ' ' -f 2
+}
+
+while read -a fields; do
+    short_test_name=${fields[0]}
+    full_test_name=${fields[1]}
+    len=${#fields[@]}
+    for (( i=2; i<${len}; i+=2 )); do
+        short_metric_name=${fields[$i]}
+        metric_name=${fields[$((i+1))]}
+        name="www:chrome:$short_test_name:$short_metric_name"
+        test_name="$test_name $name"
+        eval "${name}_run() { __telemetry__ $full_test_name $metric_name; }"
+    done
+done <<< "filter smoothness.gpu_rasterization.tough_filters_cases frametime mean_frame_time discrepancy frame_time_discrepancy
+    bi-scrolling smoothness.bidirectionally_scrolling_tough_ad_cases frametime mean_frame_time discrepancy frame_time_discrepancy
+    mobile-scrolling smoothness.pathological_mobile_sites frametime mean_frame_time discrepancy frame_time_discrepancy
+    scrolling smoothness.gpu_rasterization.tough_scrolling_cases frametime mean_frame_time discrepancy frame_time_discrepancy
+    texture_upload smoothness.tough_texture_upload_cases frametime mean_frame_time discrepancy frame_time_discrepancy
+    vector smoothness.gpu_rasterization.tough_path_rendering_cases frametime mean_frame_time discrepancy frame_time_discrepancy
+    yuv_decoding smoothness.gpu_rasterization_and_decoding.image_decoding_cases frametime mean_frame_time discrepancy frame_time_discrepancy"
+
+test_exec_time=120
+test_unit="ms"
+test_invert=1
