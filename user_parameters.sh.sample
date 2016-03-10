@@ -92,6 +92,9 @@ IGT_TRACES=/opt/intel-gpu-tools/traces
 # cairo-demos settings
 CAIRO_DEMOS=/opt/benchmarks/cairo-demos
 
+# cairo-traces repo. Make sure you ran make there before running benchmarks
+CAIRO_TRACES="/opt/benchmarks//cairo-traces"
+
 # xf86-video-intel setting
 XF86_VIDEO_INTEL=/opt/benchmarks/xf86-video-intel
 
