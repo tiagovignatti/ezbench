@@ -1,0 +1,11 @@
+test_name="x11:gtkperf"
+test_unit="s"
+test_invert=1
+
+hash gtkperf || return 1
+
+gtkperf_run() {
+    gtkperf -a | grep "Total time: " | cut -d : -f 2 | tr --delete ' '
+}
+
+test_exec_time=5
