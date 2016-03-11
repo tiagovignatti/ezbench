@@ -43,7 +43,8 @@ There are two possible ways:
 NOTE: If the program you want to trace spawns other commands, you may want to
 set the ENV_DUMP_RESTRICT_TO_BINARY environment variable to the fullpath of the
 binary you are interested in. Otherwise, multiple environment files will be
-created.
+created. If that still is not enough, you can make sure one argument matches
+exactly the ENV_DUMP_REQUIRE_ARGUMENT environment variable.
 
 === SHA1 Database ===
 

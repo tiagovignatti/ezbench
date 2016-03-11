@@ -57,6 +57,14 @@ _env_dump_binary_fullpath(int pid)
 	}
 }
 
+char *
+_env_dump_binary_cmdline(int pid)
+{
+	char proc_path[22]; /* longest fd path is /proc/4194303/cmdline */
+	snprintf(proc_path, sizeof(proc_path), "/proc/%i/cmdline", pid);
+	return _env_dump_read_file(proc_path, 4096, NULL);
+}
+
 void
 _env_var_dump_binary_information(int pid)
 {

@@ -87,20 +87,54 @@ print_date_and_time()
 	fprintf(env_file, "DATE,%s\n", buf);
 }
 
+static int
+check_restrictions()
+{
+	char *full_path, *cmdline, *restrict_binary, *restrict_cmdline;
+	int ret = 0;
+
+	full_path = _env_dump_binary_fullpath(getpid());
+	cmdline = _env_dump_binary_cmdline(getpid());
+	restrict_binary = getenv("ENV_DUMP_RESTRICT_TO_BINARY");
+	restrict_cmdline = getenv("ENV_DUMP_REQUIRE_ARGUMENT");
+
+	if (full_path!= NULL && restrict_binary != NULL &&
+		strcmp(full_path, restrict_binary) != 0) {
+		printf("Env_dump: binary '%s', ignore...\n", full_path);
+		ret = 1;
+	}
+
+	if (cmdline!= NULL && restrict_cmdline != NULL) {
+		/* Read the entire cmdline */
+		const char *p = cmdline;
+		int not_found = 1;
+		while (*p) {
+			if (strcmp(p, restrict_cmdline) == 0) {
+				not_found = 0;
+				break;
+			}
+			while (*p++);
+		}
+		if (not_found)
+			printf("Env_dump: cmdline does not contain '%s', ignore...\n", restrict_cmdline);
+		ret |= not_found;
+	}
+	free(cmdline);
+	free(full_path);
+
+	return ret;
+}
+
 __attribute__((constructor))
 static void init() {
 	const char *base_path = getenv("ENV_DUMP_FILE");
-	char *full_path, *restrict_binary, *path;
+	char *path;
 	int fd;
 
 	if (base_path == NULL)
 		base_path = "/tmp/env_dump";
 
-	full_path = _env_dump_binary_fullpath(getpid());
-	restrict_binary = getenv("ENV_DUMP_RESTRICT_TO_BINARY");
-	if (full_path!= NULL && restrict_binary != NULL &&
-		strcmp(full_path, restrict_binary) != 0) {
-		printf("Env_dump: binary '%s' ignored...\n", full_path);
+	if (check_restrictions()) {
 		env_file = fopen("/dev/null", "w");
 	} else if (strcmp(base_path, "stderr") != 0) {
 		/* if the file asked by the user already exists, append the pid to the
@@ -124,7 +158,6 @@ static void init() {
 	} else {
 		env_file = stderr;
 	}
-	free(full_path);
 
 	/* handle some signals that would normally result in an exit without
 	 * calling the fini functions. This will hopefully be done before any
