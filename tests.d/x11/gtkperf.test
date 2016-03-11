@@ -4,8 +4,8 @@ test_invert=1
 
 hash gtkperf || return 1
 
-gtkperf_run() {
-    gtkperf -a | grep "Total time: " | cut -d : -f 2 | tr --delete ' '
+x11:gtkperf_run() {
+    run_bench 0 gtkperf -a | grep "Total time: " | cut -d : -f 2 | tr --delete ' '
 }
 
 test_exec_time=5
