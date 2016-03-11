@@ -32,6 +32,12 @@ function auto_deploy_make_and_deploy() {
     # 71: Compilation error
     # 72: Deployment error
 
+    # Check that the deploy folder exists
+    if [ ! -d "$DEPLOY_BASE_DIR" ]; then
+        echo "ERROR: Please set DEPLOY_BASE_DIR ($DEPLOY_BASE_DIR) to an acceptable directory in user_parameters.sh."
+        return 72
+    fi
+
     # First, check if we already have the
     dep_version_dir=$(profile_repo_deployment_version_dir)
     depl_version=$(LD_LIBRARY_PATH=$dep_version_dir/lib:$LD_LIBRARY_PATH \
