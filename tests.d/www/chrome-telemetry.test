@@ -2,6 +2,9 @@ hash "$TELEMETRY_FOLDER/run_benchmark" 2> /dev/null || return 1
 
 function __telemetry__ {
     cd $TELEMETRY_FOLDER
+
+    ENV_DUMP_RESTRICT_TO_BINARY="$CHROME_PATH" \
+    ENV_DUMP_REQUIRE_ARGUMENT="--type=gpu-process" \
     run_bench 0 ./run_benchmark --browser=stable --use-live-sites \
     --extra-browser-args="--disable-gpu-vsync" -d $1 | \
     grep "^RESULT $2:" | cut -d '=' -f 2 | cut -d ' ' -f 2
