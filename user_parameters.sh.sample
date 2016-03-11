@@ -99,6 +99,9 @@ CAIRO_TRACES="/opt/benchmarks//cairo-traces"
 TELEMETRY_FOLDER="/opt/benchmarks/telemetry"
 CHROME_PATH="/opt/google/chrome/chrome"
 
+# Videos' folder for the video benchmarks
+VIDEOS_FOLDER="/opt/benchmarks/videos"
+
 # xf86-video-intel setting
 XF86_VIDEO_INTEL=/opt/benchmarks/xf86-video-intel
 

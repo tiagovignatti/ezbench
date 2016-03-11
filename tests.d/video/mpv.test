@@ -1,0 +1,45 @@
+test_unit="s"
+test_invert=1
+
+mpv_path=/usr/bin/mpv
+
+[ ! -d "$VIDEOS_FOLDER" ] && return 1
+hash $mpv_path 2> /dev/null || return 1
+hash date 2> /dev/null || return 1
+hash bc 2> /dev/null || return 1
+
+# 4 argument: $hwdec $output $extra_args $video_file
+function __mpv__ {
+    cd $VIDEOS_FOLDER # Set this variable in user_paramaters.sh
+
+    before=$(date +%s.%N)
+    validation=$(vblank_mode=0 ENV_DUMP_RESTRICT_TO_BINARY="$mpv_path" \
+        run_bench 0 $mpv_path --no-audio --untimed --hwdec $1 --vo $2 $3 \
+        $4 2> /dev/null | grep "Video: no video")
+    after=$(date +%s.%N)
+    if [ -z "$validation" ]; then
+        echo "$after - $before" | bc -l
+    else
+        echo 0
+    fi
+}
+
+while read hwdec_name hwdec; do
+    while read output_name output; do
+        for video in $VIDEOS_FOLDER/*; do
+            video=$(basename $video)
+            while read mode args; do
+                name="video:mpv:$hwdec_name:$output_name:$video:$mode"
+                test_name="$test_name ${name}"
+                eval "${name}_run() { __mpv__ $hwdec $output $args $video; }"
+            done <<< "fullscreen --fs
+                      window "
+        done
+    done <<< "drm drm
+              gl opengl
+              gl-hq opengl-hq
+              wayland wayland
+              xv xv"
+done <<< "sw no
+          vaapi vaapi"
+test_exec_time=15
