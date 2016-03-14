@@ -1358,7 +1358,7 @@ def readCsv(filepath):
     data = []
 
     h1 = re.compile('^# (.*) of \'(.*)\' using commit (.*)$')
-    h2 = re.compile('^# (.*) \\((.*) is better\\) of \'(.*)\' using commit (.*)$')
+    h2 = re.compile('^# (.*) \\((.*) is better\\) of \'(.*)\' using (commit|version) (.*)$')
 
     with open(filepath, 'rt') as f:
         reader = csv.reader(f)
@@ -1373,7 +1373,7 @@ def readCsv(filepath):
                 m1 = h1.match(row[0])
                 m2 = h2.match(row[0])
                 if m2 is not None:
-                    # groups: unit type, more|less qualifier, benchmark, commit_sha1
+                    # groups: unit type, more|less qualifier, benchmark, commit/version, commit_sha1
                     unit = m2.groups()[0]
                     more_is_better = m2.groups()[1].lower() == "more"
                 elif m1 is not None:
