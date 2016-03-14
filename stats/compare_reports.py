@@ -110,9 +110,11 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 				if not result.benchmark.full_name in db["benchmarks"]:
 					db["benchmarks"].append(result.benchmark.full_name)
 				db["commits"][commit.sha1]['reports'][report.name][result.benchmark.full_name] = result
-				average = convert_unit(result.result(), result.unit_str, output_unit)
+				average_raw = result.result()
+				average = convert_unit(average_raw, result.unit_str, output_unit)
 				score_sum += average
 				count += 1
+				result.average_raw = float("{0:.2f}".format(average_raw))
 				result.average = float("{0:.2f}".format(average))
 				result.margin_str = float("{0:.2f}".format(result.margin() * 100))
 
@@ -432,7 +434,7 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 			diff_target = 100
 		diff_target = "{0:.2f}".format(diff_target)
 	%>\\
-	, ${diff_target}, "${tooltip_commit_table(commit)}<h4>Perf</h4><table><tr><td><b>Benchmark</b></td><td>${benchmark}</td></tr><tr><td><b>Target</b></td><td>${diff_target} %</td></tr><tr><td><b>Raw value</b></td><td>${result.average} ${output_unit} +/- ${result.margin_str}% (n=${len(result.data)})</td></tr></table>"\\
+	, ${diff_target}, "${tooltip_commit_table(commit)}<h4>Perf</h4><table><tr><td><b>Benchmark</b></td><td>${benchmark}</td></tr><tr><td><b>Target</b></td><td>${diff_target} %</td></tr><tr><td><b>Raw value</b></td><td>${result.average_raw} ${result.unit_str} +/- ${result.margin_str}% (n=${len(result.data)})</td></tr><tr><td><b>Converted value</b></td><td>${result.average} ${output_unit} +/- ${result.margin_str}% (n=${len(result.data)})</td></tr></table><br/>"\\
 								% else:
 	, null, "${benchmark}"\\
 								% endif
