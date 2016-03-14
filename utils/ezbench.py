@@ -1622,7 +1622,9 @@ def convert_unit(value, input_unit, output_type):
 	elif value == 0:
 		return 0
 
-	if input_unit == "ms":
+	if input_unit == "s":
+		ir_fps = 1.0 / value
+	elif input_unit == "ms":
 		ir_fps = 1.0e3 / value
 	elif input_unit == "us":
 		ir_fps = 1.0e6 / value
@@ -1636,7 +1638,9 @@ def convert_unit(value, input_unit, output_type):
 	elif ir_fps == 0:
 		return float('+inf')
 
-	if output_type == "ms":
+	if output_type == "s":
+		return 1.0 / ir_fps
+	elif output_type == "ms":
 		return 1.0e3 / ir_fps
 	elif output_type == "us":
 		return 1.0e6 / ir_fps
