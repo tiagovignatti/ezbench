@@ -276,11 +276,12 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 					text-decoration:underline;
 				}
 			</style>
-			<script type="text/javascript" src="https://www.google.com/jsapi"></script>
+			<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 			<script type="text/javascript">
-				google.load('visualization', '1', {packages: ['corechart']});
-				google.setOnLoadCallback(drawTrend);
-				google.setOnLoadCallback(drawDetails);
+				google.charts.load('current', {'packages':['corechart', 'table']});
+				google.charts.setOnLoadCallback(drawTrend);
+				google.charts.setOnLoadCallback(drawDetails);
+				google.charts.setOnLoadCallback(drawTable);
 
 				var currentCommit = "${default_commit}";
 
@@ -492,6 +493,7 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 							if (commit != currentCommit) {
 								currentCommit = commit;
 								drawDetails();
+								drawTable();
 							}
 						}
 
@@ -607,6 +609,47 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 						}
 					});
 				}
+
+				function drawTable() {
+					var dataTable = new google.visualization.DataTable();
+					dataTable.addColumn('string', 'Benchmark');
+					dataTable.addColumn('string', 'Report 1');
+					dataTable.addColumn('string', 'Report 2');
+					dataTable.addColumn('number', '%');
+					dataTable.addColumn('string', 'Comments');
+
+					% for commit in db["commits"]:
+					if (currentCommit == "${commit}") {
+						% for report1 in db["reports"]:
+							% if report1 in db["commits"][commit]['reports']:
+								% for report2 in db["reports"]:
+									% if report2 != report1 and report2 in db["commits"][commit]['reports']:
+										% for benchmark in db["benchmarks"]:
+											% if (benchmark in db["commits"][commit]['reports'][report1] and benchmark in db["commits"][commit]['reports'][report2]):
+											<%
+												r1 = db["commits"][commit]['reports'][report1][benchmark]
+												r2 = db["commits"][commit]['reports'][report2][benchmark]
+												perf_diff = compute_perf_difference(r1.unit_str, r1.average_raw, r2.average_raw)
+												perf_diff = "{0:.2f}".format(perf_diff)
+											%>
+						dataTable.addRows([['${benchmark}', '${report1}', '${report2}', ${perf_diff}, "${r1.average_raw} => ${r2.average_raw} ${r1.unit_str}"]])
+											% endif
+										% endfor
+									% endif
+								% endfor
+							% endif
+						% endfor
+					}
+					%endfor
+
+					var chart = new google.visualization.Table(document.getElementById('details_table'));
+
+					% if len(db["reports"]) > 1:
+						chart.draw(dataTable, {showRowNumber: true, width: '100%', height: '100%'});
+					% else:
+						details_table.style.height = 0
+					% endif
+				}
 			</script>
 		</head>
 
@@ -620,6 +663,8 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 			<h2>Details</h2>
 
 			<center><div id="details_chart" style="width: 100%; height: 500px;"></div></center>
+
+			<center><div id="details_table" style="width: 100%; height: 500px;"></div></center>
 
 			<h2>Benchmarks</h2>
 
