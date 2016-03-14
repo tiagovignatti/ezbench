@@ -1647,3 +1647,15 @@ def convert_unit(value, input_unit, output_type):
 
 	print("convert_unit: Unknown output type " + output_type)
 	return value
+
+def compute_perf_difference(unit, target, value):
+    if unit == "s" or unit == "ms" or unit == "us" or unit == "µs":
+        if value != 0:
+            return target * 100.0 / value
+        else:
+            return 100
+    else:
+        if target != 0:
+            return value * 100.0 / target
+        else:
+            return 100

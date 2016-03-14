@@ -122,6 +122,9 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 				if (not result.benchmark.full_name in db["targets"] or
 				db["targets"][result.benchmark.full_name] == 0):
 					db["targets"][result.benchmark.full_name] = result.average
+				result.diff_target = compute_perf_difference(output_unit,
+				                                             db["targets"][result.benchmark.full_name],
+				                                             result.average)
 
 				# Environment
 				if result.benchmark.full_name not in human_envs:
@@ -212,6 +215,7 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
 	<%! import cgi %>
+	<%! from ezbench import compute_perf_difference %>
 
 	<html xmlns="http://www.w3.org/1999/xhtml">
 		<head>
@@ -427,12 +431,7 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 							% if benchmark in db["commits"][commit]['reports'][report]:
 	<%
 		result = db["commits"][commit]['reports'][report][benchmark]
-		target = db['targets'][benchmark]
-		if target != 0:
-			diff_target = result.average * 100.0 / target
-		else:
-			diff_target = 100
-		diff_target = "{0:.2f}".format(diff_target)
+		diff_target = "{0:.2f}".format(result.diff_target)
 	%>\\
 	, ${diff_target}, "${tooltip_commit_table(commit)}<h4>Perf</h4><table><tr><td><b>Benchmark</b></td><td>${benchmark}</td></tr><tr><td><b>Target</b></td><td>${diff_target} %</td></tr><tr><td><b>Raw value</b></td><td>${result.average_raw} ${result.unit_str} +/- ${result.margin_str}% (n=${len(result.data)})</td></tr><tr><td><b>Converted value</b></td><td>${result.average} ${output_unit} +/- ${result.margin_str}% (n=${len(result.data)})</td></tr></table><br/>"\\
 								% else:
@@ -522,11 +521,8 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 	<%
 										if not r in db["commits"][commit]:
 											continue
-										if db["commits"][commit]['reports'][report]["average"] != 0:
-											diff = db["commits"][commit]['reports'][r]["average"] / db["commits"][commit]['reports'][report]["average"] * 100
-											diff = float("{0:.2f}".format(diff))
-										else:
-											diff = "ERR"
+										diff = compute_perf_difference(output_unit, db["commits"][commit]['reports'][report]["average"], db["commits"][commit]['reports'][r]["average"])
+										diff = float("{0:.2f}".format(diff))
 										btag = btagend = ""
 										if r == report:
 											btag="<b>"
@@ -542,11 +538,8 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 	<%
 												if not r in db["commits"][commit]['reports'] or benchmark not in db["commits"][commit]['reports'][r]:
 													continue
-												if db["commits"][commit]['reports'][report][benchmark].average != 0:
-													diff = db["commits"][commit]['reports'][r][benchmark].average / db["commits"][commit]['reports'][report][benchmark].average * 100
-													diff = float("{0:.2f}".format(diff))
-												else:
-													diff = "ERR"
+												diff = compute_perf_difference(output_unit, db["commits"][commit]['reports'][report][benchmark].average, db["commits"][commit]['reports'][r][benchmark].average)
+												diff = float("{0:.2f}".format(diff))
 												btag = btagend = ""
 												if r == report:
 													btag="<b>"
