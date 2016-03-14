@@ -1626,7 +1626,7 @@ def convert_unit(value, input_unit, output_type):
 		ir_fps = 1.0 / value
 	elif input_unit == "ms":
 		ir_fps = 1.0e3 / value
-	elif input_unit == "us":
+	elif input_unit == "us" or output_type == "µs":
 		ir_fps = 1.0e6 / value
 
 	if ir_fps == -1:
@@ -1642,7 +1642,7 @@ def convert_unit(value, input_unit, output_type):
 		return 1.0 / ir_fps
 	elif output_type == "ms":
 		return 1.0e3 / ir_fps
-	elif output_type == "us":
+	elif output_type == "us" or output_type == "µs":
 		return 1.0e6 / ir_fps
 
 	print("convert_unit: Unknown output type " + output_type)
