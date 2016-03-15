@@ -266,14 +266,24 @@ function kill_random_pid() {
     sudo -n kill $1
 
     # This is generally unsafe, but better than waiting a random amount of time
-    ps -p $1 > /dev/null 2> /dev/null
-    while [[ ${?} == 0 && $loop_watchdog > 0 ]]
+    while /bin/true
     do
+        ps -p $1 > /dev/null 2> /dev/null
+        [[ "${?}" == "0" ]] || return 0
+        [[ $loop_watchdog > 0 ]] || break
+
         loop_watchdog=$((loop_watchdog - 1))
         sleep .01
-        ps -p $1 > /dev/null 2> /dev/null
     done
+
+    # Warn about the issue!
+    echo "WARNING: Could not gently kill the pid $1 ($(ps -ho cmd $1)). Be less gentle!"
 
     # Stop waiting, just kill it!
     sudo -n kill -9 $1
+
+    # Wait a little, because some resources may be being freed
+    sleep 1
+
+    return 1
 }
