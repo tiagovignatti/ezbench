@@ -89,7 +89,7 @@ function xserver_reset() {
     # Check for dependencies
     has_binary xrandr || return 1
 
-    xrandr --auto
+    xrandr --auto 2> /dev/null 2> /dev/null
 
     return 0
 }
