@@ -47,7 +47,7 @@ static void fini();
  */
 void _exit(int status)
 {
-	void (*const orig__exit)(int) = _env_dump_resolve_symbol_by_name("_exit");
+	void (*__attribute__((noreturn)) const orig__exit)(int) = _env_dump_resolve_symbol_by_name("_exit");
 	fini();
 	orig__exit(status);
 }
