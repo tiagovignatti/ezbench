@@ -45,11 +45,26 @@ static void fini();
 /* Yes, the program may call _exit() and in this case, the fini() function will
  * never be called. Fix this!
  */
-void _exit(int status)
+void
+_exit(int status)
 {
 	void (*__attribute__((noreturn)) const orig__exit)(int) = _env_dump_resolve_symbol_by_name("_exit");
+	fprintf(env_file, "EXIT,%i\n", status);
+
+	/* call fini() now, as no other interaction may happen after our call to
+	 * _exit().
+	 */
 	fini();
 	orig__exit(status);
+}
+
+void
+exit(int status)
+{
+	void (*__attribute__((noreturn)) const orig_exit)(int) = _env_dump_resolve_symbol_by_name("exit");
+	fprintf(env_file, "EXIT,%i\n", status);
+	/* do not call fini() now as we may miss some precious interactions */
+	orig_exit(status);
 }
 
 /* handle exit signals to run the fini() functions */
