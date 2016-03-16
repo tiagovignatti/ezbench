@@ -56,8 +56,10 @@ void _exit(int status)
 static void
 sig_handler(int sig, siginfo_t *siginfo, void *context)
 {
-	/* this will also call fini! */
-	_exit(-1);
+	void (*const orig__exit)(int) = _env_dump_resolve_symbol_by_name("_exit");
+	fprintf(env_file, "EXIT_SIGNAL,%i (%s)\n", sig, strsignal(sig));
+	fini();
+	orig__exit(-1);
 }
 
 static void
@@ -168,6 +170,7 @@ static void init() {
 	register_signal_handler(SIGINT);
 	register_signal_handler(SIGPIPE);
 	register_signal_handler(SIGTERM);
+	register_signal_handler(SIGSEGV);
 
 	fprintf(env_file, "-- Env dump start (version 1) --\n");
 
