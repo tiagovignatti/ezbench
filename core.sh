@@ -93,13 +93,10 @@ function run_bench {
 
     run_log_file_stdout="$run_log_file.stdout"
     run_log_file_stderr="$run_log_file.stderr"
-    if [ ! -z "$run_log_file" ]; then
-        cmd="$cmd > >(tee $run_log_file_stdout) 2> >(tee $run_log_file_stderr >&2)"
-    fi
 
     callIfDefined run_bench_pre_hook
     export REPO_COMPILE_AND_DEPLOY_VERSION=$version
-    eval $cmd
+    eval $cmd > "$run_log_file_stdout" 2> "$run_log_file_stderr"
     unset REPO_COMPILE_AND_DEPLOY_VERSION
     callIfDefined run_bench_post_hook
 
@@ -110,9 +107,13 @@ function run_bench {
     # delete the log files if they are empty
     if [ ! -s "$run_log_file_stdout" ] ; then
         rm "$run_log_file_stdout"
+    else
+        cat "$run_log_file_stdout"
     fi
     if [ ! -s "$run_log_file_stderr" ] ; then
         rm "$run_log_file_stderr"
+    else
+        cat "$run_log_file_stderr" >&2
     fi
 }
 
