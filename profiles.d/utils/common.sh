@@ -106,8 +106,10 @@ function gui_start() {
     if [ -n "$EZBENCH_CONF_COMPOSITOR" ]; then
         has_binary "${EZBENCH_CONF_COMPOSITOR}" || return 1
         eval "${EZBENCH_CONF_COMPOSITOR} $EZBENCH_CONF_COMPOSITOR_ARGS&" 2> /dev/null > /dev/null
-        sleep 0.25
     fi
+
+    # Give it a little more time to setup
+    sleep 0.5
 
     return 0
 }
