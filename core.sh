@@ -95,12 +95,10 @@ function run_bench {
     run_log_file_stderr="$run_log_file.stderr"
 
     callIfDefined run_bench_pre_hook
-    export REPO_COMPILE_AND_DEPLOY_VERSION=$version
     local time_before=$(date +%s.%N)
     eval $cmd > "$run_log_file_stdout" 2> "$run_log_file_stderr"
     local time_after=$(date +%s.%N)
     local test_exec_time=$(echo "$time_after - $time_before" | bc -l)
-    unset REPO_COMPILE_AND_DEPLOY_VERSION
     callIfDefined run_bench_post_hook
 
     if [ -f "$env_dump_path" ]; then
@@ -443,8 +441,10 @@ function compile_and_deploy {
     profile_repo_get_patch $version > "$logsFolder/$1.patch"
 
     # Compile the version and check for failure. If it failed, go to the next version.
+    export REPO_COMPILE_AND_DEPLOY_VERSION=$version
     eval "$makeAndDeployCmd" >> "$compile_logs" 2>&1
     local exit_code=$?
+    unset REPO_COMPILE_AND_DEPLOY_VERSION
 
     # The exit code 74 actually means everything is fine but we need to reboot
     if [ $exit_code -eq 74 ]
