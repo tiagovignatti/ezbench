@@ -168,7 +168,17 @@ class EnvDumpReport:
         self.values = dict()
         head_re = re.compile('^-- Env dump start \(version (\d+)\) --$')
         for line in f:
-            fields = line.rstrip('\n').split(',')
+            raw_fields = line.rstrip('\n').split(',')
+
+            # Detect when a coma was found between two '', useful for the EXE line
+            fields = []
+            total_count = 0
+            for field in raw_fields:
+                if raw_fields[0] == 'EXE' and (total_count % 2) == 1:
+                    fields[-1] = fields[-1] + ',' + field
+                else:
+                    fields.append(field)
+                total_count += field.count('\'')
 
             # Parse the header and footer
             if len(fields) == 1:
