@@ -20,6 +20,20 @@ function has_binary() {
     return 0
 }
 
+function poll_timeout() {
+    local timeout_ms=$1
+    local polling_period_s=$2
+    local polling_function=$3
+
+    local start=$(date +%s%3N)
+
+    while /bin/true; do
+        eval $polling_function && return 0
+        [ "$(($(date +%s%3N) - start))" -gt "$timeout_ms" ] && return 1
+        sleep $polling_period_s
+    done
+}
+
 # Change VT
 function vt_switch_start() {
     has_automatic_sudo_rights || return 1
@@ -28,16 +42,21 @@ function vt_switch_start() {
 
     export EZBENCH_VT_ORIG=$(sudo -n fgconsole)
     sudo -n chvt 5
-    sleep 1 # Wait for the potential x-server running to release MASTER
 
-    return 0
+    # Wait for the switch to have happened
+    poll_timeout 5000 0.01 "test $(sudo -n fgconsole) -eq 5"
+
+    return $?
 }
 function vt_switch_stop() {
     [[ -z "$EZBENCH_VT_ORIG" ]] && return
 
     sudo -n chvt $EZBENCH_VT_ORIG
+
+    # Wait for the switch to have happened
+    poll_timeout 5000 0.01 "test $(sudo -n fgconsole) -eq $EZBENCH_VT_ORIG"
+
     unset EZBENCH_VT_ORIG
-    sleep 1
 }
 
 # Requires xset, chvt,X,sudo rights without passwords
