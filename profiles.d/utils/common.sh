@@ -132,6 +132,7 @@ function gui_start() {
     if [ -n "$EZBENCH_CONF_COMPOSITOR" ]; then
         has_binary "${EZBENCH_CONF_COMPOSITOR}" || return 1
         eval "${EZBENCH_CONF_COMPOSITOR} $EZBENCH_CONF_COMPOSITOR_ARGS&" 2> /dev/null > /dev/null
+        export EZBENCH_COMPOSITOR_PID=$!
     fi
 
     # Give it a little more time to setup
@@ -142,6 +143,12 @@ function gui_start() {
 
 function gui_stop() {
     [[ $dry_run -eq 1 ]] && return
+
+    # Kill the compositor first
+    if [ -n "$EZBENCH_COMPOSITOR_PID" ]; then
+        kill_random_pid $EZBENCH_COMPOSITOR_PID
+        unset EZBENCH_COMPOSITOR_PID
+    fi
 
     # Stop our X server
     xserver_setup_stop
