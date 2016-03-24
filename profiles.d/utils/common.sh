@@ -73,11 +73,18 @@ function xserver_setup_start() {
 
     vt_switch_start || return 1
 
-    x_pid=$(sudo -n $ezBenchDir/profiles.d/utils/_launch_background.sh Xorg -nolisten tcp -noreset :42 vt5 -auth /tmp/ezbench_XAuth 2> /dev/null) # TODO: Save the xorg logs
+    local xauthority="/tmp/ezbench_XAuth"
+    local xorg_id=":42"
+
+    if [ -n "$EZBENCH_CONF_X11_CONF" ]; then
+        local xorg_config="-config $EZBENCH_CONF_X11_CONF"
+    fi
+
+    local x_pid=$(sudo -n $ezBenchDir/profiles.d/utils/_launch_background.sh Xorg $xorg_config -configdir /no_conf_please/ -nolisten tcp -noreset $xorg_id vt5 -auth $xauthority 2> /tmp/xorg) # TODO: Save the xorg logs
     export EZBENCH_X_PID=$x_pid
 
-    export DISPLAY=:42
-    export XAUTHORITY=/tmp/ezbench_XAuth
+    export DISPLAY=$xorg_id
+    export XAUTHORITY=$xauthority
 
     # disable DPMS. The X-Server may not have started yet, so try multiple times (up to 5 seconds)
     for i in {0..50}
