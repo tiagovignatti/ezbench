@@ -1,1 +1,1 @@
-export EZBENCH_CONF_X11_CONF="$ezBenchDir/confs.d/x11_ddx/intel.conf"
+export EZBENCH_CONF_X11_CONF="$ezBenchDir/confs.d/xorg_intel.conf"
