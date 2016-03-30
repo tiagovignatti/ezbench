@@ -5,17 +5,19 @@ test_invert=1
 [ ! -d "$CAIRO_TRACES" ] && return 1
 hash cairo-perf-trace 2> /dev/null || return 1
 
-function __cairo_traces_xlib__ {
-    ns=$(CAIRO_TRACE_DIR="$CAIRO_TRACES" CAIRO_TEST_TARGET=xlib \
-    run_bench 0 cairo-perf-trace $1 -ri 1 | \
-    grep -e "\[*\] xlib.rgba $1.0 " | cut -d ' ' -f 5)
+function __cairo_traces__ {
+    ns=$(CAIRO_TRACE_DIR="$CAIRO_TRACES" CAIRO_TEST_TARGET=$1 \
+    run_bench 0 cairo-perf-trace $2 -ri 1 | \
+    grep -e "\[*\] $1.rgba $2.0 " | cut -d ' ' -f 5)
     bc <<< "scale=2; $ns/1000000.0"
 }
 
-tests=$(CAIRO_TRACE_DIR="$CAIRO_TRACES" CAIRO_TEST_TARGET=xlib cairo-perf-trace -l)
-for test in $tests; do
-    name="x11:cairo:trace:$test:offscreen"
-    test_name="$test_name $name"
-    eval "${name}_run() { __cairo_traces_xlib__ $test; }"
+tests=$(CAIRO_TRACE_DIR="$CAIRO_TRACES" cairo-perf-trace -l)
+for backend in xlib xcb image; do
+    for test in $tests; do
+        name="x11:cairo:$backend:trace:$test:offscreen"
+        test_name="$test_name $name"
+        eval "${name}_run() { __cairo_traces__ $backend $test; }"
+    done
 done
 test_exec_time=20

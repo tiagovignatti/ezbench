@@ -5,16 +5,18 @@
 
 # fish: 99.999 fps
 
-function __cairo_demos_xlib__ {
+function __cairo_demos__ {
     cd $CAIRO_DEMOS
     # This does not work for some demos, but we can fix that later!
-    run_bench 23 ./$1-demo --benchmark --xlib | sed -e '/fps/!d; s/.*: \(.*\) fps.*/\1/'
+    run_bench 23 ./$2-demo --async --benchmark --$1 | sed -e '/fps/!d; s/.*: \(.*\) fps.*/\1/'
 }
 
 for i in $CAIRO_DEMOS/*-demo; do
     demo=$(basename $i -demo)
-    name="x11:cairo:demo:$demo"
-    test_name="$test_name $name"
-    eval "${name}_run() { __cairo_demos_xlib__ $demo; }"
+    for backend in xlib xcb image glx; do
+        name="x11:cairo:$backend:demo:$demo"
+        test_name="$test_name $name"
+        eval "${name}_run() { __cairo_demos__ $backend $demo; }"
+    done
 done
 test_exec_time=20
