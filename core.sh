@@ -347,6 +347,10 @@ trap __ezbench_finish__ INT # Needed for zsh
 callIfDefined ezbench_pre_hook || exit 60
 
 versionList=$(profile_get_version_list $@)
+if [ $? -ne 0 ]; then
+    echo $versionList
+    exit 50
+fi
 
 # Seed the results with the last round?
 versionListLog="$logsFolder/commit_list"
