@@ -133,10 +133,27 @@ function gui_start() {
         has_binary "${EZBENCH_CONF_COMPOSITOR}" || return 1
         eval "${EZBENCH_CONF_COMPOSITOR} $EZBENCH_CONF_COMPOSITOR_ARGS&" 2> /dev/null > /dev/null
         export EZBENCH_COMPOSITOR_PID=$!
-    fi
 
-    # Give it a little more time to setup
-    sleep 0.5
+        has_binary "wmctrl" || {
+            sleep 2 # Give the compositor a chance to start
+            return 0
+        }
+
+        local start=$(date +%s%3N)
+        while /bin/true; do
+            comp=$(wmctrl -m 2> /dev/null | grep 'Name' | cut -d ' ' -f 2)
+            [[ "$comp" == "$EZBENCH_CONF_COMPOSITOR_NAME" ]] && return 0
+            [ "$(($(date +%s%3N) - start))" -gt "5000" ] && break
+            sleep 0.05
+        done
+
+        # We failed, warn and exit
+        echo "ERROR: gui_start failed to start the compositor '$EZBENCH_CONF_COMPOSITOR_NAME' ($EZBENCH_CONF_COMPOSITOR $EZBENCH_CONF_COMPOSITOR_ARGS). Abort..."
+        return 1
+    else
+        # Give X a little more time to setup
+        sleep 0.5
+    fi
 
     return 0
 }
