@@ -131,7 +131,9 @@ function gui_start() {
     # Start the compositor
     if [ -n "$EZBENCH_CONF_COMPOSITOR" ]; then
         has_binary "${EZBENCH_CONF_COMPOSITOR}" || return 1
-        eval "${EZBENCH_CONF_COMPOSITOR} $EZBENCH_CONF_COMPOSITOR_ARGS&" 2> /dev/null > /dev/null
+        has_binary "unbuffer" || return 1
+
+        eval "unbuffer ${EZBENCH_CONF_COMPOSITOR} $EZBENCH_CONF_COMPOSITOR_ARGS &" 2> /dev/null > /dev/null
         export EZBENCH_COMPOSITOR_PID=$!
 
         has_binary "wmctrl" || {
