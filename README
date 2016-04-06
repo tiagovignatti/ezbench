@@ -35,11 +35,28 @@ a new kernel to test a new commit.
 
 === Dependencies ===
 
+The real core of ezbench requires:
  - A recent-enough version of bash
- - make
- - git
  - awk
  - all the other typical binutils binaries
+
+If you plan on recompiling drivers (such as mesa or the kernel), you will need:
+ - autotools
+ - gcc/clang
+ - git
+ - make
+
+To run the xserver, you will need the following applications:
+ - chvt
+ - sudo (with the testuser setup not to ask for passwords)
+ - Xorg
+ - xrandr
+ - xset
+
+If you want to use specify which compositor should be run, you will need to
+install the following applications:
+ - unbuffer
+ - wmctrl
 
 === Configuration ===
 
