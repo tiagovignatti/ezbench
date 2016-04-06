@@ -45,6 +45,9 @@
 #   Git:
 #       - 50: Invalid version ID
 #
+#   Environment:
+#       - 60: Failed to deploy the environment
+#
 #   Compilation & deployment:
 #       - 70: Compilation or deployment failed
 #       - 71: Compilation failed
@@ -297,7 +300,7 @@ trap __ezbench_finish__ EXIT
 trap __ezbench_finish__ INT # Needed for zsh
 
 # Execute the user-defined pre hook
-callIfDefined ezbench_pre_hook
+callIfDefined ezbench_pre_hook || exit 60
 
 versionList=$(profile_get_version_list $@)
 
