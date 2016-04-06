@@ -13,7 +13,7 @@ function __cairo_demos__ {
 
 for i in $CAIRO_DEMOS/*-demo; do
     demo=$(basename $i -demo)
-    for backend in xlib xcb image glx; do
+    for backend in xlib xcb ximage glx; do
         name="x11:cairo:$backend:demo:$demo"
         test_name="$test_name $name"
         eval "${name}_run() { __cairo_demos__ $backend $demo; }"
