@@ -10,6 +10,7 @@ SHA1_DB=$ezBenchDir/SHA1_DB
 REPO_MESA=/opt/source/mesa
 REPO_LINUX=/opt/source/linux
 REPO_PERF_BISECT='/opt/source/bisect-test' # git://people.freedesktop.org/~mperes/bisect-test
+REPO_PIGLIT='/opt/source/piglit'
 
 # Repo compilation parameters
 REPO_MESA_PARAMETERS="--prefix=\$REPO_MESA_PREFIX \
@@ -76,6 +77,9 @@ GLBENCHMARK30_FOLDER=/opt/benchmarks/gfxbench3_desktop/
 
 # LuxMark settings
 LUXMARK_FOLDER=/opt/benchmarks/luxmark-v3.0
+
+# Piglit run parameters
+PIGLIT_RUN_PARAMS=''
 
 # PolyBench-ACC settings
 # https://github.com/cavazos-lab/PolyBench-ACC

@@ -1,0 +1,39 @@
+test -e "$REPO_PIGLIT/piglit" || return 1
+
+function __piglit_run__ {
+    cd "$REPO_PIGLIT"
+
+    local backend=$1
+    local testscript=$2
+
+    piglit_output=${run_log_file}_tmp
+
+    # start piglit
+    local cmdline="./piglit run -p $backend $PIGLIT_RUN_PARAMS $subtests $testscript ${piglit_output}"
+    hash xterm && cmdline="xterm -e 'echo $cmdline; $cmdline'"
+
+    ENV_DUMP_RESTRICT_TO_BINARY=/usr/bin/glxinfo \
+    run_bench 0 $cmdline > /dev/null 2> /dev/null
+
+    # generate a report, first print the passrate on the first line, then print the individual results
+    ./piglit summary console -s ${piglit_output} | awk '{ if ($1 == "pass:") pass = $2; if ($1 == "total:") total = $2} END{ if (total > 0) print pass / total; else print 0 }'
+    ./piglit summary console ${piglit_output} | awk 'BEGIN{ d = 0 } { if (d == 0 && $0 != "summary:") print $0; else d = 1}'
+
+    # delete the temporary report
+    rm -rf ${piglit_output} 2>&1
+}
+
+backends=$($REPO_PIGLIT/piglit run -h | grep "^  -p" | cut -d '{' -f 2 | cut -d '}' -f 1 | tr ',' ' ')
+for backend in $backends; do
+    for test_script in $REPO_PIGLIT/tests/*.py; do
+        [ "$(basename $test_script)" == "__init__.py" ] && continue
+
+        name="piglit:$backend:$(basename ${test_script} | cut -d '.' -f 1)"
+        eval "${name}_run() { __piglit_run__ $backend $test_script \$@; }"
+        test_name="$test_name $name"
+    done
+done
+
+test_unit="pass/total"
+test_type="unit"
+test_exec_time=600
