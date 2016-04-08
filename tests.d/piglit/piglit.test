@@ -6,6 +6,12 @@ function __piglit_run__ {
     local backend=$1
     local testscript=$2
 
+    # Sub tests
+    subtests=""
+    for subtest in $(echo "$run_sub_tests" | tr ',' ' '); do
+        subtests="$subtests -t $(echo $subtest | tr '/' '@')"
+    done
+
     piglit_output=${run_log_file}_tmp
 
     # start piglit
