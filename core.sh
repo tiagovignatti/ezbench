@@ -310,6 +310,7 @@ last_version=$(tail -1 "$versionListLog" 2>/dev/null | cut -f 1 -d ' ')
 
 # Generate the actual list of tests
 typeset -A testNames
+typeset -A testSubTests
 typeset -A testInvert
 typeset -A testUnit
 typeset -A testType
@@ -330,14 +331,14 @@ for test_dir in ${testsDir:-$ezBenchDir/tests.d}; do
 
         for t in $test_name; do
             # Check that the user wants this test or not
-            found=1
+            tests_found=""
             if [ -n "$testsList" ]; then
-                found=0
                 for filter in $testsList; do
-                    if [[ $t =~ $filter ]]; then
+                    basetest=$(echo "$filter" | cut -d [ -f 1)
+                    if [[ $t =~ $basetest ]]; then
                         testFilter[$filter]=1
-                        found=1
-                        break
+                        tests_found="$tests_found $filter"
+                        # Do not break as other requested tests may match
                     fi
                 done
             fi
@@ -345,12 +346,12 @@ for test_dir in ${testsDir:-$ezBenchDir/tests.d}; do
                 for filter in $testExcludeList; do
                     if [[ $t =~ $filter ]]; then
                         testFilter[$filter]=-1
-                        found=0
+                        tests_found=""
                         break
                     fi
                 done
             fi
-            [ $found -eq 0 ] && continue
+            [ -z "$tests_found" ] && continue
 
             # Set the default unit to FPS
             [ -z "$test_unit" ] && test_unit="FPS"
@@ -358,18 +359,20 @@ for test_dir in ${testsDir:-$ezBenchDir/tests.d}; do
             # Set the default type to bench
             [ -z "$test_type" ] && test_type="bench"
 
-            testNames[$total_tests]=$t
-            testUnit[$total_tests]=$test_unit
-            testType[$total_tests]=$test_type
-            testInvert[$total_tests]=$test_invert
+            for test in $tests_found; do
+                testNames[$total_tests]=$t
+                testSubTests[$total_tests]=$(echo $test | cut -s -d '[' -f 2 | cut -d ']' -f 1)
+                testUnit[$total_tests]=$test_unit
+                testType[$total_tests]=$test_type
+                testInvert[$total_tests]=$test_invert
+                echo -n "${test} "
+            done
 
             last_result="$logsFolder/${last_version}_result_${t}"
             if [ -e "$logsFolder/${last_version}_result_${t}" ]; then
                 testPrevFps[$total_tests]=$(cat "$last_result")
             fi
             unset last_result
-
-            echo -n "${testNames[$total_tests]} "
 
             total_round_time=$(dc <<<"$total_round_time $test_exec_time + p")
             total_tests=$(( total_tests + 1))
@@ -554,6 +557,7 @@ do
             [ -e "$abortFile" ] && continue
 
             run_log_file="${fps_logs}#$c"
+            run_sub_tests="${testSubTests[$t]}"
 
             callIfDefined "$preHookFuncName"
             callIfDefined benchmark_run_pre_hook
