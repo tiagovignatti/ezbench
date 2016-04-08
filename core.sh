@@ -312,6 +312,7 @@ last_version=$(tail -1 "$versionListLog" 2>/dev/null | cut -f 1 -d ' ')
 typeset -A testNames
 typeset -A testInvert
 typeset -A testUnit
+typeset -A testType
 typeset -A testPrevFps
 typeset -A testFilter
 total_tests=0
@@ -321,6 +322,7 @@ for test_dir in ${testsDir:-$ezBenchDir/tests.d}; do
     for test_file in $test_dir/**/*.test; do
         unset test_name
         unset test_unit
+        unset test_type
         unset test_invert
         unset test_exec_time
 
@@ -353,8 +355,12 @@ for test_dir in ${testsDir:-$ezBenchDir/tests.d}; do
             # Set the default unit to FPS
             [ -z "$test_unit" ] && test_unit="FPS"
 
+            # Set the default type to bench
+            [ -z "$test_type" ] && test_type="bench"
+
             testNames[$total_tests]=$t
             testUnit[$total_tests]=$test_unit
+            testType[$total_tests]=$test_type
             testInvert[$total_tests]=$test_invert
 
             last_result="$logsFolder/${last_version}_result_${t}"
@@ -511,7 +517,7 @@ do
         benchName=${testNames[$t]}
 
         # Generate the logs file names
-        fps_logs=$logsFolder/${version}_bench_${testNames[$t]}
+        fps_logs=$logsFolder/${version}_${testType[$t]}_${testNames[$t]}
         error_logs=${fps_logs}.errors
 
         # Find the first run id available
@@ -559,10 +565,14 @@ do
             callIfDefined "$postHookFuncName"
 
             if [ -s "$run_log_file" ]; then
-                # Add the fps values before adding the result to the average fps for
-                # the run.
-                fps_avg=$(awk '{sum=sum+$1} END {print sum/NR}' $run_log_file)
-                echo "$fps_avg" >> "$fps_logs"
+                if [ ${testType[$t]} == "bench" ]; then
+                    # Add the reported values before adding the result to the average values for
+                    # the run.
+                    run_avg=$(awk '{sum=sum+$1} END {print sum/NR}' $run_log_file)
+                elif [ ${testType[$t]} == "unit" ]; then
+                    run_avg=$(head -n 1 $run_log_file)
+                fi
+                echo "$run_avg" >> "$fps_logs"
             else
                 echo "0" >> "$run_log_file"
                 echo "0" >> "$fps_logs"
