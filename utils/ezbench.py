@@ -1612,10 +1612,10 @@ def getResultsGeomDiffs(commits):
 
     return results
 
-def convert_unit(value, input_unit, output_type):
+def convert_unit(value, input_unit, output_unit):
 	ir_fps = -1.0
 
-	if input_unit == output_type:
+	if input_unit == output_unit:
 		return value
 
 	if input_unit.lower() == "fps":
@@ -1627,26 +1627,26 @@ def convert_unit(value, input_unit, output_type):
 		ir_fps = 1.0 / value
 	elif input_unit == "ms":
 		ir_fps = 1.0e3 / value
-	elif input_unit == "us" or output_type == "µs":
+	elif input_unit == "us" or output_unit == "µs":
 		ir_fps = 1.0e6 / value
 
 	if ir_fps == -1:
-		print("convert_unit: Unknown input type " + input_type)
+		print("convert_unit: Unknown input type " + input_unit)
 		return value
 
-	if output_type.lower() == "fps":
+	if output_unit.lower() == "fps":
 		return ir_fps
 	elif ir_fps == 0:
 		return float('+inf')
 
-	if output_type == "s":
+	if output_unit == "s":
 		return 1.0 / ir_fps
-	elif output_type == "ms":
+	elif output_unit == "ms":
 		return 1.0e3 / ir_fps
-	elif output_type == "us" or output_type == "µs":
+	elif output_unit == "us" or output_unit == "µs":
 		return 1.0e6 / ir_fps
 
-	print("convert_unit: Unknown output type " + output_type)
+	print("convert_unit: Unknown output type " + output_unit)
 	return value
 
 def compute_perf_difference(unit, target, value):
