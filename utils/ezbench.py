@@ -1393,6 +1393,15 @@ def readCsv(filepath):
 
     return data, unit, more_is_better
 
+def readUnitRun(filepath):
+    tests = dict()
+    with open(filepath, 'rt') as f:
+        for line in f.readlines():
+            fields = line.split(':')
+            if len(fields) == 2:
+                tests[fields[0]] = fields[1].strip()
+    return tests
+
 def readCommitLabels():
     labels = dict()
     try:
@@ -1452,15 +1461,15 @@ def genPerformanceReport(log_folder, silentMode = False):
 
     # Find all the result files and sort them by sha1
     files_list = os.listdir()
-    benchFiles = dict()
-    commit_bench_file_re = re.compile(r'^(.+)_bench_[^\.]+$')
+    testFiles = dict()
+    commit_bench_file_re = re.compile(r'^(.+)_(bench|unit)_[^\.]+$')
     for f in files_list:
         m = commit_bench_file_re.match(f)
         if m is not None:
-            sha1 = m.groups(1)[0]
-            if sha1 not in benchFiles:
-                benchFiles[sha1] = []
-            benchFiles[sha1].append(f)
+            sha1 = m.groups()[0]
+            if sha1 not in testFiles:
+                testFiles[sha1] = []
+            testFiles[sha1].append((f, m.groups()[1]))
     files_list = None
 
     # Gather all the information from the commits
@@ -1481,21 +1490,21 @@ def genPerformanceReport(log_folder, silentMode = False):
         commits.append(commit)
 
         # If there are no results, just continue
-        if sha1 not in benchFiles:
+        if sha1 not in testFiles:
             continue
 
         # find all the benchmarks
-        for benchFile in benchFiles[sha1]:
+        for testFile, testType in testFiles[sha1]:
             # Skip when the file is a run file (finishes by #XX)
-            if re.search(r'#\d+$', benchFile) is not None:
+            if re.search(r'#\d+$', testFile) is not None:
                 continue
 
             # Skip on unrelated files
-            if "." in benchFile:
+            if "." in testFile:
                 continue
 
             # Get the bench name
-            bench_name = benchFile.replace("{sha1}_bench_".format(sha1=commit.sha1), "")
+            bench_name = testFile[len(commit.sha1) + len(testType) + 2:]
 
             # Find the right Benchmark or create one if none are found
             try:
@@ -1505,15 +1514,17 @@ def genPerformanceReport(log_folder, silentMode = False):
                 benchmarks.append(benchmark)
 
             # Create the result object
-            result = BenchResult(commit, benchmark, benchFile)
+            result = BenchResult(commit, benchmark, testFile)
 
             # Read the data and abort if there is no data
-            result.data, result.unit_str, result.more_is_better = readCsv(benchFile)
+            result.data, result.unit_str, result.more_is_better = readCsv(testFile)
             if len(result.data) == 0:
                 continue
 
             if result.unit_str is None:
                 result.unit_str = "FPS"
+
+            result.test_type = testType
 
             # Check that the result file has the same default v
             if benchmark.unit_str != result.unit_str:
@@ -1526,20 +1537,25 @@ def genPerformanceReport(log_folder, silentMode = False):
                 benchmark.unit_str = result.unit_str
 
             # Look for the runs
-            run_re = re.compile(r'^{benchFile}#[0-9]+$'.format(benchFile=benchFile))
-            runsFiles = [f for f in benchFiles[sha1] if run_re.search(f)]
+            run_re = re.compile(r'^{testFile}#[0-9]+$'.format(testFile=testFile))
+            runsFiles = [f for f,t in testFiles[sha1] if run_re.search(f)]
             runsFiles.sort(key=lambda x: '{0:0>100}'.format(x).lower()) # Sort the runs in natural order
             for runFile in runsFiles:
-                data, unit, more_is_better = readCsv(runFile)
-                if len(data) > 0:
-                    # Add the FPS readings of the run
-                    result.runs.append(data)
+                if testType == "bench":
+                    data, unit, more_is_better = readCsv(runFile)
+                    if len(data) > 0:
+                        # Add the FPS readings of the run
+                        result.runs.append(data)
 
-                    # Add the environment file
-                    envFile = runFile + ".env_dump"
-                    if not os.path.isfile(envFile):
-                        envFile = None
-                    result.env_files.append(envFile)
+                        # Add the environment file
+                        envFile = runFile + ".env_dump"
+                        if not os.path.isfile(envFile):
+                            envFile = None
+                        result.env_files.append(envFile)
+                elif testType == "unit":
+                    result.runs.append(readUnitRun(runFile))
+                else:
+                    print("WARNING: Ignoring results because the type '{}' is unknown".format(testType))
 
             # Add the result to the commit's results
             commit.results.append(result)
