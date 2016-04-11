@@ -813,7 +813,7 @@ class SmartEzbench:
         if cached_only:
             return self._report_cached
 
-        if reorder_commits and git_history is None:
+        if reorder_commits and len(git_history) == 0:
             git_history = self.git_history()
 
         # Generate the report, order commits based on the git history
