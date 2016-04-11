@@ -1464,6 +1464,8 @@ def genPerformanceReport(log_folder, silentMode = False):
     testFiles = dict()
     commit_bench_file_re = re.compile(r'^(.+)_(bench|unit)_[^\.]+$')
     for f in files_list:
+        if os.path.isdir(f):
+            continue
         m = commit_bench_file_re.match(f)
         if m is not None:
             sha1 = m.groups()[0]
