@@ -1296,6 +1296,7 @@ class Report:
         self.commits = commits
         self.notes = notes
         self.events = list()
+        self.test_type = "unknown"
 
     def find_commit(self, sha1):
         for commit in self.commits:
