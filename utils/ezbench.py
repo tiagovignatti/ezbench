@@ -1548,16 +1548,17 @@ def genPerformanceReport(log_folder, silentMode = False):
                     if len(data) > 0:
                         # Add the FPS readings of the run
                         result.runs.append(data)
-
-                        # Add the environment file
-                        envFile = runFile + ".env_dump"
-                        if not os.path.isfile(envFile):
-                            envFile = None
-                        result.env_files.append(envFile)
                 elif testType == "unit":
                     result.runs.append(readUnitRun(runFile))
                 else:
                     print("WARNING: Ignoring results because the type '{}' is unknown".format(testType))
+                    continue
+
+                # Add the environment file
+                envFile = runFile + ".env_dump"
+                if not os.path.isfile(envFile):
+                    envFile = None
+                result.env_files.append(envFile)
 
             # Add the result to the commit's results
             commit.results.append(result)
