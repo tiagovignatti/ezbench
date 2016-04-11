@@ -975,6 +975,14 @@ class Benchmark:
         self.prevValue = -1
         self.unit_str = unit
 
+class BenchSubTest:
+    def __init__(self, benchmark, subtest):
+        self.benchmark = benchmark
+        self.subtest = subtest
+
+    def __str__(self):
+        return "{}[{}]".format(self.benchmark.full_name, self.subtest)
+
 class BenchResult:
     def __init__(self, commit, benchmark, data_raw_file):
         self.commit = commit
@@ -1268,6 +1276,18 @@ class EventInsufficientSignificance:
         return msg.format(self.result.benchmark.full_name, self.result.commit.sha1,
                           margin * 100, self.wanted_margin * 100, wanted_n)
 
+class EventUnitResultChange:
+    def __init__(self, bench_sub_test, commit_range, old_status, new_status):
+        self.bench_sub_test = bench_sub_test
+        self.commit_range = commit_range
+        self.old_status = old_status
+        self.new_status = new_status
+
+    def __str__(self):
+        msg = "{} changed the status of {} from {} to {}"
+        return msg.format(self.commit_range, self.bench_sub_test,
+                          self.old_status, self.new_status)
+
 class Report:
     def __init__(self, log_folder, benchmarks, commits, notes):
         self.log_folder = log_folder
@@ -1330,27 +1350,44 @@ class Report:
                 bench = result.benchmark.full_name
                 bench_unit = result.benchmark.unit_str
 
-                if result.margin() > max_variance:
-                    self.events.append(EventInsufficientSignificance(result, max_variance))
+                if result.test_type == "bench":
+                    if result.margin() > max_variance:
+                        self.events.append(EventInsufficientSignificance(result, max_variance))
 
-                if bench in bench_prev:
-                    # We got previous perf results, compare!
-                    t, p = stats.ttest_ind(bench_prev[bench].data, result.data, equal_var=True)
-                    perf = result.result()
-                    old_perf = bench_prev[bench].result()
-                    if old_perf > 0:
-                        diff = abs(perf - old_perf) / old_perf
-                    else:
-                        diff = float('inf')
+                    if bench in bench_prev:
+                        # We got previous perf results, compare!
+                        t, p = stats.ttest_ind(bench_prev[bench].data, result.data, equal_var=True)
+                        perf = result.result()
+                        old_perf = bench_prev[bench].result()
+                        if old_perf > 0:
+                            diff = abs(perf - old_perf) / old_perf
+                        else:
+                            diff = float('inf')
 
-                    # If we are not $perf_diff_confidence sure that this is the
-                    # same normal distribution, say that the performance changed
-                    confidence = 1 - p
-                    if confidence >= perf_diff_confidence and diff >= smallest_perf_change:
-                        commit_range = EventCommitRange(bench_prev[bench].commit, commit)
-                        self.events.append(EventPerfChange(result.benchmark,
-                                                           commit_range,
-                                                           old_perf, perf, confidence))
+                        # If we are not $perf_diff_confidence sure that this is the
+                        # same normal distribution, say that the performance changed
+                        confidence = 1 - p
+                        if confidence >= perf_diff_confidence and diff >= smallest_perf_change:
+                            commit_range = EventCommitRange(bench_prev[bench].commit, commit)
+                            self.events.append(EventPerfChange(result.benchmark,
+                                                            commit_range,
+                                                            old_perf, perf, confidence))
+                elif result.test_type == "unit":
+                    if bench in bench_prev:
+                        # FIXME: Aggregate all the results
+                        for test in result.runs[0]:
+                            if not test in bench_prev[bench].runs[0]:
+                                continue
+
+                            before = bench_prev[bench].runs[0][test]
+                            after = result.runs[0][test]
+                            if before == after:
+                                continue
+
+                            subtest = BenchSubTest(result.benchmark, test)
+                            self.events.append(EventUnitResultChange(subtest, commit_range, before, after))
+                else:
+                    print("WARNING: enhance_report: unknown test type {}".format(result.test_type))
                 bench_prev[bench] = result
 
             commit_prev = commit
