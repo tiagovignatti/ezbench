@@ -8,7 +8,7 @@ function __piglit_run__ {
 
     # Sub tests
     subtests=""
-    for subtest in $(echo "$run_sub_tests" | tr ',' ' '); do
+    for subtest in $(echo "$run_sub_tests" | tr '|' ' '); do
         subtests="$subtests -t $(echo $subtest | tr '/' '@')"
     done
 
