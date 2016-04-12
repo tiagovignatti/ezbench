@@ -1291,6 +1291,18 @@ class EventUnitResultChange:
         return msg.format(self.commit_range, self.bench_sub_test,
                           self.old_status, self.new_status)
 
+class EventUnitResultUnstable:
+    def __init__(self, bench_sub_test, commit, prev_status, new_status):
+        self.bench_sub_test = bench_sub_test
+        self.commit = commit
+        self.prev_status = prev_status
+        self.new_status = new_status
+
+    def __str__(self):
+        msg = "Unstable result on commit {} for {} (from {} to {})"
+        return msg.format(self.commit.sha1, self.bench_sub_test,
+                          self.prev_status, self.new_status)
+
 class Report:
     def __init__(self, log_folder, benchmarks, commits, notes):
         self.log_folder = log_folder
@@ -1377,14 +1389,28 @@ class Report:
                                                             commit_range,
                                                             old_perf, perf, confidence))
                 elif result.test_type == "unit":
+                    # Aggregate the results
+                    result.unit_results = dict()
+                    for run in result.runs:
+                        for test in run:
+                            subtest = BenchSubTest(result.benchmark, test)
+                            if (test in result.unit_results and
+                                result.unit_results[test] != run[test]):
+                                self.events.append(EventUnitResultUnstable(subtest,
+                                                                           commit,
+                                                                           result.unit_results[test],
+                                                                           run[test]))
+                            result.unit_results[test] = run[test]
+
+                    # Check for differences with the previous commit
                     if bench in bench_prev:
                         # FIXME: Aggregate all the results
-                        for test in result.runs[0]:
-                            if not test in bench_prev[bench].runs[0]:
+                        for test in result.unit_results:
+                            if not test in bench_prev[bench].unit_results:
                                 continue
 
-                            before = bench_prev[bench].runs[0][test]
-                            after = result.runs[0][test]
+                            before = bench_prev[bench].unit_results[test]
+                            after = result.unit_results[test]
                             if before == after:
                                 continue
 
