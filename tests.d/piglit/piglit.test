@@ -7,15 +7,20 @@ function __piglit_run__ {
     local testscript=$2
 
     # Sub tests
-    subtests=""
+    local has_subtests=0
+    local testlist=''
+    testlistfile="${run_log_file}.testlist"
+    rm "$testlistfile"
     for subtest in $(echo "$run_sub_tests" | tr '|' ' '); do
-        subtests="$subtests -t $(echo $subtest | tr '/' '@')"
+        echo $subtest | tr '/' '@' | tr ' ' '\n' >> $testlistfile
+        has_subtests=1
     done
+    [ $has_subtests -eq 1 ] && testlist="--test-list $testlistfile"
 
     piglit_output=${run_log_file}_tmp
 
     # start piglit
-    local cmdline="./piglit run -p $backend $PIGLIT_RUN_PARAMS $subtests $testscript ${piglit_output}"
+    local cmdline="./piglit run -p $backend $PIGLIT_RUN_PARAMS $testlist $testscript ${piglit_output}"
     hash xterm && cmdline="xterm -e 'echo $cmdline; $cmdline'"
 
     ENV_DUMP_RESTRICT_TO_BINARY=/usr/bin/glxinfo \
