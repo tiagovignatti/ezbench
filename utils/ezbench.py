@@ -942,6 +942,9 @@ class SmartEzbench:
                     runs = max_run_count - len(e.result.data)
                     if runs == 0:
                         continue
+            else:
+                print("schedule_enhancements: unknown event type {}".format(type(e).__name__))
+                continue
 
             score = self.__score_event__(commits_rev_order, commit_sha1, benchmark, severity)
             score *= event_prio
