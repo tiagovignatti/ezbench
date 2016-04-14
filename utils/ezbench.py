@@ -622,6 +622,27 @@ class SmartEzbench:
     def __prioritize_runs(self, task_tree, deployed_version):
         task_list = list()
 
+        # Aggregate all the subtests
+        for commit in task_tree:
+            bench_subtests = dict()
+            bench_rounds = dict()
+
+            # First, read all the benchmarks and aggregate them
+            for benchmark in task_tree[commit]["benchmarks"]:
+                basename, subtests = Benchmark.parse_name(benchmark)
+                if basename not in bench_subtests:
+                    bench_subtests[basename] = set()
+                bench_subtests[basename] |= set(subtests)
+                bench_rounds[basename] = max(bench_rounds.get(basename, 0),
+                                       task_tree[commit]["benchmarks"][benchmark]["rounds"])
+
+            # Destroy the state before reconstructing it!
+            task_tree[commit]["benchmarks"] = dict()
+            for basename in bench_subtests:
+                full_name = Benchmark.partial_name(basename, list(bench_subtests[basename]))
+                task_tree[commit]["benchmarks"][full_name] = dict()
+                task_tree[commit]["benchmarks"][full_name]["rounds"] = bench_rounds[basename]
+
         # Schedule the tests using the already-deployed version
         if deployed_version is not None and deployed_version in task_tree:
             for benchmark in task_tree[deployed_version]["benchmarks"]:
@@ -978,13 +999,42 @@ class Benchmark:
         self.prevValue = -1
         self.unit_str = unit
 
+    # returns (base_name, subtests=[])
+    @classmethod
+    def parse_name(cls, full_name):
+        idx = full_name.find('[')
+        if idx > 0:
+            if full_name[-1] != ']':
+                print("WARNING: benchmark name '{}' is invalid.".format(full_name))
+
+            print("{}: idx = {}".format(full_name, idx))
+            basename = full_name[0 : idx]
+            subtests = full_name[idx + 1 : -1].split('|')
+        else:
+            basename = full_name
+            subtests = []
+
+        return (basename, subtests)
+
+    @classmethod
+    def partial_name(self, basename, sub_tests):
+        name = basename
+        if len(sub_tests) > 0:
+            name += "["
+            for i in range(0, len(sub_tests)):
+                if i != 0:
+                    name += "|"
+                name += sub_tests[i]
+            name += "]"
+        return name
+
 class BenchSubTest:
     def __init__(self, benchmark, subtest):
         self.benchmark = benchmark
         self.subtest = subtest
 
     def __str__(self):
-        return "{}[{}]".format(self.benchmark.full_name, self.subtest)
+        return self.benchmark.partial_name([self.subtest])
 
 class BenchResult:
     def __init__(self, commit, benchmark, data_raw_file):
