@@ -963,6 +963,22 @@ class SmartEzbench:
                     runs = max_run_count - len(e.result.data)
                     if runs == 0:
                         continue
+            elif type(e) is EventUnitResultChange:
+                print("type(e) is EventUnitResultChange: {}".format(e))
+                if e.commit_range.is_single_commit():
+                    continue
+                middle = self.__find_middle_commit__(commits_rev_order,
+                                                     e.commit_range.old.sha1,
+                                                     e.commit_range.new.sha1)
+                if middle is None:
+                    continue
+
+                # Schedule the work
+                commit_sha1 = middle
+                severity = 1
+                event_prio = 1
+                bench_name_to_run = str(e.bench_sub_test)
+                runs = 1
             else:
                 print("schedule_enhancements: unknown event type {}".format(type(e).__name__))
                 continue
