@@ -233,7 +233,13 @@ while getopts "$optString" opt; do
         ;;
     r)  rounds=$OPTARG
         ;;
-    b)  testsList="$testsList $OPTARG"
+    b)  if [ $OPTARG != "-" ]; then
+            testsList="$testsList $OPTARG"
+        else
+            while read test; do
+                testsList="$testsList $test";
+            done
+        fi
         ;;
     B)  testExcludeList="$testExcludeList $OPTARG"
         ;;

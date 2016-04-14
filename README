@@ -117,6 +117,19 @@ the call to utils/get_commit_list.py which generates a list of commits
                  -m "./recompile-release.sh" \
                  `utils/get_commit_list.py -p ~/repos/mesa -s 2014-12-01 -i "1 week"`
 
+==== Giving a large list of tests to core.sh ====
+
+The command line argument's maximum length is limited. If you ever feel the need
+to pass a long list of tests in a reliable way, you may use the character '-' as
+a test name. This will make core.sh read the list of tests from stdin, until EOF.
+Here is an example:
+
+    ./core ./core.sh -P mesa -b - -r 1 HEAD
+    test1
+    ...
+    test5000
+    EOF (Ctrl + D)
+
 == ezbench ==
 
 This tool is meant to make the usage of core.sh easy and support testing
