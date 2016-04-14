@@ -99,7 +99,7 @@ class Ezbench:
 
         if list_benchmarks:
             ezbench_cmd.append("-l")
-            return ezbench_cmd
+            return ezbench_cmd, ""
 
         if self.profile is not None:
             ezbench_cmd.append("-P"); ezbench_cmd.append(self.profile)
@@ -107,8 +107,8 @@ class Ezbench:
         if self.repo_path is not None:
             ezbench_cmd.append("-p"); ezbench_cmd.append(self.repo_path)
 
-        for benchmark in benchmarks:
-            ezbench_cmd.append("-b"); ezbench_cmd.append(benchmark)
+        if len(benchmarks) > 0:
+            ezbench_cmd.append("-b"); ezbench_cmd.append("-")
 
         for benchmark_excl in benchmark_excludes:
             ezbench_cmd.append("-B"); ezbench_cmd.append(benchmark_excl)
@@ -128,20 +128,26 @@ class Ezbench:
         if dry_run:
             ezbench_cmd.append("-k")
 
-        return ezbench_cmd
+        stdin = ""
+        for benchmark in benchmarks:
+            stdin += benchmark + "\n"
 
-    def __run_ezbench(self, cmd, dry_run = False, verbose = False):
+        return ezbench_cmd, stdin
+
+    def __run_ezbench(self, cmd, stdin, dry_run = False, verbose = False):
         exit_code = None
 
         if verbose:
-            print(cmd)
+            print(cmd); print(stdin)
 
         try:
-            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode()
+            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT,
+                                             universal_newlines=True,
+                                             input=stdin)
             exit_code = EzbenchExitCode.NO_ERROR
         except subprocess.CalledProcessError as e:
             exit_code = EzbenchExitCode(e.returncode)
-            output = e.output.decode()
+            output = e.output
             pass
 
         # we need to parse the output
@@ -182,16 +188,16 @@ class Ezbench:
 
     def run_commits(self, commits, benchmarks, benchmark_excludes = [],
                     rounds = None, dry_run = False, verbose = False):
-        ezbench_cmd = self.__ezbench_cmd_base(benchmarks, benchmark_excludes, rounds, dry_run)
+        ezbench_cmd, ezbench_stdin = self.__ezbench_cmd_base(benchmarks, benchmark_excludes, rounds, dry_run)
 
         for commit in commits:
             ezbench_cmd.append(commit)
 
-        return self.__run_ezbench(ezbench_cmd, dry_run, verbose)
+        return self.__run_ezbench(ezbench_cmd, ezbench_stdin, dry_run, verbose)
 
     def available_benchmarks(self):
-        ezbench_cmd = self.__ezbench_cmd_base(list_benchmarks = True)
-        return self.__run_ezbench(ezbench_cmd).benchmarks
+        ezbench_cmd, ezbench_stdin = self.__ezbench_cmd_base(list_benchmarks = True)
+        return self.__run_ezbench(ezbench_cmd, ezbench_stdin).benchmarks
 
 # Test sets, needed by SmartEzbench
 class Testset:
