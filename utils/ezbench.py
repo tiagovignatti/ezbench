@@ -802,10 +802,11 @@ class SmartEzbench:
                 self.__log(Criticality.WW, msg.format(count=e.rounds, commit=e.commit, benchmark=e.benchmark))
                 continue
 
+            short_name=e.benchmark[:80].rsplit('|', 1)[0]+'...'
             self.__log(Criticality.DD,
                        "make {count} runs for benchmark {benchmark} using commit {commit}".format(count=e.rounds,
                                                                                                   commit=e.commit,
-                                                                                                  benchmark=e.benchmark))
+                                                                                                  benchmark=short_name))
             run_info = ezbench.run_commits([e.commit], [e.benchmark + '$'], rounds=e.rounds)
             if run_info.success():
                 continue
@@ -1041,7 +1042,6 @@ class Benchmark:
             if full_name[-1] != ']':
                 print("WARNING: benchmark name '{}' is invalid.".format(full_name))
 
-            print("{}: idx = {}".format(full_name, idx))
             basename = full_name[0 : idx]
             subtests = full_name[idx + 1 : -1].split('|')
         else:
