@@ -983,7 +983,6 @@ class SmartEzbench:
                     if runs == 0:
                         continue
             elif type(e) is EventUnitResultChange:
-                print("type(e) is EventUnitResultChange: {}".format(e))
                 if e.commit_range.is_single_commit():
                     continue
                 middle = self.__find_middle_commit__(commits_rev_order,
