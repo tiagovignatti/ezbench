@@ -702,6 +702,22 @@ class SmartEzbench:
         if running_state == RunningMode.RUNNING or running_state == RunningMode.RUN:
             self.__write_attribute_unlocked__('mode', RunningMode.RUN.value, allow_updates = True)
 
+    def __remove_task_from_tasktree__(self, task_tree, commit, full_name, rounds):
+        if commit.sha1 not in task_tree:
+            return False
+        if full_name not in task_tree[commit.sha1]["benchmarks"]:
+            return False
+
+        task_tree[commit.sha1]["benchmarks"][full_name]['rounds'] -= rounds
+
+        if task_tree[commit.sha1]["benchmarks"][full_name]['rounds'] <= 0:
+            del task_tree[commit.sha1]["benchmarks"][full_name]
+
+        if len(task_tree[commit.sha1]["benchmarks"]) == 0:
+            del task_tree[commit.sha1]
+
+        return True
+
     def run(self):
         self.__log(Criticality.II, "----------------------")
         self.__log(Criticality.II, "Starting a run: {report} ({path})".format(report=self.state['report_name'], path=self.log_folder))
@@ -739,18 +755,14 @@ class SmartEzbench:
                            "Found {count} runs for benchmark {benchmark} using commit {commit}".format(count=len(result.data),
                                                                                                        commit=commit.sha1,
                                                                                                        benchmark=result.benchmark.full_name))
-                if commit.sha1 not in task_tree:
-                    continue
-                if result.benchmark.full_name not in task_tree[commit.sha1]["benchmarks"]:
-                    continue
 
-                task_tree[commit.sha1]["benchmarks"][result.benchmark.full_name]['rounds'] -= len(result.data)
-
-                if task_tree[commit.sha1]["benchmarks"][result.benchmark.full_name]['rounds'] <= 0:
-                    del task_tree[commit.sha1]["benchmarks"][result.benchmark.full_name]
-
-                if len(task_tree[commit.sha1]["benchmarks"]) == 0:
-                    del task_tree[commit.sha1]
+                if result.test_type == "unit":
+                    for run in result.runs:
+                        for test in run:
+                            full_name = Benchmark.partial_name(result.benchmark.full_name, [test])
+                            self.__remove_task_from_tasktree__(task_tree, commit, full_name, 10^5) # FIXME: Read the actual round count?
+                else:
+                    self.__remove_task_from_tasktree__(task_tree, commit, result.benchmark.full_name, len(result.data))
 
         # Delete the tests on commits that do not compile
         for commit in report.commits:
