@@ -427,6 +427,7 @@ fi
 echo -n "Tests that will be run:"
 for (( t=0; t<${#testNames[@]}; t++ )); do
     echo -n " ${testNames[$t]}"
+    [ -n "${testSubTests[$t]}" ] && echo -n "[${testSubTests[$t]}]"
 done
 echo
 
