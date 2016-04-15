@@ -364,7 +364,7 @@ total_round_time=0
 for (( t=0; t<${#testsList[@]}; t++ )); do
     test=${testsList[$t]}
     basetest=$(echo "$test" | cut -d [ -f 1)
-    subtests=$(echo $test | cut -s -d '[' -f 2 | cut -d ']' -f 1)
+    subtests=$(echo $test | cut -s -d '[' -f 2- | rev | cut -d ']' -f 2- | rev)
 
     # Try to find the test in the list of available tests
     found=0
