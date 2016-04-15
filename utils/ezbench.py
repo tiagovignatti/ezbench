@@ -1056,7 +1056,7 @@ class BenchSubTest:
         self.subtest = subtest
 
     def __str__(self):
-        return self.benchmark.partial_name([self.subtest])
+        return Benchmark.partial_name(self.benchmark.full_name, [self.subtest])
 
 class BenchResult:
     def __init__(self, commit, benchmark, data_raw_file):
