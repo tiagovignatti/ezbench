@@ -1108,7 +1108,10 @@ class BenchResult:
 
     def margin(self):
         self.__compute_stats__()
-        return (self._cache_mean[1][1] - self._cache_mean[1][0]) / 2 / self._cache_mean[0]
+        if self._cache_mean[0] > 0:
+            return (self._cache_mean[1][1] - self._cache_mean[1][0]) / 2 / self._cache_mean[0]
+        else:
+            return 0
 
     # wanted_margin is a number between 0 and 1
     def confidence_margin(self, wanted_margin = None, confidence=0.95):
