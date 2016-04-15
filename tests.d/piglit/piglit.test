@@ -11,8 +11,8 @@ function __piglit_run__ {
     local testlist=''
     testlistfile="${run_log_file}.testlist"
     rm "$testlistfile"
-    for subtest in $(echo "$run_sub_tests" | tr '|' ' '); do
-        echo $subtest | tr '/' '@' | tr ' ' '\n' >> $testlistfile
+    for subtest in "${run_sub_tests[@]}"; do
+        echo "$subtest" | tr '/' '@' >> $testlistfile
         has_subtests=1
     done
     [ $has_subtests -eq 1 ] && testlist="--test-list $testlistfile"

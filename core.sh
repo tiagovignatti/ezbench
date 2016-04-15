@@ -130,22 +130,11 @@ function display_repo_info() {
     echo "Repo type = $type, directory = $repoDir, version = $vh, deployed version = $dv"
 }
 
-# parse the options
 function available_tests {
     # Generate the list of available tests
     echo -n "Available tests: "
-    for test_dir in ${testsDir:-$ezBenchDir/tests.d}; do
-        for test_file in $test_dir/**/*.test; do
-            unset test_name
-            unset test_exec_time
-
-            source "$test_file" || continue
-            [ -z "$test_name" ] && continue
-            [ -z "$test_exec_time" ] && continue
-            for t in $test_name; do
-                echo -n "$t "
-            done
-        done
+    for (( t=0; t<${#availTestNames[@]}; t++ )); do
+        echo -n "${availTestNames[$t]} "
     done
     echo
 }
@@ -218,8 +207,54 @@ PROFILE_DEPLOY_DIR="$DEPLOY_BASE_DIR/$profile/cur"
 export LD_LIBRARY_PATH="$PROFILE_DEPLOY_DIR/lib":$LD_LIBRARY_PATH
 export PATH="$PROFILE_DEPLOY_DIR/bin":$PATH
 
+# Parse the list of tests
+typeset -A availTestNames
+typeset -A availTestUnits
+typeset -A availTestTypes
+typeset -A availTestIsInvert
+typeset -A availTestExecTime
+for test_dir in ${testsDir:-$ezBenchDir/tests.d}; do
+    for test_file in $test_dir/**/*.test; do
+        unset test_name
+        unset test_unit
+        unset test_type
+        unset test_invert
+        unset test_exec_time
+
+        source "$test_file" || continue
+
+        # Sanity checks on the file
+        [ -z "$test_name" ] && continue
+        [ -z "$test_exec_time" ] && continue
+
+        # Set the default unit to FPS
+        [ -z "$test_unit" ] && test_unit="FPS"
+
+        # Set the default type to bench
+        [ -z "$test_type" ] && test_type="bench"
+
+        for test in $test_name; do
+            # TODO: Check that the run function exists
+
+            idx=${#availTestNames[@]}
+            availTestNames[$idx]=$test
+            availTestUnits[$idx]=$test_unit
+            availTestTypes[$idx]=$test_type
+            availTestIsInvert[$idx]=$test_invert
+            availTestExecTime[$idx]=$test_exec_time
+        done
+    done
+done
+unset test_name
+unset test_unit
+unset test_type
+unset test_invert
+unset test_exec_time
+
 # Start again the argument parsing, this time with every option
 unset OPTIND
+typeset -A testsList
+typeset -A testExcludeList
 conf_scripts=""
 while getopts "$optString" opt; do
     case "$opt" in
@@ -233,15 +268,18 @@ while getopts "$optString" opt; do
         ;;
     r)  rounds=$OPTARG
         ;;
-    b)  if [ $OPTARG != "-" ]; then
-            testsList="$testsList $OPTARG"
+    b)  if [ "$OPTARG" != "-" ]; then
+            idx=${#testsList[$@]}
+            testsList[$idx]="$OPTARG"
         else
             while read test; do
-                testsList="$testsList $test";
+                idx=${#testsList[$@]}
+                testsList[$idx]="$test"
             done
         fi
         ;;
-    B)  testExcludeList="$testExcludeList $OPTARG"
+    B)  idx=${#testExcludeList[$@]}
+        testExcludeList[$idx]="$OPTARG"
         ;;
     m)  makeAndDeployCmd=$OPTARG
         ;;
@@ -321,83 +359,76 @@ typeset -A testInvert
 typeset -A testUnit
 typeset -A testType
 typeset -A testPrevFps
-typeset -A testFilter
-total_tests=0
+typeset -A testMissing
 total_round_time=0
-echo -n "Tests that will be run: "
-for test_dir in ${testsDir:-$ezBenchDir/tests.d}; do
-    for test_file in $test_dir/**/*.test; do
-        unset test_name
-        unset test_unit
-        unset test_type
-        unset test_invert
-        unset test_exec_time
+for (( t=0; t<${#testsList[@]}; t++ )); do
+    test=${testsList[$t]}
+    basetest=$(echo "$test" | cut -d [ -f 1)
+    subtests=$(echo $test | cut -s -d '[' -f 2 | cut -d ']' -f 1)
 
-        source "$test_file" || continue
+    # Try to find the test in the list of available tests
+    found=0
+    for (( a=0; a<${#availTestNames[@]}; a++ )); do
+        if [[ ${availTestNames[$a]} =~ $basetest ]]; then
+            found=1
 
-        for t in $test_name; do
-            # Check that the user wants this test or not
-            tests_found=""
-            if [ -n "$testsList" ]; then
-                for filter in $testsList; do
-                    basetest=$(echo "$filter" | cut -d [ -f 1)
-                    if [[ $t =~ $basetest ]]; then
-                        testFilter[$filter]=1
-                        tests_found="$tests_found $filter"
-                        # Do not break as other requested tests may match
-                    fi
-                done
-            fi
-            if [ -n "$testExcludeList" ]; then
-                for filter in $testExcludeList; do
-                    if [[ $t =~ $filter ]]; then
-                        testFilter[$filter]=-1
-                        tests_found=""
-                        break
-                    fi
-                done
-            fi
-            [ -z "$tests_found" ] && continue
+            # We do not accept running subtests on non-complete matches of names
+            [[ $basetest != ${availTestNames[$a]} && -n $subtests ]] && break
 
-            # Set the default unit to FPS
-            [ -z "$test_unit" ] && test_unit="FPS"
-
-            # Set the default type to bench
-            [ -z "$test_type" ] && test_type="bench"
-
-            for test in $tests_found; do
-                testNames[$total_tests]=$t
-                testSubTests[$total_tests]=$(echo $test | cut -s -d '[' -f 2 | cut -d ']' -f 1)
-                testUnit[$total_tests]=$test_unit
-                testType[$total_tests]=$test_type
-                testInvert[$total_tests]=$test_invert
-                echo -n "${test} "
+            # Try to find the test in the list of blacklisted tests
+            blacklisted=0
+            for (( b=0; b<${#testExcludeList[@]}; b++ )); do
+                if [[ "${availTestNames[$a]}" =~ "${testExcludeList[$b]}" ]]; then
+                    blacklisted=1
+                    break
+                fi
             done
+            [ $blacklisted -eq 1 ] && continue
 
-            last_result="$logsFolder/${last_version}_result_${t}"
-            if [ -e "$logsFolder/${last_version}_result_${t}" ]; then
+            # TODO: Check that the test is not already scheduled
+
+            # Add the test!
+            total_tests=${#testNames[@]}
+            testNames[$total_tests]="${availTestNames[$a]}"
+            testSubTests[$total_tests]="$subtests"
+            testUnit[$total_tests]="${availTestUnits[$a]}"
+            testType[$total_tests]="${availTestTypes[$a]}"
+            testInvert[$total_tests]="${availTestIsInvert[$a]}"
+
+            last_result="$logsFolder/${last_version}_result_${basetest}"
+            if [ -e "$last_result" ]; then
                 testPrevFps[$total_tests]=$(cat "$last_result")
             fi
             unset last_result
 
-            total_round_time=$(dc <<<"$total_round_time $test_exec_time + p")
-            total_tests=$(( total_tests + 1))
-        done
+            total_round_time=$(dc <<<"$total_round_time ${availTestExecTime[$a]} +p")
+        fi
     done
+    if [ $found -eq 0 ]; then
+        idx=${#testMissing[@]}
+        testMissing[$idx]=$basetest
+    fi
 done
 total_round_time=${total_round_time%.*}
-echo
 unset last_version
 
-missing_tests=
-for t in $testsList; do
-    [ -z ${testFilter[$t]} ] && missing_tests+="$t "
-done
-if [ -n "$missing_tests" ]; then
-    echo "The tests \"${missing_tests:0:-1}\" do not exist"
-    available_tests
+# Check if there are any tests that were not found
+if [[ ${#testMissing[@]} > 0 ]]; then
+    echo -n "The following tests are not available:"
+    for (( t=0; t<${#testMissing[@]}; t++ )); do
+        echo -n " ${testMissing[$t]}"
+    done
+    echo
+
     exit 100
 fi
+
+# Print the tests that will be executed
+echo -n "Tests that will be run:"
+for (( t=0; t<${#testNames[@]}; t++ )); do
+    echo -n " ${testNames[$t]}"
+done
+echo
 
 # Set the average compilation time to 0 when we are not compiling
 if [ -z "$makeAndDeployCmd" ]
@@ -563,7 +594,7 @@ do
             [ -e "$abortFile" ] && continue
 
             run_log_file="${fps_logs}#$c"
-            run_sub_tests="${testSubTests[$t]}"
+            IFS='|' read -a run_sub_tests <<< "${testSubTests[$t]}"
 
             callIfDefined "$preHookFuncName"
             callIfDefined benchmark_run_pre_hook
