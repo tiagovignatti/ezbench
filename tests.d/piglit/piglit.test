@@ -3,6 +3,7 @@ test -e "$REPO_PIGLIT/piglit" || return 1
 function __piglit_run__ {
     cd "$REPO_PIGLIT"
 
+    local test_name=${testNames[$t]}
     local backend=$1
     local testscript=$2
 
@@ -12,7 +13,7 @@ function __piglit_run__ {
     testlistfile="${run_log_file}.testlist"
     rm "$testlistfile"
     for subtest in "${run_sub_tests[@]}"; do
-        echo "$subtest" | tr '/' '@' >> $testlistfile
+        echo "$subtest" | cut -d '<' -f 1 >> $testlistfile
         has_subtests=1
     done
     [ $has_subtests -eq 1 ] && testlist="--test-list $testlistfile"
@@ -25,10 +26,43 @@ function __piglit_run__ {
 
     ENV_DUMP_RESTRICT_TO_BINARY=/usr/bin/glxinfo \
     run_bench 0 $cmdline > /dev/null 2> /dev/null
+    local exit_code=$?
 
     # generate a report, first print the passrate on the first line, then print the individual results
-    ./piglit summary console -s ${piglit_output} | awk '{ if ($1 == "pass:") pass = $2; if ($1 == "total:") total = $2} END{ if (total > 0) print pass / total; else print 0 }'
-    ./piglit summary console ${piglit_output} | awk 'BEGIN{ d = 0 } { if (d == 0 && $0 != "summary:") print $0; else d = 1}'
+    python3 - << END
+import sys
+import six
+
+sys.path.append("$PIGLIT_RUN_PARAMS")
+from framework import summary, status, core, backends, exceptions
+from framework.programs import parsers
+
+testrun = backends.load("${piglit_output}")
+
+tests=list()
+pass_count = 0
+for name, result in six.iteritems(testrun.tests):
+    for key, value in six.iteritems(result.subtests):
+        tests.append("{}<{}>: {}".format(name, key, value))
+        if value == 'pass':
+            pass_count += 1
+    tests.append("{}: {}".format(name, result.result))
+    if result.result == 'pass':
+        pass_count += 1
+
+print("{:.3f}".format(pass_count / len(tests)))
+for test in tests:
+    print(test)
+END
+
+    # Display the final status, if it was a full run
+    if [ -z "${testSubTests[$t]}" ]; then
+        if [ "$exit_code" -eq 0 ]; then
+            echo ": completed"
+        else
+            echo ": incomplete"
+        fi
+    fi
 
     # delete the temporary report
     rm -rf ${piglit_output} 2>&1
