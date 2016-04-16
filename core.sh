@@ -100,6 +100,7 @@ function run_bench {
     callIfDefined run_bench_pre_hook
     local time_before=$(date +%s.%N)
     eval $cmd > "$run_log_file_stdout" 2> "$run_log_file_stderr"
+    local exit_code=$?
     local time_after=$(date +%s.%N)
     local test_exec_time=$(echo "$time_after - $time_before" | bc -l)
     callIfDefined run_bench_post_hook
@@ -121,6 +122,7 @@ function run_bench {
     fi
 
     echo "EZBENCH:test_exec_time:$test_exec_time"
+    return $exit_code
 }
 
 function display_repo_info() {
