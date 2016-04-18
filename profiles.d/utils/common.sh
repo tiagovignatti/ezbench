@@ -80,7 +80,7 @@ function xserver_setup_start() {
         local xorg_config="-config $EZBENCH_CONF_X11_CONF"
     fi
 
-    local x_pid=$(sudo -n $ezBenchDir/profiles.d/utils/_launch_background.sh Xorg $xorg_config -configdir /no_conf_please/ -nolisten tcp -noreset $xorg_id vt5 -auth $xauthority 2> /tmp/xorg) # TODO: Save the xorg logs
+    local x_pid=$(sudo -n $ezBenchDir/profiles.d/utils/_launch_background.sh Xorg $xorg_config -configdir /no_conf_please/ -nolisten tcp -noreset $xorg_id vt5 -auth $xauthority 2> /dev/null) # TODO: Save the xorg logs
     export EZBENCH_X_PID=$x_pid
 
     export DISPLAY=$xorg_id
