@@ -271,11 +271,11 @@ while getopts "$optString" opt; do
     r)  rounds=$OPTARG
         ;;
     b)  if [ "$OPTARG" != "-" ]; then
-            idx=${#testsList[$@]}
+            idx=${#testsList[@]}
             testsList[$idx]="$OPTARG"
         else
             while read test; do
-                idx=${#testsList[$@]}
+                idx=${#testsList[@]}
                 testsList[$idx]="$test"
             done
         fi
