@@ -41,12 +41,20 @@ function vt_switch_start() {
     has_binary fgconsole || return 1
 
     export EZBENCH_VT_ORIG=$(sudo -n fgconsole)
-    sudo -n chvt 5
+    local i=0
+    while true; do
+        sudo -n chvt 5
 
-    # Wait for the switch to have happened
-    poll_timeout 5000 0.01 "test $(sudo -n fgconsole) -eq 5"
+        # Wait for the switch to have happened
+        poll_timeout 5000 0.01 "test $(sudo -n fgconsole) -eq 5"
+        [ $? -eq 0 ] && return 0
+        [ $i -gt 6 ] && return 1
 
-    return $?
+        i=$(($i + 1))
+
+        sudo -n chvt $EZBENCH_VT_ORIG
+        poll_timeout 1000 0.01 "test $(sudo -n fgconsole) -eq $EZBENCH_VT_ORIG"
+    done
 }
 function vt_switch_stop() {
     [[ -z "$EZBENCH_VT_ORIG" ]] && return
