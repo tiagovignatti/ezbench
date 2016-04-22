@@ -48,6 +48,9 @@ struct shared_object {
 void *handle_libcrypto = NULL;
 unsigned char *(*SHA1_local)(const unsigned char *d, size_t n, unsigned char *md);
 
+size_t dlopen_local_handles_count = 0;
+void **dlopen_local_handles = NULL;
+
 
 struct fll_data {
 	const char *name;
@@ -190,6 +193,27 @@ new_deps_callback(struct dl_phdr_info *info, size_t size, void *data)
 }
 
 static void
+add_dlopen_handle_to_list(void *handle)
+{
+	int i;
+
+	pthread_mutex_lock(&found_so_list_mp);
+	for (i = 0; i < dlopen_local_handles_count; i++) {
+		if (dlopen_local_handles[i] == NULL) {
+			dlopen_local_handles[i] = handle;
+			goto done;
+		}
+	}
+	dlopen_local_handles = realloc(dlopen_local_handles,
+	                               sizeof(void *) * (dlopen_local_handles_count + 1));
+	dlopen_local_handles[dlopen_local_handles_count] = handle;
+	dlopen_local_handles_count++;
+
+done:
+	pthread_mutex_unlock(&found_so_list_mp);
+}
+
+static void
 _dlopen_check_result(void *handle, const char *filename, int flag)
 {
 	char *full_path;
@@ -202,6 +226,10 @@ _dlopen_check_result(void *handle, const char *filename, int flag)
 	full_path = realpath(lm->l_name, NULL);
 
 	add_so_to_found_list(full_path, "DYNLINK");
+
+	/* Local imports are a bit problematic, so store them to a list */
+	if ((flag & RTLD_GLOBAL) == 0)
+		add_dlopen_handle_to_list(handle);
 
 	free(full_path);
 
@@ -257,7 +285,7 @@ extern void *_dl_sym(void *, const char *, void *);
 void *
 _env_dump_resolve_symbol_by_name(const char *symbol)
 {
-	void *ret = NULL;
+	void *ret = NULL, *tmp_ret = NULL;
 	int i;
 
 	pthread_mutex_lock(&symbols_mp);
@@ -275,6 +303,24 @@ _env_dump_resolve_symbol_by_name(const char *symbol)
 	/* Then try to see if there is another version somewhere else */
 	if (ret == NULL)
 		ret = _dl_sym(RTLD_NEXT, symbol, _env_dump_resolve_symbol_by_name);
+
+	if (ret == NULL) {
+		/* Try to resolve the symbol from the local handles */
+		pthread_mutex_lock(&found_so_list_mp);
+		for (i = 0; i < dlopen_local_handles_count; i++) {
+			tmp_ret = _dl_sym(dlopen_local_handles[i], symbol,
+						  _env_dump_resolve_symbol_by_name);
+			if (tmp_ret) {
+				if (ret == NULL || ret == tmp_ret)
+					ret = tmp_ret;
+				else  {
+					fprintf(env_file, "WARNING, found multiple candidates for "
+					"the symbol '%s'\n", symbol);
+				}
+			}
+		}
+		pthread_mutex_unlock(&found_so_list_mp);
+	}
 
 	return ret;
 }
@@ -412,13 +458,24 @@ dlsym(void *handle, const char *symbol)
 		return orig_ptr;
 }
 
-/*int dlclose(void *handle)
+int dlclose(void *handle)
 {
 	int(*orig_dlclose)(void *);
+	int i;
+
 	orig_dlclose = _env_dump_resolve_symbol_by_name("dlclose");
 
+	pthread_mutex_lock(&found_so_list_mp);
+	for (i = 0; i < dlopen_local_handles_count; i++) {
+		if (dlopen_local_handles[i] == handle) {
+			dlopen_local_handles[i] = NULL;
+			break;
+		}
+	}
+	pthread_mutex_unlock(&found_so_list_mp);
+
 	return orig_dlclose(handle);
-}*/
+}
 
 void
 _env_dump_libs_init()
