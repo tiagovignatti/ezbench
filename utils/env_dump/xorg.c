@@ -74,7 +74,10 @@ _env_dump_xlib_compositor(Display *dpy, int screen)
 			wmName, 0, 1024, False, stringType, &typeRet, &format,
 			&nitems, &after, (unsigned char **) &name)))
 		{
-			result = strdup((char *)name);
+			if (name != NULL)
+				result = strdup((char *)name);
+			else
+				result = "UNKNOWN";
 			orig_xfree(name);
 		}
 	}
