@@ -55,6 +55,13 @@ for test in tests:
     print(test)
 END
 
+    # Go through all the subtests we wanted to get and check if all of them
+    # are present. If not, mark them as missing.
+    for subtest in "${run_sub_tests[@]}"; do
+        grep "$subtest" "$run_log_file" 2> /dev/null > /dev/null
+        [ $? -eq 1 ] && echo "$subtest: missing"
+    done
+
     # Display the final status, if it was a full run
     if [ -z "${testSubTests[$t]}" ]; then
         if [ "$exit_code" -eq 0 ]; then
