@@ -11,6 +11,7 @@ REPO_MESA=/opt/source/mesa
 REPO_LINUX=/opt/source/linux
 REPO_PERF_BISECT='/opt/source/bisect-test' # git://people.freedesktop.org/~mperes/bisect-test
 REPO_PIGLIT='/opt/source/piglit'
+REPO_XF86_VIDEO_INTEL=/home/mupuf/src/xf86-video-intel
 
 # Repo compilation parameters
 REPO_MESA_PARAMETERS="--prefix=\$REPO_MESA_PREFIX \
@@ -38,6 +39,12 @@ REPO_MESA_PARAMETERS="--prefix=\$REPO_MESA_PREFIX \
     --enable-opencl --enable-opencl-icd \
     --with-clang-libdir=/usr/lib"
 REPO_LINUX_CONFIG=/path/to/linux/.config
+
+REPO_XF86_VIDEO_INTEL_PARAMETERS="--prefix=\$REPO_XF86_VIDEO_INTEL_PREFIX \
+    --enable-sna \
+    --with-default-dri=3 \
+    --disable-xvmc"
+REPO_XF86_VIDEO_INTEL_XORG_CONF_TEMPLATE="$ezBenchDir/confs.d/xf86-video-intel-template.conf"
 
 # folder that will receive the different builds
 DEPLOY_BASE_DIR=$ezBenchDir/builds

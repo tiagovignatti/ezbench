@@ -1,0 +1,88 @@
+source "$ezBenchDir/profiles.d/utils/common.sh"
+source "$ezBenchDir/profiles.d/utils/git-repo.sh"
+source "$ezBenchDir/profiles.d/utils/auto-deploy.sh"
+
+# Accessible variables
+# $ezBenchDir            [RO]: Directory of the ezbench
+# ------------------
+# $rounds                [WO]: Default number of rounds
+# $makeAndDeployCmd      [WO]: Command to compile and deploy the current git HEAD
+# $gitVersionDeployedCmd [WO]: Command to print out the sha1 of the version currently deployed
+# $repoDir               [WO]: Path to the git repo to use for this profile
+# $reportName            [WO]: Name to give to your report
+# $testsDir              [WO]: List of pathes to the directories containing the tests for this profile
+# $testsList             [WO]: List of tests that should be ran in this profile
+# $testExcludeList       [WO]: List of tests that should be excluded in this profile
+
+# MANDATORY: Print the currently-deployed version of the repo
+# Inputs:
+#   - $repoDir
+function profile_repo_deployed_version() {
+    # We have no choice but look for the currently running X server and see
+    # what is the SHA1 of the intel DDX. With this information, we can query
+    # SHA1-DB to get the version of the DDX.
+
+    # Get the PID behind the server providing $DISPLAY
+    local unix_socket="/tmp/.X11-unix/X$(echo "$DISPLAY" | cut -d ':' -f 2)"
+    local xorg_pid=$(sudo lsof -E "$unix_socket" 2> /dev/null | tail -n 1 | awk '{print $2}')
+
+    # Get the path of the intel DDX, if loaded
+    local i965_path=$(sudo cat "/proc/$xorg_pid/maps" | grep intel_drv.so | head -n 1 | rev | cut -d ' ' -f 1 | rev) 2> /dev/null
+
+    # Ask SHA1-DB for the corresponding ID
+    local sha1=$(sha1sum "$i965_path" | cut -d ' ' -f 1)
+    local version=$($ezBenchDir/SHA1_DB/sha1_db $ezBenchDir/SHA1_DB/ $sha1 read_attr version)
+    if [ $? -eq 0 ]; then
+        echo $version
+    else
+        echo "UNKNOWN"
+    fi
+}
+
+# MANDATORY: Compile the version of the repo found in the current working
+# directory and install it to $(profile_repo_deployment_version_dir).
+# Inputs:
+#   - CWD: Set inside the repo at the right version
+#   - $repoDir
+# Outputs:
+#   - Print the build command line (echo "BUILD_INFO: build command: $cmd")
+#   - configure, compile and install to the prefix $(profile_repo_deployment_version_dir)
+#   - Fill the SHA1-db with all the information about the build when applicable
+function repo_compile_version() {
+    prefix_dir=$(profile_repo_deployment_version_dir)
+    mkdir -p $prefix_dir
+
+    ARGS=${REPO_XF86_VIDEO_INTEL_PARAMETERS//\$REPO_XF86_VIDEO_INTEL_PREFIX/$prefix_dir}
+    echo "BUILD_INFO: build command: ./autogen.sh $ARGS"
+    ./autogen.sh $ARGS || return 71
+
+    make -j8 || return 71
+    make_install_sha1_dump || return 72
+
+    # Now, generate the config file that will allow us to use this module
+    install -D $REPO_XF86_VIDEO_INTEL_XORG_CONF_TEMPLATE "$prefix_dir/etc/X11/xorg.conf" || return 72
+    sed -i "s~\$REPO_XF86_VIDEO_INTEL_PREFIX~$prefix_dir~g" "$prefix_dir/etc/X11/xorg.conf" || return 72
+
+    return 0
+}
+
+# MANDATORY: Deploy the previously-compiled version $version.
+# Inputs:
+#   - $version: the version to deploy
+# Outputs:
+#   - All the environment variables set to work as expected
+function repo_deploy_version() {
+    prefix_dir=$(profile_repo_deployment_version_dir)
+
+    [ -e "$prefix_dir/etc/X11/xorg.conf" ] || return 1
+
+    # Stop the X server, set a new xorg.conf and restart
+    xserver_setup_stop
+    export EZBENCH_CONF_X11_CONF="$prefix_dir/etc/X11/xorg.conf"
+    xserver_setup_start
+
+    return 0
+}
+
+rounds=3
+repoDir="$REPO_XF86_VIDEO_INTEL"
