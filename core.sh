@@ -194,20 +194,17 @@ if [ ! -d "$profileDir" ]; then
     exit 12
 fi
 
+# The profile name is valid, set some environment variables
+PROFILE_TMP_BUILD_DIR="$DEPLOY_BASE_DIR/$profile/tmp"
+PROFILE_DEPLOY_BASE_DIR="$DEPLOY_BASE_DIR/$profile/builds"
+PROFILE_DEPLOY_DIR="$DEPLOY_BASE_DIR/$profile/cur"
+
 # Default user options
 for conf in $profileDir/conf.d/**/*.conf; do
     [ "$conf" = "$profileDir/conf.d/**/*.conf" ] && continue
     source "$conf"
 done
 source "$profileDir/profile"
-
-# Now, let's use the deployed-versions of everything
-PROFILE_TMP_BUILD_DIR="$DEPLOY_BASE_DIR/$profile/tmp"
-PROFILE_DEPLOY_BASE_DIR="$DEPLOY_BASE_DIR/$profile/builds"
-PROFILE_DEPLOY_DIR="$DEPLOY_BASE_DIR/$profile/cur"
-
-export LD_LIBRARY_PATH="$PROFILE_DEPLOY_DIR/lib":$LD_LIBRARY_PATH
-export PATH="$PROFILE_DEPLOY_DIR/bin":$PATH
 
 # Parse the list of tests
 typeset -A availTestNames

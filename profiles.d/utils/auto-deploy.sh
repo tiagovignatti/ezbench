@@ -27,6 +27,21 @@ function profile_repo_deployment_version_dir() {
     echo "$PROFILE_DEPLOY_BASE_DIR/$version"
 }
 
+# MANDATORY: Default version of the function that deploys a previously-compiled
+# version $version.
+# Inputs:
+#   - $version: the version to deploy
+# Outputs:
+#   - All the environment variables set to work as expected
+function repo_deploy_version() {
+    rm $PROFILE_DEPLOY_DIR 2> /dev/null
+
+    local dep_version_dir=$(profile_repo_deployment_version_dir)
+    ln -s $dep_version_dir $PROFILE_DEPLOY_DIR || return 72
+
+    return 0
+}
+
 function auto_deploy_make_and_deploy() {
     # Return error codes:
     # 71: Compilation error
@@ -38,12 +53,11 @@ function auto_deploy_make_and_deploy() {
         return 72
     fi
 
-    # First, check if we already have the
-    dep_version_dir=$(profile_repo_deployment_version_dir)
-    depl_version=$(LD_LIBRARY_PATH=$dep_version_dir/lib:$LD_LIBRARY_PATH \
-                   PATH=$dep_version_dir/bin:$PATH \
-                   profile_repo_deployed_version)
+    # First, check if we already have compiled the wanted version
+    repo_deploy_version
+    local depl_version=$(profile_repo_deployed_version)
 
+    # If we did not get the expected version, let's compile it
     if [[ "$depl_version" != "$version" ]]
     then
         echo "$(date +"%m-%d-%Y-%T"): Start compiling version $version"
@@ -57,7 +71,7 @@ function auto_deploy_make_and_deploy() {
         callIfDefined compile_pre_hook
 
         repo_compile_version
-        compile_error=$?
+        local compile_error=$?
 
         # Call the user-defined post-compile hook
         callIfDefined compile_post_hook
@@ -69,20 +83,18 @@ function auto_deploy_make_and_deploy() {
         # compute the compilation time
         local compile_end=$(date +%s)
         local build_time=$(($compile_end-$compile_start))
-        echo "$(date +"%m-%d-%Y-%T"): Done compiling version $version. Build time = $build_time."
+        echo "$(date +"%m-%d-%Y-%T"): Done compiling version $version (exit code=$compile_error). Build time = $build_time."
 
         # Update our build time estimator
         local avgBuildTime=$(profile_repo_compilation_time)
         local avgBuildTime=$(bc <<< "0.75*$avgBuildTime + 0.25*$build_time")
         profile_repo_set_compilation_time $avgBuildTime
+
+        # Now deploy the version that we compiled
+        repo_deploy_version
     else
         echo "$(date +"%m-%d-%Y-%T"): Found a cached version of the compilation, re-use it!"
     fi
-
-    rm $PROFILE_DEPLOY_DIR 2> /dev/null
-
-    # TODO: Allow profiles to override this function with their own deployment function
-    ln -s $dep_version_dir $PROFILE_DEPLOY_DIR || return 72
 
     return $compile_error
 }
