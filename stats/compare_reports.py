@@ -667,6 +667,17 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 
 			<center><div id="details_table" style="width: 100%; height: 500px;"></div></center>
 
+			<h2>Events</h2>
+
+			% for report in db['events']:
+				<h3>${report}</h3>
+				<ul>
+				% for event in db['events'][report]:
+					<li>${event}</li>
+				% endfor
+				</ul>
+			% endfor
+
 			<h2>Benchmarks</h2>
 
 				% for benchmark in db["benchmarks"]:
@@ -722,17 +733,6 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 						</tr>
 						% endfor
 					</table>
-				% endfor
-
-				<h2>Events</h2>
-
-				% for report in db['events']:
-				<h3>${report}</h3>
-				<ul>
-				% for event in db['events'][report]:
-					<li>${event}</li>
-				% endfor
-				</ul>
 				% endfor
 		</body>
 
