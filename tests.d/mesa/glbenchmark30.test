@@ -33,15 +33,17 @@ test -e ${GLB30} || return 1
 # ]
 #}
 
-# 1 argument: $benchmark
+# 1 argument: $benchmark $fullscreen $width $height
 function __gl30run__ {
-    local W="${GLBENCHMARK30_WIDTH:-1920}"
-    local H="${GLBENCHMARK30_HEIGHT:-1080}"
+    local benchmark=$1
+    local F=$2
+    local W=$3
+    local H=$4
 
     cd ${GLBENCHMARK30_FOLDER}/build/linux/gfxbench_Release/mainapp/
 
     # set GL versions when needed
-    case "$1" in
+    case "$benchmark" in
     gl_4*)
         export MESA_GL_VERSION_OVERRIDE=4.3
         export MESA_GLSL_VERSION_OVERRIDE=430
@@ -57,7 +59,7 @@ function __gl30run__ {
     esac
 
     LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${GLBENCHMARK30_FOLDER}/build/linux/poco_Release/lib/ \
-    run_bench 0 ./mainapp -data ${GLB30_DATA} -w $W -h $H -ow $W -oh $H -t $1 -fullscreen $2 |\
+    run_bench 0 ./mainapp -data ${GLB30_DATA} -w $W -h $H -ow $W -oh $H -t $1 -fullscreen $F |\
     grep fps | cut -d : -f 2- | cut -d " " -f 2 | cut -d ',' -f 1
 
     unset MESA_GL_VERSION_OVERRIDE
@@ -65,21 +67,24 @@ function __gl30run__ {
 }
 
 while read name benchmark; do
-   eval "${name}:fullscreen_run() { __gl30run__ $benchmark 1; }"
-   test_name="$test_name $name:fullscreen"
+    while read res_name width height; do
+        eval "${name}:${res_name}:fullscreen_run() { __gl30run__ $benchmark 1 $width $height; }"
+        test_name="$test_name ${name}:${res_name}:fullscreen"
 
-   eval "${name}:window_run() { __gl30run__ $benchmark 0; }"
-   test_name="$test_name $name:window"
+        eval "${name}:${res_name}:window_run() { __gl30run__ $benchmark 0 $width $height; }"
+        test_name="$test_name ${name}:${res_name}:window"
 
-   eval "${name}:offscreen_run() { __gl30run__ ${benchmark}_off 0; }"
-   test_name="$test_name $name:offscreen"
-
-   eval "${name}:cpu_run() { INTEL_NO_HW=1 __gl30run__ ${benchmark} 0; }"
-   test_name="$test_name $name:cpu"
+        eval "${name}:${res_name}:offscreen_run() { __gl30run__ ${benchmark}_off 0 $width $height; }"
+        test_name="$test_name ${name}:${res_name}:offscreen"
+    done <<< "720p 1280 720
+              1080p 1920 1080"
+    eval "${name}:cpu_run() { INTEL_NO_HW=1 __gl30run__ ${benchmark} 0 16 16; }"
+    test_name="$test_name $name:cpu"
 done<<EOL
         GLB30:Trex gl_trex
-	GLB30:Manhattan gl_manhattan
-	GLB30:Manhattan31 gl_manhattan31
-	GLB30:Driver gl_driver
+        GLB30:Manhattan gl_manhattan
+        GLB30:Manhattan31 gl_manhattan31
+        GLB30:ALU gl_alu
+        GLB30:Driver gl_driver
 EOL
 test_exec_time=70
