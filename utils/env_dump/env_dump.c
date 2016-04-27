@@ -117,7 +117,7 @@ check_restrictions()
 
 	if (full_path!= NULL && restrict_binary != NULL &&
 		strcmp(full_path, restrict_binary) != 0) {
-		printf("Env_dump: binary '%s', ignore...\n", full_path);
+		fprintf(stderr, "Env_dump: binary '%s', ignore...\n", full_path);
 		ret = 1;
 	}
 
@@ -133,7 +133,7 @@ check_restrictions()
 			while (*p++);
 		}
 		if (not_found)
-			printf("Env_dump: cmdline does not contain '%s', ignore...\n", restrict_cmdline);
+			fprintf(stderr, "Env_dump: cmdline does not contain '%s', ignore...\n", restrict_cmdline);
 		ret |= not_found;
 	}
 	free(cmdline);
