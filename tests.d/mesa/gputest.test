@@ -15,7 +15,7 @@ __gputest__() {
 }
 
 fullscreen="/width=1920 /height=1080 /fullscreen"
-window="/width=1024 /height=768"
+window="/width=1024 /height=576"
 
 GL2_1="fur pixmark_julia_fp32 pixmark_piano pixmark_volplosion plot3d triangle"
 GL3_3="gi"
@@ -23,11 +23,11 @@ GL4_0="tess_x8 tess_x16 tess_x32 tess_x64 pixmark_julia_fp64"
 
 # 3 arguments: $rounds $fps_logs_file $runID
 for t in $GL2_1 $GL3_3 $GL4_0; do
-    name="gputest:$t:fullscreen"
+    name="gputest:$t:1080p:fullscreen"
     test_name="$test_name $name"
     eval "${name}_run() { __gputest__ $t \"$fullscreen\"; }"
 
-    name="gputest:$t:window"
+    name="gputest:$t:576p:window"
     test_name="$test_name $name"
     eval "${name}_run() { __gputest__ $t \"$window\"; }"
 done

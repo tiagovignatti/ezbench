@@ -18,9 +18,9 @@ include GLB30:.*:fullscreen 3
 
 include unigine:.*:1080p:fullscreen 3
 
-include gputest:.*:fullscreen 3
-exclude gputest:tess_x16:fullscreen
-exclude gputest:tess_x32:fullscreen
+include gputest:.*:1080p:fullscreen 3
+exclude gputest:tess_x16:1080p:fullscreen
+exclude gputest:tess_x32:1080p:fullscreen
 
 include lightsmark 3
 
