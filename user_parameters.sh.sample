@@ -83,6 +83,9 @@ GLBENCHMARK30_FOLDER=/opt/benchmarks/gfxbench3_desktop/
 # LuxMark settings
 LUXMARK_FOLDER=/opt/benchmarks/luxmark-v3.0
 
+# OpenArena folder, install cfg files in baseoa/!
+OPENARENA_FOLDER=/opt/benchmarks/openarena-0.8.8
+
 # Piglit run parameters
 PIGLIT_RUN_PARAMS=''
 

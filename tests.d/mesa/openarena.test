@@ -1,0 +1,32 @@
+test -e "$OPENARENA_FOLDER/openarena.x86_64" || return 1
+
+__openarena__() {
+    width=$1
+    height=$2
+    benchmark=$3
+
+    # 3398 frames 45.8 seconds 74.2 fps 4.0/13.5/29.0/2.1 ms
+    local extract_fps="egrep -e '[0-9]+ frames' | cut -d ' ' -f 5 2> /dev/null"
+
+    run_bench 0 "$OPENARENA_FOLDER/openarena.x86_64" +set r_customWidth $width \
+            +set r_customHeight $height +exec $benchmark +set r_mode -1        \
+            +set r_fullscreen 1 +set com_speeds 1 2>&1 | eval $extract_fps
+}
+
+for benchmark in "$OPENARENA_FOLDER"/baseoa/*.cfg; do
+while read name width height; do
+   benchmark=$(basename $benchmark | rev | cut -d '.' -f 2- | rev)
+   base_name="openarena:${benchmark}:${name}"
+
+   eval "$base_name:fullscreen_run() { __openarena__ $width $height $benchmark; }"
+   test_name="$test_name $base_name:fullscreen"
+done<<EOL
+        720p 1280 720
+        1080p 1920 1080
+EOL
+
+eval "openarena:${benchmark}:cpu_run() { INTEL_NO_HW=1 __openarena__ 16 16 $benchmark; }"
+test_name="$test_name openarena:${benchmark}:cpu"
+done
+
+test_exec_time=30
