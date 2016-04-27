@@ -95,6 +95,6 @@ done<<EOL
         GFXB4:Driver2 gl_driver2
         GFXB4:Fill2 gl_fill2
         GFXB4:Tess gl_tess
-        GFXB4:CarChase gl_4.json
+        GFXB4:CarChase gl_4
 EOL
 test_exec_time=70
