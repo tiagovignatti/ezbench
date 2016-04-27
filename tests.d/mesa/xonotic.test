@@ -4,23 +4,31 @@ __xonotic__() {
     fullscreen=$1
     width=$2
     height=$3
+    quality=$4
 
     # 10510 frames 24.7782191 seconds 424.1628480 fps, one-second fps min/avg/max: 57 1352 7027 (336 seconds)
     local extract_fps="egrep -e '[0-9]+ frames' | cut -d ' ' -f 5 2> /dev/null"
 
     run_bench 0 $XONOTIC_FOLDER/xonotic-glx +vid_width $width +vid_height $height \
-                +vid_fullscreen $fullscreen +exec effects-high.cfg                \
+                +vid_fullscreen $fullscreen +exec effects-${quality}.cfg          \
                 -benchmark demos/the-big-keybench | eval $extract_fps
 }
 
 while read name width height; do
-   name="xonotic:${name}"
+while read quality; do
+   base_name="xonotic:${quality}:${name}"
 
-   eval "$name:fullscreen_run() { __xonotic__ 1 $width $height; }"
-   test_name="$test_name $name:fullscreen"
+   eval "$base_name:fullscreen_run() { __xonotic__ 1 $width $height $quality; }"
+   test_name="$test_name $base_name:fullscreen"
 
-   eval "$name:window_run() { __xonotic__ 0 $width $height; }"
-   test_name="$test_name $name:window"
+   eval "$base_name:window_run() { __xonotic__ 0 $width $height $quality; }"
+   test_name="$test_name $base_name:window"
+done<<EOL
+        low
+        high
+        ultra
+        ultimate
+EOL
 done<<EOL
         720p 1280 720
         1080p 1920 1080
