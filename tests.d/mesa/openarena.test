@@ -1,9 +1,9 @@
 test -e "$OPENARENA_FOLDER/openarena.x86_64" || return 1
 
 __openarena__() {
-    width=$1
-    height=$2
-    benchmark=$3
+    local width=$1
+    local height=$2
+    local benchmark=$3
 
     # 3398 frames 45.8 seconds 74.2 fps 4.0/13.5/29.0/2.1 ms
     local extract_fps="egrep -e '[0-9]+ frames' | cut -d ' ' -f 5 2> /dev/null"
