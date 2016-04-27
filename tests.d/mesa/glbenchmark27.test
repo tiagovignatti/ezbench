@@ -46,6 +46,7 @@ while read bench_name benchmark_base fixed_postfix bench_time; do
             eval "${name}_run() { __gl27${i}__ ${benchmark_base}${fixed_postfix} $width $height 0; }"
             test_name="$test_name ${name}"
         done <<< "720p 1280 720
+                768p  1366 768
                 1080p 1920 1080"
     done
 
