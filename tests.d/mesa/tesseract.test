@@ -1,0 +1,46 @@
+test -e "$TESSERACT_FOLDER/tesseract_unix" || return 1
+
+__tesseract__() {
+    local width=$1
+    local height=$2
+    local fullscreen=$3
+    local benchmark=$4
+
+    cd "$TESSERACT_FOLDER"
+
+    local  script='maxfps = 0; benchsamples = 0; benchfps = 0;
+        getbenchsample = [benchsamples = (+f $benchsamples 1);
+        benchfps = (+f $benchfps (getfps 1));
+        sleep 100 [getbenchsample]];
+        mapstart = [sleep 1 [follow 0];
+        sleep 100 [getbenchsample]];
+        demoend = [echo FPS: (divf $benchfps $benchsamples);
+        mapstart = ""; demoend = ""; quit]; demo '$benchmark
+
+    # Output: FPS: <fps>
+    ENV_DUMP_RESTRICT_TO_BINARY="$TESSERACT_FOLDER/bin_unix/linux_64_client" \
+    HOME=/no_home \
+    run_bench 0 ./tesseract_unix -x\'$script\' -w$width -h$height \
+    -f$fullscreen | grep 'FPS: ' | cut -d ' ' -f 2
+}
+
+for benchmark in "$TESSERACT_FOLDER"/*.dmo; do
+while read name width height; do
+   benchmark=$(basename $benchmark | rev | cut -d '.' -f 2- | rev)
+   base_name="tesseract:${benchmark}:${name}"
+
+   eval "$base_name:fullscreen_run() { __tesseract__ $width $height 1 $benchmark; }"
+   test_name="$test_name $base_name:fullscreen"
+
+   eval "$base_name:window_run() { __tesseract__ $width $height 0 $benchmark; }"
+   test_name="$test_name $base_name:window"
+done<<EOL
+        720p 1280 720
+        1080p 1920 1080
+EOL
+
+eval "benchmark:${benchmark}:cpu_run() { INTEL_NO_HW=1 __tesseract__ 16 16 $benchmark; }"
+test_name="$test_name benchmark:${benchmark}:cpu"
+done
+
+test_exec_time=30

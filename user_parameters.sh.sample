@@ -86,6 +86,9 @@ LUXMARK_FOLDER=/opt/benchmarks/luxmark-v3.0
 # OpenArena folder, install cfg files in baseoa/!
 OPENARENA_FOLDER=/opt/benchmarks/openarena-0.8.8
 
+# Tesseract folder, install demo files at the root
+TESSERACT_FOLDER=/opt/benchmarks/tesseract
+
 # Piglit run parameters
 PIGLIT_RUN_PARAMS=''
 
