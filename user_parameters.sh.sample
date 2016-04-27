@@ -77,8 +77,7 @@ CITYBENCH_FOLDER=/opt/replay_hbas_citybench
 # GLBenchmark settings
 GLBENCHMARK27_FOLDER=/opt/benchmarks/glbenchmark2.7.0/
 GLBENCHMARK30_FOLDER=/opt/benchmarks/gfxbench3_desktop/
-#GLBENCHMARK30_WIDTH=1920
-#GLBENCHMARK30_HEIGHT=1080
+GFXBENCH4_FOLDER=/opt/benchmarks/gfxbench_gl-linux-4.0.0+corporate
 
 # LuxMark settings
 LUXMARK_FOLDER=/opt/benchmarks/luxmark-v3.0

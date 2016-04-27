@@ -1,0 +1,100 @@
+GFXBENCH4=${GFXBENCH4_FOLDER}/bin/testfw_app
+
+test -e ${GFXBENCH4} || return 1
+
+# Output:
+#    [INFO ]: {
+# "results":
+# [
+#  {
+#   "elapsed_time": 616,
+#   "error_string": "",
+#   "gfx_result":
+#   {
+#    "egl_config_id": -1,
+#    "fps": 52.1,
+#    "frame_count": 31,
+#    "frametimes": [ 15, 3, 26, 21, 20, 21, 20, 21, 20, 20, 21, 38, 3, 20, 21, 22, 20, 20, 20, 20, 21, 20,
+#                    20, 20, 20, 21, 20, 21, 20, 20, 21 ],
+#    "graphics_version": "3.0 Mesa 10.3.2",
+#    "renderer": "Mesa DRI Intel(R) HD Graphics 5500 (Broadwell GT2) ",
+#    "surface_height": 1080,
+#    "surface_width": 1920
+#   },
+#   "load_time": 4427,
+#   "measured_time": 616,
+#   "result_id": -1,
+#   "score": 2917.64697265625,
+#   "status": "OK",
+#   "test_id": "gl_trex",
+#   "unit": "frames",
+#   "version": 1
+#  }
+# ]
+#}
+
+# 1 argument: $benchmark $fullscreen $width $height
+function __gfxbench4run__ {
+    local benchmark=$1
+    local F=$2
+    local W=$3
+    local H=$4
+
+    cd ${GFXBENCH4_FOLDER}
+
+    # set GL versions when needed
+    case "$benchmark" in
+    gl_4*)
+        export MESA_GL_VERSION_OVERRIDE=4.3
+        export MESA_GLSL_VERSION_OVERRIDE=430
+        export MESA_EXTENSION_OVERRIDE=GL_ARB_compute_shader
+        ;;
+    gl_manhattan31*)
+        export MESA_GL_VERSION_OVERRIDE=4.3
+        export MESA_GLSL_VERSION_OVERRIDE=430
+        export MESA_EXTENSION_OVERRIDE=GL_ARB_compute_shader
+        ;;
+    gl_manhattan*)
+        export MESA_GL_VERSION_OVERRIDE=4.1
+        export MESA_GLSL_VERSION_OVERRIDE=400
+        ;;
+    gl_tess*)
+        export MESA_GL_VERSION_OVERRIDE=4.1
+        export MESA_GLSL_VERSION_OVERRIDE=400
+    esac
+
+    run_bench 0 bin/testfw_app --gfx glfw --gl_api desktop_core --width $W --height $H --test_id $benchmark --fullscreen $F |\
+    grep fps | cut -d : -f 2- | cut -d " " -f 2 | cut -d ',' -f 1
+
+    unset MESA_GL_VERSION_OVERRIDE
+    unset MESA_GLSL_VERSION_OVERRIDE
+    unset MESA_EXTENSION_OVERRIDE
+}
+
+while read name benchmark; do
+    while read res_name width height; do
+        eval "${name}:${res_name}:fullscreen_run() { __gfxbench4run__ $benchmark 1 $width $height; }"
+        test_name="$test_name ${name}:${res_name}:fullscreen"
+
+        eval "${name}:${res_name}:window_run() { __gfxbench4run__ $benchmark 0 $width $height; }"
+        test_name="$test_name ${name}:${res_name}:window"
+
+        eval "${name}:${res_name}:offscreen_run() { __gfxbench4run__ ${benchmark}_off 0 $width $height; }"
+        test_name="$test_name ${name}:${res_name}:offscreen"
+    done <<< "720p 1280 720
+              1080p 1920 1080"
+    eval "${name}:cpu_run() { INTEL_NO_HW=1 __gfxbench4run__ ${benchmark} 0 16 16; }"
+    test_name="$test_name $name:cpu"
+done<<EOL
+        GFXB4:Trex gl_trex
+        GFXB4:Manhattan gl_manhattan
+        GFXB4:Manhattan31 gl_manhattan31
+        GFXB4:ALU gl_alu
+        GFXB4:ALU2 gl_alu2
+        GFXB4:Driver gl_driver
+        GFXB4:Driver2 gl_driver2
+        GFXB4:Fill2 gl_fill2
+        GFXB4:Tess gl_tess
+        GFXB4:CarChase gl_4.json
+EOL
+test_exec_time=70
