@@ -834,7 +834,7 @@ class SmartEzbench:
         ezbench = self.__create_ezbench()
         run_info = ezbench.run_commits(["HEAD"], [], [], dry_run=True)
 
-        if not run_info.success():
+        if not run_info.success() or run_info.repo_dir == '':
             return git_history
 
         # Get the list of commits and store their position in the list in a dict
@@ -1413,23 +1413,21 @@ class Report:
 
     def enhance_report(self, commits_rev_order, max_variance = 0.025,
                        perf_diff_confidence = 0.95, smallest_perf_change=0.005):
-        if len(commits_rev_order) == 0:
-            return
+        if len(commits_rev_order) > 0:
+            # Get rid of the commits that are not in the commits list
+            to_del = list()
+            for c in range(0, len(self.commits)):
+                if self.commits[c].sha1 not in commits_rev_order:
+                    to_del.append(c)
+            for v in reversed(to_del):
+                del self.commits[v]
 
-        # Get rid of the commits that are not in the commits list
-        to_del = list()
-        for c in range(0, len(self.commits)):
-            if self.commits[c].sha1 not in commits_rev_order:
-                to_del.append(c)
-        for v in reversed(to_del):
-            del self.commits[v]
+            # Add the index inside the commit
+            for commit in self.commits:
+                commit.git_distance_head = commits_rev_order.index(commit.sha1)
 
-        # Add the index inside the commit
-        for commit in self.commits:
-            commit.git_distance_head = commits_rev_order.index(commit.sha1)
-
-        # Sort the remaining commits
-        self.commits.sort(key=lambda commit: len(commits_rev_order) - commit.git_distance_head)
+            # Sort the remaining commits
+            self.commits.sort(key=lambda commit: len(commits_rev_order) - commit.git_distance_head)
 
         # Generate events
         commit_prev = None
@@ -1455,6 +1453,10 @@ class Report:
                 if result.test_type == "bench":
                     if result.margin() > max_variance:
                         self.events.append(EventInsufficientSignificance(result, max_variance))
+
+                    # All the other events require a git history which we do not have, continue...
+                    if len(commits_rev_order) == 0:
+                        continue
 
                     if bench in bench_prev:
                         # We got previous perf results, compare!
@@ -1487,6 +1489,10 @@ class Report:
                                                                            result.unit_results[test],
                                                                            run[test]))
                             result.unit_results[test] = run[test]
+
+                    # All the other events require a git history which we do not have, continue...
+                    if len(commits_rev_order) == 0:
+                        continue
 
                     # Check for differences with the previous commit
                     if bench in bench_prev:
