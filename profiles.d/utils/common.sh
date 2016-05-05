@@ -349,3 +349,28 @@ function kill_random_pid() {
 
     return 1
 }
+
+function __opengl_clean_version__() {
+    version="${1// /_}"
+    version="${version//./_}"
+    version="${version//\(/}"
+    version="${version//\)/}"
+    printf %q "$version"
+    return 0
+}
+
+function opengl_version() {
+    local out=''
+
+    out=$(wflinfo -p gbm --api gl --profile core 2> /dev/null | grep "OpenGL version string: " | cut -d ' ' -f 4-)
+    [ -n "$out" ] && __opengl_clean_version__ "$out" && return 0
+
+    out=$(wflinfo -p glx --api gl --profile core 2> /dev/null | grep "OpenGL version string: " | cut -d ' ' -f 4-)
+    [ -n "$out" ] && __opengl_clean_version__ "$out" && return 0
+
+    out=$(wflinfo -p wayland --api gl --profile core 2> /dev/null | grep "OpenGL version string: " | cut -d ' ' -f 4-)
+    [ -n "$out" ] && __opengl_clean_version__ "$out" && return 0
+
+    out=$(glxinfo 2> /dev/null | grep "OpenGL core profile version string:" | cut -d : -f 2 | cut -d ' ' -f 2-)
+    [ -n "$out" ] && __opengl_clean_version__ "$out" && return 0
+}

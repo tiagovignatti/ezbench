@@ -18,7 +18,7 @@ source "$ezBenchDir/profiles.d/utils/auto-deploy.sh"
 # Inputs:
 #   - $repoDir
 function profile_repo_deployed_version() {
-    glxinfo 2> /dev/null | sed -n 's/.*(git-\(.*\)).*/\1/p' | head -1
+    opengl_version | sed -n 's/.*git-\(.*\).*/\1/p'
 }
 
 # MANDATORY: Compile the version of the repo found in the current working

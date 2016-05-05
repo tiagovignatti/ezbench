@@ -17,12 +17,7 @@ source "$ezBenchDir/profiles.d/utils/no-repo.sh"
 # $testExcludeList       [WO]: List of tests that should be excluded in this profile
 
 function profile_repo_deployed_version() {
-    version=$(glxinfo | grep "OpenGL core profile version string:" | cut -d : -f 2 | cut -d ' ' -f 2-)
-    version="${version// /_}"
-    version="${version//./_}"
-    version="${version//\(/}"
-    version="${version//\)/}"
-    printf %q "$version"
+    opengl_version
 }
 
 rounds=3
