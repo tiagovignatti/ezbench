@@ -43,11 +43,11 @@ from env_dump_parser import *
 html_name="index.html"
 
 def reports_to_html(reports, output, output_unit = None, title = None,
-			   commit_url = None, verbose = False):
+			   commit_url = None, verbose = False, reference_report = None):
 
 	# select the right unit
 	if output_unit is None:
-		output_unit = "fps"
+		output_unit = "FPS"
 
 	# Parse the results and then create one report with the following structure:
 	# commit -> report_name -> benchmark -> bench results
@@ -59,7 +59,23 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 	db['env_sets'] = dict()
 	db["envs"] = dict()
 	db["targets"] = dict()
+	db["targets_raw"] = dict()
 	human_envs = dict()
+
+	# set all the targets
+	if reference_report is not None and len(reference_report.commits) > 0:
+		db['reference_name'] = "{} ({})".format(reference_report.name, reference_report.commits[-1].sha1)
+		db['reference'] = reference_report
+		for result in reference_report.commits[-1].results:
+			average_raw = result.result()
+			average = convert_unit(average_raw, result.unit_str, output_unit)
+			average = float("{0:.2f}".format(average))
+			average_raw = float("{0:.2f}".format(average_raw))
+			if (not result.benchmark.full_name in db["targets"] or
+				db["targets"][result.benchmark.full_name] == 0):
+					db["targets"][result.benchmark.full_name] = average
+					db["targets_raw"][result.benchmark.full_name] = average_raw
+
 	for report in reports:
 		db["reports"].append(report.name)
 
@@ -122,6 +138,7 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 				if (not result.benchmark.full_name in db["targets"] or
 				db["targets"][result.benchmark.full_name] == 0):
 					db["targets"][result.benchmark.full_name] = result.average
+					db["targets_raw"][result.benchmark.full_name] = result.average_raw
 				result.diff_target = compute_perf_difference(output_unit,
 				                                             db["targets"][result.benchmark.full_name],
 				                                             result.average)
@@ -433,7 +450,7 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 		result = db["commits"][commit]['reports'][report][benchmark]
 		diff_target = "{0:.2f}".format(result.diff_target)
 	%>\\
-	, ${diff_target}, "${tooltip_commit_table(commit)}<h4>Perf</h4><table><tr><td><b>Benchmark</b></td><td>${benchmark}</td></tr><tr><td><b>Target</b></td><td>${diff_target} %</td></tr><tr><td><b>Raw value</b></td><td>${result.average_raw} ${result.unit_str} +/- ${result.margin_str}% (n=${len(result.data)})</td></tr><tr><td><b>Converted value</b></td><td>${result.average} ${output_unit} +/- ${result.margin_str}% (n=${len(result.data)})</td></tr></table><br/>"\\
+	, ${diff_target}, "${tooltip_commit_table(commit)}<h4>Perf</h4><table><tr><td><b>Benchmark</b></td><td>${benchmark}</td></tr><tr><td><b>Target</b></td><td>${db['targets'][benchmark]} ${result.unit_str} (${diff_target}%)</td></tr><tr><td><b>Raw value</b></td><td>${result.average_raw} ${result.unit_str} +/- ${result.margin_str}% (n=${len(result.data)})</td></tr><tr><td><b>Converted value</b></td><td>${result.average} ${output_unit} +/- ${result.margin_str}% (n=${len(result.data)})</td></tr></table><br/>"\\
 								% else:
 	, null, "${benchmark}"\\
 								% endif
@@ -610,50 +627,75 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 				}
 
 				function drawTable() {
-					var dataTable = new google.visualization.DataTable();
-					dataTable.addColumn('string', 'Benchmark');
-					dataTable.addColumn('string', 'Report 1');
-					dataTable.addColumn('string', 'Report 2');
-					dataTable.addColumn('number', '%');
-					dataTable.addColumn('string', 'Comments');
-
-					% for commit in db["commits"]:
-					if (currentCommit == "${commit}") {
-						% for report1 in db["reports"]:
-							% if report1 in db["commits"][commit]['reports']:
-								% for report2 in db["reports"]:
-									% if report2 != report1 and report2 in db["commits"][commit]['reports']:
-										% for benchmark in db["benchmarks"]:
-											% if (benchmark in db["commits"][commit]['reports'][report1] and benchmark in db["commits"][commit]['reports'][report2]):
-											<%
-												r1 = db["commits"][commit]['reports'][report1][benchmark]
-												r2 = db["commits"][commit]['reports'][report2][benchmark]
-												perf_diff = compute_perf_difference(r1.unit_str, r1.average_raw, r2.average_raw)
-												perf_diff = "{0:.2f}".format(perf_diff)
-											%>
-						dataTable.addRows([['${benchmark}', '${report1}', '${report2}', ${perf_diff}, "${r1.average_raw} => ${r2.average_raw} ${r1.unit_str}"]])
-											% endif
-										% endfor
-									% endif
-								% endfor
-							% endif
-						% endfor
-					}
-					%endfor
-
-					var chart = new google.visualization.Table(document.getElementById('details_table'));
-
 					% if len(db["reports"]) > 1:
-						chart.draw(dataTable, {showRowNumber: true, width: '100%', height: '100%'});
+						var dataTable = new google.visualization.DataTable();
+						dataTable.addColumn('string', 'Benchmark');
+						dataTable.addColumn('string', 'Report 1');
+						dataTable.addColumn('string', 'Report 2');
+						dataTable.addColumn('number', '%');
+						dataTable.addColumn('string', 'Comments');
+
+						% for commit in db["commits"]:
+						if (currentCommit == "${commit}") {
+							% for report1 in db["reports"]:
+								% if report1 in db["commits"][commit]['reports']:
+									% for report2 in db["reports"]:
+										% if report2 != report1 and report2 in db["commits"][commit]['reports']:
+											% for benchmark in db["benchmarks"]:
+												% if (benchmark in db["commits"][commit]['reports'][report1] and benchmark in db["commits"][commit]['reports'][report2]):
+												<%
+													r1 = db["commits"][commit]['reports'][report1][benchmark]
+													r2 = db["commits"][commit]['reports'][report2][benchmark]
+													perf_diff = compute_perf_difference(r1.unit_str, r1.average_raw, r2.average_raw)
+													perf_diff = "{0:.2f}".format(perf_diff)
+												%>
+							dataTable.addRows([['${benchmark}', '${report1}', '${report2}', ${perf_diff}, "${r1.average_raw} => ${r2.average_raw} ${r1.unit_str}"]])
+												% endif
+											% endfor
+										% endif
+									% endfor
+								% endif
+							% endfor
+						}
+						%endfor
 					% else:
-						details_table.style.height = 0
+						var dataTable = new google.visualization.DataTable();
+						dataTable.addColumn('string', 'Benchmark');
+						dataTable.addColumn('string', 'Report');
+						dataTable.addColumn('number', '% of target');
+						dataTable.addColumn('string', 'Comments');
+
+						% for commit in db["commits"]:
+						if (currentCommit == "${commit}") {
+							% for report1 in db["reports"]:
+								% if report1 in db["commits"][commit]['reports']:
+									% for benchmark in db["benchmarks"]:
+										% if (benchmark in db["commits"][commit]['reports'][report1] and benchmark in db["targets"]):
+										<%
+											r1 = db["commits"][commit]['reports'][report1][benchmark]
+											perf_diff = compute_perf_difference(r1.unit_str, db["targets_raw"][benchmark], r1.average_raw)
+											perf_diff = "{0:.2f}".format(perf_diff)
+										%>\\
+dataTable.addRows([['${benchmark}', '${report1}', ${perf_diff}, "${r1.average_raw}(${report1}) => ${db["targets_raw"][benchmark]}(target) ${r1.unit_str}"]])
+										% endif
+									% endfor
+								% endif
+							% endfor
+						}
+						%endfor
 					% endif
+					var chart = new google.visualization.Table(document.getElementById('details_table'));
+					chart.draw(dataTable, {showRowNumber: true, width: '100%', height: '100%'});
 				}
 			</script>
 		</head>
 
 		<body>
 			<h1>${title}</h1>
+
+			% if 'reference_name' in db:
+				<p>With targets taken from: ${db['reference_name']}</p>
+			% endif
 
 			<h2>Trends</h2>
 
@@ -762,10 +804,11 @@ if __name__ == "__main__":
 	# parse the options
 	parser = argparse.ArgumentParser()
 	parser.add_argument("--title", help="Set the title for the report")
-	parser.add_argument("--unit", help="Set the output unit (Default: fps)")
+	parser.add_argument("--unit", help="Set the output unit (Default: FPS)")
 	parser.add_argument("--output", help="Report html file path", required=True)
 	parser.add_argument("--commit_url", help="HTTP URL pattern, {commit} contains the SHA1")
 	parser.add_argument("--quiet", help="Be quiet when generating the report", action="store_true")
+	parser.add_argument("--reference", help="Compare the benchmarks to this reference report")
 	parser.add_argument("log_folder", nargs='+')
 	args = parser.parse_args()
 
@@ -779,5 +822,10 @@ if __name__ == "__main__":
 			report = genPerformanceReport(log_folder)
 		reports.append(report)
 
+	# Reference report
+	reference = None
+	if args.reference is not None:
+		reference = genPerformanceReport(args.reference)
+
 	reports_to_html(reports, args.output, args.unit, args.title,
-			   args.commit_url, not args.quiet)
+			   args.commit_url, not args.quiet, reference)
