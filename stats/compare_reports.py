@@ -795,7 +795,7 @@ dataTable.addRows([['${benchmark}', '${report1}', ${perf_diff}, "${r1.average_ra
 							<th>${commit}</th>
 							%endfor
 
-							% for metric in db["metrics"][benchmark]:
+							% for metric in sorted(db["metrics"][benchmark]):
 								<tr><td>${metric}</td>
 								% if 'reference' in db:
 									% if (benchmark in db["target_result"] and metric in db["target_result"][benchmark].metrics):
