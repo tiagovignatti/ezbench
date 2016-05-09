@@ -67,7 +67,7 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 		db['reference_name'] = "{} ({})".format(reference_report.name, reference_report.commits[-1].sha1)
 		db['reference'] = reference_report
 		for result in reference_report.commits[-1].results:
-			average_raw = result.result()
+			average_raw = result.result()[0]
 			average = convert_unit(average_raw, result.unit_str, output_unit)
 			average = float("{0:.2f}".format(average))
 			average_raw = float("{0:.2f}".format(average_raw))
@@ -126,7 +126,7 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 				if not result.benchmark.full_name in db["benchmarks"]:
 					db["benchmarks"].append(result.benchmark.full_name)
 				db["commits"][commit.sha1]['reports'][report.name][result.benchmark.full_name] = result
-				average_raw = result.result()
+				average_raw = result.result()[0]
 				average = convert_unit(average_raw, result.unit_str, output_unit)
 				score_sum += average
 				count += 1

@@ -1069,6 +1069,28 @@ class BenchSubTest:
     def __str__(self):
         return Benchmark.partial_name(self.benchmark.full_name, [self.subtest])
 
+class Metric:
+    def __init__(self, name, unit, data, result, data_raw_file):
+        self.name = name
+        self.unit = unit
+        self.data = data
+        self.result = result
+        self.data_raw_file = data_raw_file
+
+        self._cache_result = None
+
+    def average(self):
+        if self._cache_result is None:
+            s = sum(row[1] for row in self.data)
+            self._cache_result = s / len(self.data)
+        return self._cache_result
+
+    def exec_time(self):
+        if len(self.data) > 0:
+            return self.data[-1][0]
+        else:
+            return 0
+
 class BenchResult:
     def __init__(self, commit, benchmark, data_raw_file):
         self.commit = commit
@@ -1076,6 +1098,7 @@ class BenchResult:
         self.data_raw_file = data_raw_file
         self.data = []
         self.runs = []
+        self.metrics = dict()
         self.env_files = []
         self.unit_str = None
 
@@ -1089,10 +1112,20 @@ class BenchResult:
         self._cache_mean = None
         self._cache_std = None
 
-    def result(self):
+    def result(self, metric = "default"):
         if self._cache_result is None:
-            self._cache_result = sum(self.data) / len(self.data)
-        return self._cache_result
+            self._cache_result = dict()
+        if metric not in self._cache_result:
+            if metric == "default":
+                self._cache_result[metric] = (sum(self.data) / len(self.data), self.unit_str)
+            else:
+                if metric not in self.metrics:
+                    raise ValueError('Unknown metric name')
+                s = 0
+                for m in self.metrics[metric]:
+                    s += m.average()
+                self._cache_result[metric] = (s / len(self.metrics[metric]), m.unit)
+        return self._cache_result[metric]
 
     def __samples_needed__(self, sigma, margin, confidence=0.95):
         # TODO: Find the function in scipy to get these values
@@ -1143,6 +1176,81 @@ class BenchResult:
                                                                confidence))
 
         return margin, wanted_samples
+
+    def add_metrics(self, metric_file):
+        values = dict()
+        with open(metric_file, 'rt') as f:
+            reader = csv.DictReader(f)
+            try:
+                # Collect stats about each metrics
+                for row in reader:
+                    if row is None or len(row) == 0:
+                        continue
+
+                    for field in row:
+                        if field not in values:
+                            values[field] = list()
+                        values[field].append(float(row[field]))
+            except csv.Error as e:
+                sys.stderr.write('file %s, line %d: %s\n' % (filepath, reader.line_num, e))
+                return [], "none"
+
+        # Find the time values and store them aside after converting them to seconds
+        time_unit_re = re.compile(r'^time \((.+)\)$')
+        time = list()
+        for field in values:
+            m = time_unit_re.match(field)
+            if m is not None:
+                unit = m.groups()[0]
+                factor = 1
+                if unit == "s":
+                    factor = 1
+                elif unit == "ms":
+                    factor = 1e-3
+                elif unit == "us" or unit == "µs":
+                    factor = 1e-6
+                elif unit == "ns":
+                    factor = 1e-9
+                else:
+                    print("unknown time unit '{}'".format(unit))
+                for v in values[field]:
+                    time.append(v * factor)
+
+        # Create the metrics
+        metric_name_re = re.compile(r'^(.+) \((.+)\)$')
+        for field in values:
+            unit = None
+            m = metric_name_re.match(field)
+            if m is not None:
+                metric_name, unit = m.groups()
+            else:
+                metric_name = field
+
+            if metric_name.lower() == "time":
+                continue
+
+            # Make sure that the metric does not already exist for this result
+            if metric_name not in self.metrics:
+                self.metrics[metric_name] = list()
+
+            metric = Metric(metric_name, unit, [], self, metric_file)
+            for v in range(0, len(values[field])):
+                metric.data.append((time[v] - time[0], values[field][v]))
+            self.metrics[metric_name].append(metric)
+
+            # Try to add more metrics by combining them
+            if unit == "W":
+                if metric.exec_time() > 0:
+                    energy_name = metric_name + ":energy"
+                    value = metric.average() * metric.exec_time()
+                    energy_metric = Metric(energy_name, "J", [(metric.exec_time(), value)], self, metric_file)
+                    self.metrics[energy_name] = [energy_metric]
+
+                efficiency_name = metric_name + ":efficiency"
+                value = self.result()[0] / metric.average()
+                unit = "{}/W".format(self.unit_str)
+                efficiency_metric = Metric(efficiency_name, unit, [(metric.exec_time(), value)], self, metric_file)
+                self.metrics[efficiency_name] = [efficiency_metric]
 
 
 class Commit:
@@ -1621,7 +1729,7 @@ def genPerformanceReport(log_folder, silentMode = False):
     # Find all the result files and sort them by sha1
     files_list = os.listdir()
     testFiles = dict()
-    commit_bench_file_re = re.compile(r'^(.+)_(bench|unit)_[^\.]+$')
+    commit_bench_file_re = re.compile(r'^(.+)_(bench|unit)_[^\.]+(.metrics_.+)?$')
     for f in files_list:
         if os.path.isdir(f):
             continue
@@ -1701,6 +1809,7 @@ def genPerformanceReport(log_folder, silentMode = False):
             run_re = re.compile(r'^{testFile}#[0-9]+$'.format(testFile=testFile))
             runsFiles = [f for f,t in testFiles[sha1] if run_re.search(f)]
             runsFiles.sort(key=lambda x: '{0:0>100}'.format(x).lower()) # Sort the runs in natural order
+            result.metrics = dict()
             for runFile in runsFiles:
                 if testType == "bench":
                     data, unit, more_is_better = readCsv(runFile)
@@ -1718,6 +1827,11 @@ def genPerformanceReport(log_folder, silentMode = False):
                 if not os.path.isfile(envFile):
                     envFile = None
                 result.env_files.append(envFile)
+
+                # Look for metrics!
+                metrics_re = re.compile(r'^{}.metrics_.+$'.format(runFile))
+                for metric_file in [f for f,t in testFiles[sha1] if metrics_re.search(f)]:
+                    result.add_metrics(metric_file)
 
             # Add the result to the commit's results
             commit.results.append(result)
