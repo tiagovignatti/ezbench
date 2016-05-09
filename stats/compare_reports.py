@@ -128,7 +128,7 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 			for result in commit.results:
 				if not result.benchmark.full_name in db["benchmarks"]:
 					db["benchmarks"].append(result.benchmark.full_name)
-					db["metrics"][result.benchmark.full_name] = list()
+					db["metrics"][result.benchmark.full_name] = ['default']
 				db["commits"][commit.sha1]['reports'][report.name][result.benchmark.full_name] = result
 				average_raw = result.result()[0]
 				average = convert_unit(average_raw, result.unit_str, output_unit)
@@ -798,7 +798,7 @@ dataTable.addRows([['${benchmark}', '${report1}', ${perf_diff}, "${r1.average_ra
 							% for metric in sorted(db["metrics"][benchmark]):
 								<tr><td>${metric}</td>
 								% if 'reference' in db:
-									% if (benchmark in db["target_result"] and metric in db["target_result"][benchmark].metrics):
+									% if (benchmark in db["target_result"] and (metric == "default" or metric in db["target_result"][benchmark].metrics)):
 									<%
 										target_value, unit = db["target_result"][benchmark].result(metric)
 									%>
@@ -808,7 +808,7 @@ dataTable.addRows([['${benchmark}', '${report1}', ${perf_diff}, "${r1.average_ra
 									% endif
 								%endif
 								% for commit in db["commits"]:
-									% if (benchmark in db["commits"][commit]['reports'][report] and metric in db["commits"][commit]['reports'][report][benchmark].metrics):
+									% if (benchmark in db["commits"][commit]['reports'][report] and (metric == "default" or metric in db["commits"][commit]['reports'][report][benchmark].metrics)):
 									<%
 										value, unit = db["commits"][commit]['reports'][report][benchmark].result(metric)
 										diff = compute_perf_difference(unit, target_value, value)
