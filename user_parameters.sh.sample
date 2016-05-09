@@ -121,3 +121,10 @@ XF86_VIDEO_INTEL=/opt/benchmarks/xf86-video-intel
 
 # Xonotic
 XONOTIC_FOLDER=/usr/bin
+
+# Driver for the yokogawa power meters. Make sure you also use a udev rule to
+# give the device an easy-to-find device name:
+# cat /etc/udev/rules.d/99-yoko.rules
+# KERNEL=="usbtmc[0-9]*", SUBSYSTEM=="usbmisc", SUBSYSTEMS=="usb", ATTRS{idVendor}=="0b21", ATTRS{idProduct}=="0025", MODE="0666", SYMLINK+="yokogawa"
+YOKO_TOOL=/opt/yoko-tool/yokotool
+YOKO_DEVICE_NAME=/dev/yokogawa
