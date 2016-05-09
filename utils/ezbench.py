@@ -1942,7 +1942,7 @@ def convert_unit(value, input_unit, output_unit):
 	return value
 
 def compute_perf_difference(unit, target, value):
-    if unit == "s" or unit == "ms" or unit == "us" or unit == "µs":
+    if unit == "s" or unit == "ms" or unit == "us" or unit == "µs" or unit == "J" or unit == "W":
         if value != 0:
             return target * 100.0 / value
         else:

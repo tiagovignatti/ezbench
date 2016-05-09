@@ -56,10 +56,12 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 	db["reports"] = list()
 	db["events"] = dict()
 	db["benchmarks"] = list()
+	db["metrics"] = dict()
 	db['env_sets'] = dict()
 	db["envs"] = dict()
 	db["targets"] = dict()
 	db["targets_raw"] = dict()
+	db["target_result"] = dict()
 	human_envs = dict()
 
 	# set all the targets
@@ -75,6 +77,7 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 				db["targets"][result.benchmark.full_name] == 0):
 					db["targets"][result.benchmark.full_name] = average
 					db["targets_raw"][result.benchmark.full_name] = average_raw
+					db["target_result"][result.benchmark.full_name] = result
 
 	for report in reports:
 		db["reports"].append(report.name)
@@ -125,6 +128,7 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 			for result in commit.results:
 				if not result.benchmark.full_name in db["benchmarks"]:
 					db["benchmarks"].append(result.benchmark.full_name)
+					db["metrics"][result.benchmark.full_name] = list()
 				db["commits"][commit.sha1]['reports'][report.name][result.benchmark.full_name] = result
 				average_raw = result.result()[0]
 				average = convert_unit(average_raw, result.unit_str, output_unit)
@@ -142,6 +146,11 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 				result.diff_target = compute_perf_difference(output_unit,
 				                                             db["targets"][result.benchmark.full_name],
 				                                             result.average)
+
+				# Get the metrics
+				for metric in result.metrics:
+					if metric not in db["metrics"][result.benchmark.full_name]:
+						db["metrics"][result.benchmark.full_name].append(metric)
 
 				# Environment
 				if result.benchmark.full_name not in human_envs:
@@ -773,6 +782,46 @@ dataTable.addRows([['${benchmark}', '${report1}', ${perf_diff}, "${r1.average_ra
 						</tr>
 						% endfor
 					</table>
+
+					<h3>Metrics</h3>
+					% for report in db["reports"]:
+						<h4>${report}</h4>
+						<table>
+							<tr><th>Metric Name</th>
+							% if 'reference' in db:
+							<th>Target</th>
+							%endif
+							% for commit in db["commits"]:
+							<th>${commit}</th>
+							%endfor
+
+							% for metric in db["metrics"][benchmark]:
+								<tr><td>${metric}</td>
+								% if 'reference' in db:
+									% if (benchmark in db["target_result"] and metric in db["target_result"][benchmark].metrics):
+									<%
+										target_value, unit = db["target_result"][benchmark].result(metric)
+									%>
+									<td>${"{:.2f} {}".format(target_value, unit)}</td>
+									% else:
+									<td>N/A</td>
+									% endif
+								%endif
+								% for commit in db["commits"]:
+									% if (benchmark in db["commits"][commit]['reports'][report] and metric in db["commits"][commit]['reports'][report][benchmark].metrics):
+									<%
+										value, unit = db["commits"][commit]['reports'][report][benchmark].result(metric)
+										diff = compute_perf_difference(unit, target_value, value)
+									%>
+										<td>${"{:.2f} {} ({:.2f}%)".format(value, unit, diff)}</td>
+									% else:
+										<td>N/A</td>
+									% endif
+								% endfor
+								</tr>
+							% endfor
+						</table>
+					%endfor
 				% endfor
 		</body>
 
