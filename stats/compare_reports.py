@@ -834,9 +834,14 @@ dataTable.addRows([['${benchmark}', '${report1}', ${perf_diff}, "${r1.average_ra
 									% if (benchmark in db["commits"][commit]['reports'][report] and (metric == "default" or metric in db["commits"][commit]['reports'][report][benchmark].metrics)):
 									<%
 										value, unit = db["commits"][commit]['reports'][report][benchmark].result(metric)
-										diff = compute_perf_difference(unit, target_value, value)
 									%>
-										<td>${"{:.2f} {} ({:.2f}%)".format(value, unit, diff)}</td>
+										<td>${"{:.2f} {}".format(value, unit)}\\
+										% if 'reference' in db:
+<%
+											diff = compute_perf_difference(unit, target_value, value)
+										%>${" ({:.2f}%)".format(diff)}\\
+										% endif
+</td>
 									% else:
 										<td>N/A</td>
 									% endif
