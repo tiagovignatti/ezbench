@@ -82,6 +82,10 @@ _env_dump_drm_dump_info(const char *path, int fd)
 	char *node_name = NULL, *primary_node = NULL, *primary_node_name = NULL;
 	char *vendor = NULL, *devid = NULL;
 
+	/* Check if the path starts with /dev/dri, as it should be */
+	if (strncmp(path, "/dev/dri/", 9) != 0)
+		goto exit;
+
 	/* resolve symbols */
 	orig_drmGetPrimaryDeviceNameFromFd = _env_dump_resolve_symbol_by_name("drmGetPrimaryDeviceNameFromFd");
 	orig_drmGetVersion = _env_dump_resolve_symbol_by_name("drmGetVersion");
@@ -90,10 +94,6 @@ _env_dump_drm_dump_info(const char *path, int fd)
 	if (!orig_drmGetPrimaryDeviceNameFromFd || !orig_drmGetVersion ||
 		!orig_drmGetLibVersion || !orig_drmFreeVersion)
 		return;
-
-    /* Check if the path starts with /, as it should be */
-    if (path[0] != '/')
-        goto exit;
 
 	/* Get the general DRM information */
 	primary_node = orig_drmGetPrimaryDeviceNameFromFd(fd);
