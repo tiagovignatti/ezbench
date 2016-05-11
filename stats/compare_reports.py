@@ -211,6 +211,8 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 		env = human_envs[bench]
 		if env is not None:
 			for key in sorted(list(env.values)):
+				if not bench in db['envs']:
+					continue
 				cur = db['envs'][bench]
 				fields = key.split(":")
 				for f in range(0, len(fields)):
@@ -827,6 +829,7 @@ dataTable.addRows([['${benchmark}', '${report1}', ${perf_diff}, "${r1.average_ra
 									%>
 									<td>${"{:.2f} {}".format(target_value, unit)}</td>
 									% else:
+<% target_value = None %>\\
 									<td>N/A</td>
 									% endif
 								%endif
@@ -836,7 +839,7 @@ dataTable.addRows([['${benchmark}', '${report1}', ${perf_diff}, "${r1.average_ra
 										value, unit = db["commits"][commit]['reports'][report.name][benchmark].result(metric)
 									%>
 										<td>${"{:.2f} {}".format(value, unit)}\\
-										% if 'reference' in db:
+										% if target_value is not None:
 <%
 											diff = compute_perf_difference(unit, target_value, value)
 										%>${" ({:.2f}%)".format(diff)}\\
