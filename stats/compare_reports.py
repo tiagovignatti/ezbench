@@ -246,6 +246,7 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
 	<%! import cgi %>
+	<%! import html %>
 	<%! from ezbench import compute_perf_difference %>
 
 	<html xmlns="http://www.w3.org/1999/xhtml">
@@ -853,6 +854,135 @@ dataTable.addRows([['${benchmark}', '${report1}', ${perf_diff}, "${r1.average_ra
 							% endfor
 						</table>
 					%endfor
+
+					<h3>Results</h3>
+					<%
+						unit_results = []
+						stats_status = dict()
+						statuses = set()
+
+						target_changes = dict()
+						changes = set()
+
+						if 'target_result' in db and benchmark in db['target_result']:
+							if db['target_result'][benchmark].test_type == "unit":
+								target_result = db['target_result'][benchmark]
+								target_result.name = "Target"
+								stats_status[target_result.name] = dict()
+								unit_results.append(target_result)
+						for report in db['reports']:
+							for commit in report.commits:
+								for result in commit.results:
+									if result.benchmark.full_name != benchmark:
+										continue
+									if result.test_type != "unit":
+										continue
+									result.name = "{}.{}".format(report.name, commit.sha1)
+									stats_status[result.name] = dict()
+									target_changes[result.name] = dict()
+									unit_results.append(result)
+
+						all_tests = set()
+						for result in unit_results:
+							all_tests |= set(result.unit_results)
+
+						unit_tests = set()
+						for test in all_tests:
+							value = None
+							for result in unit_results:
+								if "<" in test: # Hide subtests
+									continue
+								if test not in result.unit_results:
+									result.unit_results[test] = "missing"
+
+								# Collect stats on all the status
+								res = result.unit_results[test]
+								if res not in stats_status[result.name]:
+									stats_status[result.name][res] = 0
+									statuses |= set([res])
+								stats_status[result.name][res] += 1
+
+								if value == None:
+									value = result.unit_results[test]
+									continue
+								if value != result.unit_results[test]:
+									unit_tests |= set([test])
+
+								if (result == target_result or
+									target_result.unit_results[test] == result.unit_results[test]):
+									continue
+
+								change = "{} -> {}".format(target_result.unit_results[test],
+								                           result.unit_results[test])
+								if change not in target_changes[result.name]:
+									target_changes[result.name][change] = 0
+									changes |= set([change])
+								target_changes[result.name][change] += 1
+
+						all_tests = []
+					%>
+
+					% if len(unit_tests) > 0:
+					<h4>Unit tests</h4>
+						<h5>Basic stats</h4>
+						<table>
+						<tr><th>Version</th>
+						% for status in sorted(statuses):
+							<th>${status}</th>
+						% endfor
+						</tr>
+
+						% for result in stats_status:
+						<tr><td>${result}</td>\\
+							% for status in sorted(statuses):
+								% if status in stats_status[result]:
+<td>${stats_status[result][status]}</td>\\
+								% else:
+<td>0</td>\\
+								% endif
+							% endfor
+						</tr>
+						% endfor
+						</table>
+
+						% if 'target_result' in db and benchmark in db['target_result']:
+						<h5>Status changes</h4>
+						<table>
+						<tr><th>Version</th>
+						% for result in target_changes:
+							<th>${result}</th>
+						% endfor
+						</tr>
+
+						% for change in sorted(changes):
+						<tr><td>${change}</td>
+							% for result in target_changes:
+							<td>${target_changes[result][change]}</td>
+							% endfor
+						</tr>
+						% endfor
+						</table>
+						% endif
+
+						<h5>Changes</h4>
+						<div style='overflow:auto; width:100%;max-height:1000px;'>
+						<table>
+							<tr><th>test name (${len(unit_tests)})</th>
+							% for result in unit_results:
+							<th>${result.name}</th>
+							% endfor
+							</tr>
+
+							% for test in sorted(unit_tests):
+	<tr><td>${html.escape(test)}</td>\\
+								% for result in unit_results:
+	<td>${result.unit_results[test]}</td>\\
+								% endfor
+	</tr>
+							% endfor
+						<table>
+						</div>
+					% endif
 				% endfor
 		</body>
 
