@@ -1099,6 +1099,7 @@ class BenchResult:
         self.data = []
         self.runs = []
         self.metrics = dict()
+        self.unit_results = dict()
         self.env_files = []
         self.unit_str = None
 
@@ -1586,7 +1587,6 @@ class Report:
                                                             old_perf, perf, confidence))
                 elif result.test_type == "unit":
                     # Aggregate the results
-                    result.unit_results = dict()
                     for run in result.runs:
                         for test in run:
                             subtest = BenchSubTest(result.benchmark, test)

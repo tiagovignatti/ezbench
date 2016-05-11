@@ -875,6 +875,16 @@ dataTable.addRows([['${benchmark}', '${report1}', ${perf_diff}, "${r1.average_ra
 			if verbose:
 				print("Output HTML generated at: {}".format(output))
 
+def gen_report(log_folder):
+	report_name = [x for x in log_folder.split(os.sep) if x][-1]
+	try:
+		sbench = SmartEzbench(ezbench_dir, report_name, readonly=True)
+		report = sbench.report()
+	except RuntimeError:
+		report = genPerformanceReport(log_folder)
+		report.enhance_report([])
+	return report
+
 if __name__ == "__main__":
 	import argparse
 
@@ -890,19 +900,13 @@ if __name__ == "__main__":
 	args = parser.parse_args()
 
 	reports = []
-	for log_folder in args.log_folder:
-		report_name = [x for x in log_folder.split(os.sep) if x][-1]
-		try:
-			sbench = SmartEzbench(ezbench_dir, report_name, readonly=True)
-			report = sbench.report()
-		except RuntimeError:
-			report = genPerformanceReport(log_folder)
-		reports.append(report)
+	for log_folder in set(args.log_folder):
+		reports.append(gen_report(log_folder))
 
 	# Reference report
 	reference = None
 	if args.reference is not None:
-		reference = genPerformanceReport(args.reference)
+		reference = gen_report(args.reference)
 
 	reports_to_html(reports, args.output, args.unit, args.title,
 			   args.commit_url, not args.quiet, reference)
