@@ -36,6 +36,7 @@
 #include <sys/time.h>
 #include <malloc.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <fcntl.h>
 #include <sched.h>
 
@@ -68,6 +69,21 @@ _env_dump_read_file(const char *path, size_t len_max, size_t *out_len)
 exit:
 	fclose(file);
 	return buf;
+}
+
+long long
+_env_dump_read_file_intll(const char *path, int base)
+{
+	char *val = _env_dump_read_file(path, 50, NULL);
+	long ret = -1;
+
+	if (val) {
+		ret = strtoll(val, NULL, base);
+		free(val);
+	}
+
+	return ret;
+
 }
 
 static void
