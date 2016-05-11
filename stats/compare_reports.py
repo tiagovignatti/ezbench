@@ -42,6 +42,48 @@ from env_dump_parser import *
 # constants
 html_name="index.html"
 
+def __env_add_result__(db, human_envs, report, commit, result):
+	if result.benchmark.full_name not in human_envs:
+		for envfile in result.env_files:
+			if envfile is not None:
+				fullpath = report.log_folder + "/" + envfile
+				human_envs[result.benchmark.full_name] = EnvDumpReport(fullpath, True)
+	if result.benchmark.full_name not in db['env_sets']:
+		db['env_sets'][result.benchmark.full_name] = list()
+	for e in range(0, len(result.env_files)):
+		# Create the per-run information
+		envfile = result.env_files[e]
+		if envfile is None:
+			continue
+
+		fullpath = report.log_folder + "/" + envfile
+		r = EnvDumpReport(fullpath, False).to_set(['^DATE',
+													'^ENV.ENV_DUMP_FILE',
+													'_PID',
+													'SHA1$',
+													'.pid$',
+													'X\'s pid$',
+													'extension count$',
+													'window id$'])
+		tup = dict()
+		tup['log_folder'] = report.name
+		tup['commit'] = commit
+		tup['run'] = e
+
+		# Compare the set to existing ones
+		found = False
+		for r_set in db['env_sets'][result.benchmark.full_name]:
+			if r  == r_set['set']:
+				r_set['users'].append(tup)
+				found = True
+
+		# Add the report
+		if not found:
+			new_entry = dict()
+			new_entry['set'] = r
+			new_entry['users'] = [tup]
+			db['env_sets'][result.benchmark.full_name].append(new_entry)
+
 def reports_to_html(reports, output, output_unit = None, title = None,
 			   commit_url = None, verbose = False, reference_report = None):
 
@@ -78,6 +120,8 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 					db["targets"][result.benchmark.full_name] = average
 					db["targets_raw"][result.benchmark.full_name] = average_raw
 					db["target_result"][result.benchmark.full_name] = result
+
+			__env_add_result__(db, human_envs, reference_report, reference_report.commits[-1], result)
 
 	for report in reports:
 		db["reports"].append(report.name)
@@ -153,47 +197,7 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 						db["metrics"][result.benchmark.full_name].append(metric)
 
 				# Environment
-				if result.benchmark.full_name not in human_envs:
-					for envfile in result.env_files:
-						if envfile is not None:
-							fullpath = report.log_folder + "/" + envfile
-							human_envs[result.benchmark.full_name] = EnvDumpReport(fullpath, True)
-				if result.benchmark.full_name not in db['env_sets']:
-					db['env_sets'][result.benchmark.full_name] = list()
-				for e in range(0, len(result.env_files)):
-					# Create the per-run information
-					envfile = result.env_files[e]
-					if envfile is None:
-						continue
-
-					fullpath = report.log_folder + "/" + envfile
-					r = EnvDumpReport(fullpath, False).to_set(['^DATE',
-					                                           '^ENV.ENV_DUMP_FILE',
-					                                           '_PID',
-					                                           'SHA1$',
-					                                           '.pid$',
-					                                           'X\'s pid$',
-					                                           'extension count$',
-					                                           'window id$'])
-					tup = dict()
-					tup['log_folder'] = report.name
-					tup['commit'] = commit
-					tup['run'] = e
-
-					# Compare the set to existing ones
-					found = False
-					for r_set in db['env_sets'][result.benchmark.full_name]:
-						if r  == r_set['set']:
-							r_set['users'].append(tup)
-							found = True
-
-					# Add the report
-					if not found:
-						new_entry = dict()
-						new_entry['set'] = r
-						new_entry['users'] = list()
-						new_entry['users'].append(tup)
-						db['env_sets'][result.benchmark.full_name].append(new_entry)
+				__env_add_result__(db, human_envs, report, commit, result)
 
 			if count > 0:
 				avg = score_sum / count
