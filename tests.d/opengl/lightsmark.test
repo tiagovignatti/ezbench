@@ -9,17 +9,27 @@
 #   Loading scene scenes/wop_padattic/wop_padatticBB.bsp...
 # Finished, average fps = 24.34.
 
-lightsmark_run() {
+__lightsmark__() {
     local extract_fps="sed '/Finished/!d; s/.* fps = \(.*\).$/\1/'"
 
     cd $LIGHTSMARK_FOLDER/bin/pc-linux64
 
-    LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH run_bench 0 ./backend silent 1920x1080 | eval $extract_fps
+    LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH run_bench 0 ./backend silent $1 | eval $extract_fps
 }
+
+while read name resolution; do
+   base_name="lightsmark:${name}"
+
+   eval "$base_name:fullscreen_run() { __lightsmark__ $resolution; }"
+   test_name="$test_name $base_name:fullscreen"
+done<<EOL
+        720p 1280x720
+        1080p 1920x1080
+EOL
 
 lightsmark:cpu_run() {
-    INTEL_NO_HW=1 lightsmark_run
+    INTEL_NO_HW=1 __lightsmark__ 640x480
 }
 
-test_name="lightsmark lightsmark:cpu"
+test_name="$test_name lightsmark:cpu"
 test_exec_time=120
