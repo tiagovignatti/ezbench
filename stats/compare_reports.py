@@ -124,7 +124,7 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 			__env_add_result__(db, human_envs, reference_report, reference_report.commits[-1], result)
 
 	for report in reports:
-		db["reports"].append(report.name)
+		db["reports"].append(report)
 
 		# drop the no-op benchmark
 		report.benchmarks = list(filter(lambda b: b.full_name != "no-op", report.benchmarks))
@@ -425,20 +425,20 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 					dataTable.addColumn('string', 'Commit');
 					dataTable.addColumn({type: 'string', role: 'tooltip', p: { html: true }});
 					% for report in db["reports"]:
-					dataTable.addColumn('number', '${report}');
+					dataTable.addColumn('number', '${report.name}');
 					% endfor
 					dataTable.addRows([
 					% for commit in db["commits"]:
 						['${commit}', "${tooltip_commit_table(commit)}<h4>Perf</h4><table>\\
 	% for report in db["reports"]:
-	% if report in db["commits"][commit]['reports']:
-	<tr><td><b>${report}:</b></td><td>${db["commits"][commit]['reports'][report]["average"]} ${output_unit}</td></tr>\\
+	% if report.name in db["commits"][commit]['reports']:
+	<tr><td><b>${report.name}:</b></td><td>${db["commits"][commit]['reports'][report.name]["average"]} ${output_unit}</td></tr>\\
 	% endif
 	% endfor
 	</table><p></p>"\\
 							% for report in db["reports"]:
-								% if report in db["commits"][commit]['reports']:
-	, ${db["commits"][commit]['reports'][report]["average"]}\\
+								% if report.name in db["commits"][commit]['reports']:
+	, ${db["commits"][commit]['reports'][report.name]["average"]}\\
 								% else:
 	, null\\
 								% endif
@@ -448,7 +448,7 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 					]);
 	% else:
 					<%
-						report = db["reports"][0]
+						report = db["reports"][0].name
 					%>
 					dataTable.addColumn('string', 'Commits');
 					dataTable.addColumn({type: 'string', role:'annotation'});
@@ -808,7 +808,7 @@ dataTable.addRows([['${benchmark}', '${report1}', ${perf_diff}, "${r1.average_ra
 
 					<h3>Metrics</h3>
 					% for report in db["reports"]:
-						<h4>${report}</h4>
+						<h4>${report.name}</h4>
 						<table>
 							<tr><th>Metric Name</th>
 							% if 'reference' in db:
@@ -831,9 +831,9 @@ dataTable.addRows([['${benchmark}', '${report1}', ${perf_diff}, "${r1.average_ra
 									% endif
 								%endif
 								% for commit in db["commits"]:
-									% if (benchmark in db["commits"][commit]['reports'][report] and (metric == "default" or metric in db["commits"][commit]['reports'][report][benchmark].metrics)):
+									% if (benchmark in db["commits"][commit]['reports'][report.name] and (metric == "default" or metric in db["commits"][commit]['reports'][report.name][benchmark].metrics)):
 									<%
-										value, unit = db["commits"][commit]['reports'][report][benchmark].result(metric)
+										value, unit = db["commits"][commit]['reports'][report.name][benchmark].result(metric)
 									%>
 										<td>${"{:.2f} {}".format(value, unit)}\\
 										% if 'reference' in db:
