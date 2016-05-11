@@ -304,6 +304,14 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 				.close_button:hover {
 					text-decoration:underline;
 				}
+
+				/* env_dump*/
+				.ed_c {
+					color: black;
+				}
+				.ed_nc {
+					color: gray;
+				}
 			</style>
 			<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 			<script type="text/javascript">
@@ -776,12 +784,23 @@ dataTable.addRows([['${benchmark}', '${report1}', ${perf_diff}, "${r1.average_ra
 						% for key in db["env_diff_keys"][benchmark]:
 						<tr>
 							<td>${key}</td>
+							<%
+								prev = None
+							%>
 							% for env_set in db["env_sets"][benchmark]:
-							% if key in dict(env_set['set']):
-								<td>${dict(env_set['set'])[key]}</td>
-							% else:
-								<td>MISSING</td>
-							% endif
+							<%
+								if key in dict(env_set['set']):
+									env_val = dict(env_set['set'])[key]
+								else:
+									env_val = "MISSING"
+
+								if prev is None or env_val != prev:
+									css_class = "ed_c"
+								else:
+									css_class = "ed_nc"
+								prev = env_val
+							%>
+							<td class="${css_class}">${env_val}</td>
 							% endfor
 						</tr>
 						% endfor
