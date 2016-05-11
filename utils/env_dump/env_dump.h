@@ -65,6 +65,9 @@ void _env_dump_posix_env_fini();
 char *_env_dump_binary_fullpath(int pid);
 char *_env_dump_binary_cmdline(int pid);
 
+void _env_dump_metrics_init();
+void _env_dump_metrics_fini();
+
 void _env_dump_compute_and_print_sha1(const char *full_path);
 void _env_var_dump_binary_information(int pid);
 

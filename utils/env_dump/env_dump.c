@@ -198,10 +198,12 @@ static void init() {
 	_env_dump_cpu_init();
 	_env_dump_libs_init();
 	_env_dump_net_init();
+	_env_dump_metrics_init();
 }
 
 __attribute__((destructor))
 static void fini() {
+	_env_dump_metrics_fini();
 	_env_dump_net_fini();
 	_env_dump_libs_fini();
 	_env_dump_cpu_fini();

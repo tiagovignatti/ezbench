@@ -87,9 +87,9 @@ function run_bench {
 
     env_dump_path="$ezBenchDir/utils/env_dump/env_dump.so"
     if [ -f "$env_dump_path" ]; then
-        run_log_file_env_dump="$run_log_file.env_dump"
+        run_log_file_env_dump="$run_log_file"
         env_dump_launch="$ezBenchDir/utils/env_dump/env_dump.sh"
-        cmd="$cmd $env_dump_launch $run_log_file_env_dump $@"
+        cmd="$cmd $env_dump_launch "$run_log_file" $@"
     else
         cmd="$cmd $@"
     fi
@@ -106,7 +106,7 @@ function run_bench {
     callIfDefined run_bench_post_hook
 
     if [ -f "$env_dump_path" ]; then
-        $ezBenchDir/utils/env_dump/env_dump_extend.sh "$SHA1_DB" "$run_log_file_env_dump"
+        $ezBenchDir/utils/env_dump/env_dump_extend.sh "$SHA1_DB" "$run_log_file.env_dump"
     fi
 
     # delete the log files if they are empty

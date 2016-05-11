@@ -4,7 +4,8 @@ LDFLAGS = -shared -g
 
 SHA1_DB ?= ../../SHA1_DB
 
-SOURCES = env_dump.c cpu.c drm.c fd.c gl.c libs.c linux.c net.c posix_env.c xorg.c
+SOURCES = env_dump.c cpu.c drm.c fd.c gl.c libs.c linux.c metrics.c net.c \
+	posix_env.c xorg.c
 OBJECTS = $(SOURCES:.c=.o)
 
 # Name of executable target:
