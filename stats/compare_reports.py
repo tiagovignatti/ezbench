@@ -252,7 +252,7 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 			<meta http-equiv="content-type" content="text/html; charset=utf-8" />
 			<style>
 				body { font-size: 10pt; }
-				table { font-size: 10pt; }
+				table { font-size: 8pt; }
 
 				/* http://martinivanov.net/2011/09/26/css3-treevew-no-javascript/ */
 				.css-treeview input + label + ul
@@ -726,7 +726,7 @@ dataTable.addRows([['${benchmark}', '${report1}', ${perf_diff}, "${r1.average_ra
 
 			<center><div id="details_chart" style="width: 100%; height: 500px;"></div></center>
 
-			<center><div id="details_table" style="width: 100%; height: 500px;"></div></center>
+			<center><div id="details_table" style="width: 100%; max-height: 500px;"></div></center>
 
 			<h2>Events</h2>
 
