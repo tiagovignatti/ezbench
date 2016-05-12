@@ -94,6 +94,19 @@ dump_cpu_common()
 	}
 	fprintf(env_file, "\n");
 
+	fprintf(env_file, "CPU_GOVERNOR,%i", get_nprocs_conf());
+	for (i = 0; i < get_nprocs_conf(); i++) {
+		char *governor;
+		snprintf(path, 255,
+			 "/sys/devices/system/cpu/cpu%i/cpufreq/scaling_governor",
+			 i);
+		governor = _env_dump_read_file(path, 20, NULL);
+
+		fprintf(env_file, ",%s", governor);
+		free(governor);
+	}
+	fprintf(env_file, "\n");
+
 	free(path);
 }
 
