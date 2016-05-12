@@ -922,7 +922,7 @@ dataTable.addRows([['${benchmark}', '${report1}', ${perf_diff}, "${r1.average_ra
 						all_tests = []
 					%>
 
-					% if len(unit_tests) > 0:
+					% if len(unit_results) > 0:
 					<h4>Unit tests</h4>
 						<h5>Basic stats</h4>
 						<table>
