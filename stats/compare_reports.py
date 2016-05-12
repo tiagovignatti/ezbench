@@ -822,6 +822,7 @@ dataTable.addRows([['${benchmark}', '${report1}', ${perf_diff}, "${r1.average_ra
 							%endfor
 
 							% for metric in sorted(db["metrics"][benchmark]):
+<% target_value = None %>\\
 								<tr><td>${metric}</td>
 								% if 'reference' in db:
 									% if (benchmark in db["target_result"] and (metric == "default" or metric in db["target_result"][benchmark].metrics)):
@@ -830,7 +831,6 @@ dataTable.addRows([['${benchmark}', '${report1}', ${perf_diff}, "${r1.average_ra
 									%>
 									<td>${"{:.2f} {}".format(target_value, unit)}</td>
 									% else:
-<% target_value = None %>\\
 									<td>N/A</td>
 									% endif
 								%endif
