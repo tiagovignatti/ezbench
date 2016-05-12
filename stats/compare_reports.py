@@ -864,6 +864,7 @@ dataTable.addRows([['${benchmark}', '${report1}', ${perf_diff}, "${r1.average_ra
 						target_changes = dict()
 						changes = set()
 
+						target_result = None
 						if 'target_result' in db and benchmark in db['target_result']:
 							if db['target_result'][benchmark].test_type == "unit":
 								target_result = db['target_result'][benchmark]
@@ -908,7 +909,7 @@ dataTable.addRows([['${benchmark}', '${report1}', ${perf_diff}, "${r1.average_ra
 								if value != result.unit_results[test]:
 									unit_tests |= set([test])
 
-								if (result == target_result or
+								if (target_result is None or result == target_result or
 									target_result.unit_results[test] == result.unit_results[test]):
 									continue
 
