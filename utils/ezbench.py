@@ -1555,7 +1555,7 @@ class Report:
 
             # Look for performance regressions
             for result in commit.results:
-                perf = result.result()
+                perf = result.result()[0]
                 bench = result.benchmark.full_name
                 bench_unit = result.benchmark.unit_str
 
@@ -1570,8 +1570,8 @@ class Report:
                     if bench in bench_prev:
                         # We got previous perf results, compare!
                         t, p = stats.ttest_ind(bench_prev[bench].data, result.data, equal_var=True)
-                        perf = result.result()
-                        old_perf = bench_prev[bench].result()
+                        perf = result.result()[0]
+                        old_perf = bench_prev[bench].result()[0]
                         if old_perf > 0:
                             diff = abs(perf - old_perf) / old_perf
                         else:
