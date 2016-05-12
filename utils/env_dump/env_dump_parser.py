@@ -82,8 +82,8 @@ class EnvDumpReport:
     human_v1 = [
         ['BIOS', 'HW: BIOS', '${vendor} ${version} ${date}'],
         ['BOOTLINK', 'SW: Link (boot): ${fullpath}', '${provider}'],
-        ['CPU_FREQ', 'OS: CPU governor', 'freq. ranges (kHz): [${cpu#0 min}, ${cpu#0 max}], [${cpu#1 min}, ${cpu#1 max}], [${cpu#2 min}, ${cpu#2 max}], [${cpu#3 min}, ${cpu#3 max}], [${cpu#4 min}, ${cpu#4 max}], [${cpu#5 min}, ${cpu#5 max}], [${cpu#6 min}, ${cpu#6 max}], [${cpu#7 min}, ${cpu#7 max}], [${cpu#8 min}, ${cpu#8 max}], [${cpu#9 min}, ${cpu#9 max}], [${cpu#10 min}, ${cpu#10 max}], [${cpu#11 min}, ${cpu#11 max}]'],
-        ['CPU_GOVERNOR', 'OS: CPU governor policy', 'policies=[${cpu#0 governor}, ${cpu#1 governor}, ${cpu#2 governor}, ${cpu#3 governor}, ${cpu#4 governor}, ${cpu#5 governor}, ${cpu#6 governor}, ${cpu#7 governor}, ${cpu#8 governor}, ${cpu#9 governor}, ${cpu#10 governor}, ${cpu#11 governor}]'],
+        ['CPU_FREQ', 'OS: CPU frequencies', 'freq. ranges (kHz): [${cpu#0 min}, ${cpu#0 max}], [${cpu#1 min}, ${cpu#1 max}], [${cpu#2 min}, ${cpu#2 max}], [${cpu#3 min}, ${cpu#3 max}], [${cpu#4 min}, ${cpu#4 max}], [${cpu#5 min}, ${cpu#5 max}], [${cpu#6 min}, ${cpu#6 max}], [${cpu#7 min}, ${cpu#7 max}], [${cpu#8 min}, ${cpu#8 max}], [${cpu#9 min}, ${cpu#9 max}], [${cpu#10 min}, ${cpu#10 max}], [${cpu#11 min}, ${cpu#11 max}]'],
+        ['CPU_GOVERNOR', 'OS: CPU governor', 'policies=[${cpu#0 governor}, ${cpu#1 governor}, ${cpu#2 governor}, ${cpu#3 governor}, ${cpu#4 governor}, ${cpu#5 governor}, ${cpu#6 governor}, ${cpu#7 governor}, ${cpu#8 governor}, ${cpu#9 governor}, ${cpu#10 governor}, ${cpu#11 governor}]'],
         ['DATE', 'OS: Date', '${day} ${time} ${timezone}'],
         ['DRM', 'HW: DRM GPU', '${vendor} ${vendorid}:${devid} (${name} AKA ${codename}), driver ${driver}(${major}.${minor}.${patchlevel})'],
         ['DYNLINK', 'SW: Link (dynamic): ${fullpath}', '${provider}'],
