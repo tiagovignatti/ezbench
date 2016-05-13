@@ -838,7 +838,7 @@ class SmartEzbench:
             return git_history
 
         # Get the list of commits and store their position in the list in a dict
-        output = subprocess.check_output(["/usr/bin/git", "log", "--format=%h %ct"],
+        output = subprocess.check_output(["/usr/bin/git", "log", "--first-parent", "--format=%h %ct"],
                                           cwd=run_info.repo_dir).decode().split('\n')
 
         GitCommit = namedtuple('GitCommit', 'sha1 timestamp')
