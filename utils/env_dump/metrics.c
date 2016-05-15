@@ -124,6 +124,101 @@ add_hwmon()
 	closedir(dir);
 }
 
+static int
+add_rapl_device(const char *rapl_dir, int dev_id, const char *parent_base_name)
+{
+	char *path, *block_name, *base_name, *metric_name;
+	long long val;
+	int i;
+
+	path = malloc(4096 * sizeof(char));
+
+	/* bail out if the device is not enabled */
+	snprintf(path, 4096, "%s/enabled", rapl_dir);
+	if (_env_dump_read_file_intll("/sys/class/powercap/intel-rapl/enabled",
+		                          10) != 1)
+		return 1;
+
+	snprintf(path, 4096, "%s/name", rapl_dir);
+	block_name = _env_dump_read_file(path, 100, NULL);
+	if (!block_name)
+		return 1;
+
+	if (parent_base_name == NULL) {
+		base_name = malloc(8 + strlen(block_name) + 1);
+		sprintf(base_name, "rapl%i.%s", dev_id, block_name);
+	} else {
+		base_name = malloc(strlen(parent_base_name) + 1 + strlen(block_name) + 1);
+		sprintf(base_name, "%s.%s", parent_base_name, block_name);
+	}
+	metric_name = malloc(strlen(base_name) + 4 + 1);
+	sprintf(metric_name, "%s (J)", base_name);
+
+	free(block_name);
+
+	/* Find all the constraints */
+	for (i = 0; i < 20; i++) {
+		const char *name;
+		long long time_window, max_power, power_limit;
+
+		snprintf(path, 4096, "%s/constraint_%i_name", rapl_dir, i);
+		name = _env_dump_read_file(path, 50, NULL);
+		if (name == NULL)
+			break;
+
+		snprintf(path, 4096, "%s/constraint_%i_time_window_us", rapl_dir, i);
+		time_window = _env_dump_read_file_intll(path, 10);
+
+		snprintf(path, 4096, "%s/constraint_%i_max_power_uw", rapl_dir, i);
+		max_power = _env_dump_read_file_intll(path, 10);
+
+		snprintf(path, 4096, "%s/constraint_%i_power_limit_uw", rapl_dir, i);
+		power_limit = _env_dump_read_file_intll(path, 10);
+
+		fprintf(env_file, "RAPL_CONSTRAINT,%s,%s,%llu,%.1f,%.1f\n",
+				base_name, name, time_window, max_power / 1.0e6,
+				power_limit / 1.0e6);
+	}
+
+	/* Add the metric */
+	snprintf(path, 4096, "%s/energy_uj", rapl_dir);
+	val = _env_dump_read_file_intll(path, 10);
+	metric_add(metric_name, strdup(path), 1e-6, val);
+
+	/* Find all the subdevices */
+	if (parent_base_name == NULL) {
+		for (i = 0; i < 20; i++) {
+			snprintf(path, 4096, "%s/intel-rapl:%i:%i", rapl_dir, dev_id, i);
+			if (add_rapl_device(path, dev_id, base_name))
+				break;
+		}
+	}
+
+	free(base_name);
+	free(path);
+
+	return 0;
+}
+
+static void
+add_rapl()
+{
+	char *path;
+	int i;
+
+	if (_env_dump_read_file_intll("/sys/class/powercap/intel-rapl/enabled",
+		                          10) != 1)
+		return;
+
+	path = malloc(4096);
+	for (i = 0; i < 100; i++) {
+		snprintf(path, 4096, "/sys/class/powercap/intel-rapl/intel-rapl:%i", i);
+		if (add_rapl_device(path, i, NULL))
+			break;
+	}
+	free(path);
+}
+
 static float
 poll_metric(struct metric_t *metric)
 {
@@ -178,6 +273,7 @@ _env_dump_metrics_init()
 		return;
 
 	add_hwmon();
+	add_rapl();
 
 	if (metrics_count > 0) {
 		err = pthread_create(&pthread_polling, NULL, polling_thread, output_file);
