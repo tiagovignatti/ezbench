@@ -31,6 +31,7 @@
 #include <sys/resource.h>
 #include <sys/sysinfo.h>
 #include <sys/types.h>
+#include <inttypes.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <malloc.h>
@@ -151,7 +152,7 @@ dump_shed_common()
 
 	prio = getpriority(PRIO_PROCESS, 0);
 
-	fprintf(env_file, "SCHED,%s,%i,%i,%lu,%i\n", sched_str,
+	fprintf(env_file, "SCHED,%s,%i,%i,%"PRIu64",%i\n", sched_str,
 		get_nprocs_conf(), get_nprocs(), affinity, prio);
 }
 
