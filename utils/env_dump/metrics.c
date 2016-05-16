@@ -47,6 +47,7 @@ struct metric_t {
 pthread_t pthread_polling;
 struct metric_t *metrics;
 uint32_t metrics_count = 0;
+FILE *output_file;
 
 static void
 metric_add(char *name, char *path, float factor, float offset)
@@ -265,7 +266,6 @@ polling_thread(void *arg)
 void
 _env_dump_metrics_init()
 {
-	FILE *output_file;
 	int err;
 
 	output_file = fopen(getenv("ENV_DUMP_METRIC_FILE"), "w");
@@ -306,4 +306,7 @@ _env_dump_metrics_fini()
 		}
 		free(metrics);
 	}
+
+	if (output_file)
+		fclose(output_file);
 }
