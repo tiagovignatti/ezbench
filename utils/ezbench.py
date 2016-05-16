@@ -1268,18 +1268,28 @@ class BenchResult:
             self.metrics[metric_name].append(metric)
 
             # Try to add more metrics by combining them
-            if unit == "W":
-                if metric.exec_time() > 0:
-                    energy_name = metric_name + ":energy"
-                    value = metric.average() * metric.exec_time()
-                    energy_metric = Metric(energy_name, "J", [(metric.exec_time(), value)], self, metric_file)
-                    self.metrics[energy_name] = [energy_metric]
+            if unit == "W" or unit == "J":
+                power_value = None
+                if unit == "W":
+                    if metric.exec_time() > 0:
+                        energy_name = metric_name + ":energy"
+                        power_value =  metric.average()
+                        value = power_value * metric.exec_time()
+                        energy_metric = Metric(energy_name, "J", [(metric.exec_time(), value)], self, metric_file)
+                        self.metrics[energy_name] = [energy_metric]
+                elif unit == "J":
+                    if metric.exec_time() > 0:
+                        energy_name = metric_name + ":power"
+                        power_value = metric.average() / metric.exec_time()
+                        power_metric = Metric(energy_name, "W", [(metric.exec_time(), power_value)], self, metric_file)
+                        self.metrics[energy_name] = [power_metric]
 
-                efficiency_name = metric_name + ":efficiency"
-                value = self.result()[0] / metric.average()
-                unit = "{}/W".format(self.unit_str)
-                efficiency_metric = Metric(efficiency_name, unit, [(metric.exec_time(), value)], self, metric_file)
-                self.metrics[efficiency_name] = [efficiency_metric]
+                if power_value is not None and self.unit_str == "FPS":
+                    efficiency_name = metric_name + ":efficiency"
+                    value = self.result()[0] / power_value
+                    unit = "{}/W".format(self.unit_str)
+                    efficiency_metric = Metric(efficiency_name, unit, [(metric.exec_time(), value)], self, metric_file)
+                    self.metrics[efficiency_name] = [efficiency_metric]
 
 
 class Commit:
