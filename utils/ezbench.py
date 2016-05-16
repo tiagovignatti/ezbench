@@ -1356,7 +1356,7 @@ class Commit:
                                 if fdo_bug_m is not None:
                                     bugid = fdo_bug_m.groups()[0]
                                     self.bugs |= {basefdourl + bugid}
-        except IOError:
+        except Exception:
             pass
 
         # Look for the exit code
@@ -1368,7 +1368,7 @@ class Commit:
                 # Line contains the last line of the report, parse it
                 if line.startswith("Exiting with error code "):
                     self.compil_exit_code = EzbenchExitCode(int(line[24:]))
-        except IOError:
+        except Exception:
             pass
 
     def build_broken(self):
