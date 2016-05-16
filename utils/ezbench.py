@@ -905,7 +905,7 @@ class SmartEzbench:
             if type(e) is EventUnitResultUnstable:
                 if e.commit.sha1 not in unstable_unittests:
                     unstable_unittests[e.commit.sha1] = set()
-                unstable_unittests[e.commit.sha1] |= set([str(e.subtest)])
+                unstable_unittests[e.commit.sha1] |= set([str(e.bench_sub_test)])
         self.__log(Criticality.DD, "Unstable tests: {}".format(str(unstable_unittests)))
 
         # Check all events
@@ -997,10 +997,10 @@ class SmartEzbench:
 
                 # Check that the test was not unstable on either side of the change
                 if (e.commit_range.old.sha1 in unstable_unittests and
-                    str(e.subtest) in unstable_unittests[e.commit_range.old.sha1]):
+                    str(e.bench_sub_test) in unstable_unittests[e.commit_range.old.sha1]):
                     continue
                 if (e.commit_range.new.sha1 in unstable_unittests and
-                    str(e.subtest) in unstable_unittests[e.commit_range.new.sha1]):
+                    str(e.bench_sub_test) in unstable_unittests[e.commit_range.new.sha1]):
                     continue
 
                 # Find the middle commit
