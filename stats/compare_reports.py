@@ -981,7 +981,7 @@ dataTable.addRows([['${benchmark}', '${report1}', ${perf_diff}, "${r1.average_ra
 								% endfor
 	</tr>
 							% endfor
-						<table>
+						</table>
 						</div>
 					% endif
 				% endfor
