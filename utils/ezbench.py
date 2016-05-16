@@ -1207,6 +1207,15 @@ class BenchResult:
                     if row is None or len(row) == 0:
                         continue
 
+                    # Verify that all the fields are present or abort...
+                    allValuesOK = True
+                    for field in values:
+                        if row[field] is None:
+                            allValuesOK = False
+                            break
+                    if not allValuesOK:
+                        break
+
                     for field in row:
                         if field not in values:
                             values[field] = list()
