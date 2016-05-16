@@ -376,7 +376,7 @@ for (( t=0; t<${#testsList[@]}; t++ )); do
             found=1
 
             # We do not accept running subtests on non-complete matches of names
-            [[ $basetest != ${availTestNames[$a]} && -n $subtests ]] && break
+            [[ $basetest != ${availTestNames[$a]} && -n $subtests ]] && continue
 
             # Try to find the test in the list of blacklisted tests
             blacklisted=0
