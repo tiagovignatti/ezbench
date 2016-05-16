@@ -1579,6 +1579,7 @@ class Report:
         # Generate events
         commit_prev = None
         bench_prev = dict()
+        unittest_prev = dict()
         build_broken_since = None
         for commit in self.commits:
             commit_range = EventCommitRange(commit_prev, commit)
@@ -1623,6 +1624,7 @@ class Report:
                             self.events.append(EventPerfChange(result.benchmark,
                                                             commit_range,
                                                             old_perf, perf, confidence))
+                        bench_prev[bench] = result
                 elif result.test_type == "unit":
                     # Aggregate the results
                     for run in result.runs:
@@ -1641,22 +1643,26 @@ class Report:
                         continue
 
                     # Check for differences with the previous commit
-                    if bench in bench_prev:
-                        # FIXME: Aggregate all the results
-                        for test in result.unit_results:
-                            if not test in bench_prev[bench].unit_results:
-                                continue
+                    for test in result.unit_results:
+                        subtest = BenchSubTest(result.benchmark, test)
+                        if not str(subtest) in unittest_prev:
+                            continue
 
-                            before = bench_prev[bench].unit_results[test]
-                            after = result.unit_results[test]
-                            if before == after:
-                                continue
+                        before = unittest_prev[str(subtest)][2]
+                        after = result.unit_results[test]
+                        if before == after:
+                            continue
 
-                            subtest = BenchSubTest(result.benchmark, test)
-                            self.events.append(EventUnitResultChange(subtest, commit_range, before, after))
+                        subtest = BenchSubTest(result.benchmark, test)
+                        commit_range = EventCommitRange(unittest_prev[str(subtest)][1], commit)
+                        self.events.append(EventUnitResultChange(subtest, commit_range, before, after))
+
+                    # Add all the results to the prev
+                    for test in result.unit_results:
+                        subtest = BenchSubTest(result.benchmark, test)
+                        unittest_prev[str(subtest)] = (subtest, commit, result.unit_results[test])
                 else:
                     print("WARNING: enhance_report: unknown test type {}".format(result.test_type))
-                bench_prev[bench] = result
 
             commit_prev = commit
 
