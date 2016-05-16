@@ -903,10 +903,10 @@ dataTable.addRows([['${benchmark}', '${report1}', ${perf_diff}, "${r1.average_ra
 									statuses |= set([res])
 								stats_status[result.name][res] += 1
 
-								if value == None:
+								if value == None and result.unit_results[test] != "missing":
 									value = result.unit_results[test]
 									continue
-								if value != result.unit_results[test]:
+								if value != result.unit_results[test] and result.unit_results[test] != "missing":
 									unit_tests |= set([test])
 
 								if (target_result is None or result == target_result or
