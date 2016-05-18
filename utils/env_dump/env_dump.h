@@ -31,6 +31,7 @@
 #include <stdio.h>
 
 extern FILE *env_file;
+extern int _env_debug;
 
 #define likely(x)       __builtin_expect(!!(x), 1)
 #define unlikely(x)     __builtin_expect(!!(x), 0)

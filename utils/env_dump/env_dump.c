@@ -39,6 +39,7 @@
 #include <link.h>
 
 FILE *env_file = NULL;
+int _env_debug = 0;
 
 static void fini();
 
@@ -117,7 +118,8 @@ check_restrictions()
 
 	if (full_path!= NULL && restrict_binary != NULL &&
 		strcmp(full_path, restrict_binary) != 0) {
-		fprintf(stderr, "Env_dump: binary '%s', ignore...\n", full_path);
+		if (_env_debug)
+			fprintf(stderr, "Env_dump: binary '%s', ignore...\n", full_path);
 		ret = 1;
 	}
 
@@ -132,7 +134,7 @@ check_restrictions()
 			}
 			while (*p++);
 		}
-		if (not_found)
+		if (not_found && _env_debug)
 			fprintf(stderr, "Env_dump: cmdline does not contain '%s', ignore...\n", restrict_cmdline);
 		ret |= not_found;
 	}
@@ -186,6 +188,8 @@ init()
 	const char *base_path = getenv("ENV_DUMP_FILE");
 	if (base_path == NULL)
 		base_path = "/tmp/env_dump";
+
+	_env_debug = getenv("ENV_DUMP_DEBUG") ? 1 : 0;
 
 	if (strcmp(base_path, "stderr") != 0) {
 		env_file = _env_dump_create_file(base_path);
