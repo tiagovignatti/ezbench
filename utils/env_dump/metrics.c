@@ -268,7 +268,7 @@ _env_dump_metrics_init()
 {
 	int err;
 
-	output_file = fopen(getenv("ENV_DUMP_METRIC_FILE"), "w");
+	output_file = _env_dump_create_file(getenv("ENV_DUMP_METRIC_FILE"));
 	if (output_file == NULL)
 		return;
 

@@ -142,39 +142,59 @@ check_restrictions()
 	return ret;
 }
 
-__attribute__((constructor))
-static void init() {
-	const char *base_path = getenv("ENV_DUMP_FILE");
+FILE *
+_env_dump_create_file(const char *base_path)
+{
+	FILE *file;
 	char *path;
 	int fd;
 
+	if (check_restrictions())
+		return NULL;
+
+	/* if the file asked by the user already exists, append the pid to the
+	* name. Otherwise, just use the name.
+	*/
+	fd = open(base_path, O_EXCL | O_CREAT | O_WRONLY | O_CLOEXEC, 0666);
+	if (fd >= 0) {
+		fprintf(stderr, "pid %i: opened file %s\n", getpid(), base_path);
+		file = fdopen(fd, "w");
+	} else {
+		path = malloc(strlen(base_path) + 1 + 10 + 1); /* log(2^32) = 10 */
+		if (!path)
+			exit(1);
+		sprintf(path, "%s.%i", base_path, getpid());
+		fd = open(path, O_EXCL | O_CREAT | O_WRONLY | O_CLOEXEC, 0666);
+		fprintf(stderr, "pid %i: file %s -> fd = %i\n", getpid(), path, fd);
+		if (fd >= 0)
+			file = fopen(path, "w");
+		else
+			file = NULL;
+
+		free(path);
+	}
+	/* do not buffer this stream */
+	if (file)
+		setvbuf(file, (char *)NULL, _IONBF, 0);
+
+	return file;
+}
+
+__attribute__((constructor)) static void
+init()
+{
+	const char *base_path = getenv("ENV_DUMP_FILE");
 	if (base_path == NULL)
 		base_path = "/tmp/env_dump";
 
-	if (check_restrictions()) {
-		env_file = fopen("/dev/null", "w");
-	} else if (strcmp(base_path, "stderr") != 0) {
-		/* if the file asked by the user already exists, append the pid to the
-		* name. Otherwise, just use the name.
-		*/
-		fd = open(base_path, O_EXCL | O_CREAT | O_WRONLY | O_CLOEXEC, 0666);
-		if (fd >= 0) {
-			env_file = fdopen(fd, "w");
-			fprintf(stderr, "path = %s\n", base_path);
-		} else {
-			path = malloc(strlen(base_path) + 1 + 10 + 1); /* log(2^32) = 10 */
-			if (!path)
-				exit(1);
-			sprintf(path, "%s.%i", base_path, getpid());
-			fprintf(stderr, "path = %s.%i\n", base_path, getpid());
-			env_file = fopen(path, "w");
-			free(path);
-		}
-		/* do not buffer this stream */
-		setvbuf(env_file, (char *)NULL, _IONBF, 0);
-	} else {
+	if (strcmp(base_path, "stderr") != 0) {
+		env_file = _env_dump_create_file(base_path);
+	} else if (!check_restrictions()){
 		env_file = stderr;
 	}
+
+	if (!env_file)
+		env_file = fopen("/dev/null", "w");
 
 	/* handle some signals that would normally result in an exit without
 	 * calling the fini functions. This will hopefully be done before any

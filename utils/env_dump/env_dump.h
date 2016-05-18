@@ -81,6 +81,7 @@ enum symbol_key_t {
 	SYMB_END
 }; /* do not forget to duplicate the name in libs.c's symbol_key_str */
 
+FILE *_env_dump_create_file(const char *base_path);
 void *_env_dump_resolve_local_symbol_by_name(const char *symbol);
 void *_env_dump_resolve_symbol_by_name(const char *symbol);
 void *_env_dump_resolve_symbol_by_id(enum symbol_key_t symbol);
