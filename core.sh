@@ -145,6 +145,7 @@ function callIfDefined() {
         local funcName=$1
         shift
         $funcName "$@"
+        return 0
     else
         return 1
     fi
@@ -343,7 +344,7 @@ trap __ezbench_finish__ EXIT
 trap __ezbench_finish__ INT # Needed for zsh
 
 # Execute the user-defined pre hook
-callIfDefined ezbench_pre_hook || exit 60
+callIfDefined ezbench_pre_hook
 
 versionList=$(profile_get_version_list $@)
 if [ $? -ne 0 ]; then
@@ -544,6 +545,9 @@ then
     echo "Dry-run mode, exit."
     exit 0
 fi
+
+# Execute the user-defined environment deployment hook
+callIfDefined ezbench_env_deploy_hook
 
 # Iterate through the versions
 for version in $versionList
