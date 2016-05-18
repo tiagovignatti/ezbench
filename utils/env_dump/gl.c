@@ -116,7 +116,7 @@ __GLXextFuncPtr glXGetProcAddressARB(const GLubyte *procName)
 
 	/* First look up the right symbol */
 	external = orig_glXGetProcAddressARB(procName);
-	if (!external)
+	if (_env_ignored || !external)
 		return external;
 
 	/* check if we have an internal version of it! */
@@ -197,7 +197,7 @@ glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext ctx)
 	orig_glXGetClientString = _env_dump_resolve_symbol_by_name("glXGetClientString");
 
 	ret = orig_glXMakeCurrent(dpy, drawable, ctx);
-	if (ret == False)
+	if (_env_ignored || ret == False)
 		goto done;
 
 	/* check if the context is in the list */
@@ -251,7 +251,7 @@ eglMakeCurrent(EGLDisplay display, EGLSurface draw, EGLSurface read,
 	orig_eglQueryString = _env_dump_resolve_symbol_by_name("eglQueryString");
 
 	ret = orig_eglMakeCurrent(display, draw, read, context);
-	if (ret == False)
+	if (_env_ignored || ret == False)
 		goto done;
 
 	/* check if the context is in the list */

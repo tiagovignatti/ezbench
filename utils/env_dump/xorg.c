@@ -95,10 +95,11 @@ XOpenDisplay(const char *display_name)
 	int i;
 
 	orig_xopendisplay = _env_dump_resolve_symbol_by_name("XOpenDisplay");
-	orig_xservervendor = _env_dump_resolve_symbol_by_name("XServerVendor");
-	orig_xvendorrelease = _env_dump_resolve_symbol_by_name("XVendorRelease");
 	dpy = orig_xopendisplay(display_name);
-	if (dpy) {
+	if (!_env_ignored && dpy) {
+		orig_xservervendor = _env_dump_resolve_symbol_by_name("XServerVendor");
+		orig_xvendorrelease = _env_dump_resolve_symbol_by_name("XVendorRelease");
+
 		fprintf(env_file, "XORG_SESSION_OPENED,%s,%s,%i\n", display_name,
 				orig_xservervendor(dpy), orig_xvendorrelease(dpy));
 		for (i = 0; i < ScreenCount(dpy); i++) {
@@ -122,8 +123,8 @@ XCloseDisplay(Display *display)
 	int ret;
 
 	orig_xclosedisplay = _env_dump_resolve_symbol_by_name("XCloseDisplay");
-
-	fprintf(env_file, "XORG_CLOSE,%s\n", DisplayString(display));
+	if (!_env_ignored)
+		fprintf(env_file, "XORG_CLOSE,%s\n", DisplayString(display));
 	ret = orig_xclosedisplay(display);
 
 	return ret;
@@ -145,8 +146,9 @@ XCreateSimpleWindow(Display* display, Window parent, int x, int y,
 
 	ret = orig_xcreatesimplewindow(display, parent, x, y, width, height,
 				       border_width, border, background);
-	fprintf(env_file, "XORG_WINDOW_CREATE,%lu,%lu,%i,%i,-1\n", parent, ret,
-		width, height);
+	if (!_env_ignored)
+		fprintf(env_file, "XORG_WINDOW_CREATE,%lu,%lu,%i,%i,-1\n", parent, ret,
+		        width, height);
 
 	return ret;
 }
@@ -170,8 +172,9 @@ XCreateWindow(Display* display, Window parent, int x, int y,
 	ret = orig_xcreatewindow(display, parent, x, y, width, height,
 				 border_width, depth, class, visual,
 				 valuemask, attributes);
-	fprintf(env_file, "XORG_WINDOW_CREATE,%lu,%lu,%i,%i,%i\n", parent, ret,
-		width, height, depth);
+	if (!_env_ignored)
+		fprintf(env_file, "XORG_WINDOW_CREATE,%lu,%lu,%i,%i,%i\n", parent, ret,
+		        width, height, depth);
 
 	return ret;
 }
@@ -187,7 +190,8 @@ XMoveResizeWindow(Display *display, Window w, int x, int y, unsigned int width,
 	orig_xmoveresizewindow = _env_dump_resolve_symbol_by_name("XMoveResizeWindow");
 
 	ret = orig_xmoveresizewindow(display, w, x, y, width, height);
-	fprintf(env_file, "XORG_WINDOW_RESIZE,%lu,%i,%i\n", w, width, height);
+	if (!_env_ignored)
+		fprintf(env_file, "XORG_WINDOW_RESIZE,%lu,%i,%i\n", w, width, height);
 
 	return ret;
 }
@@ -202,7 +206,8 @@ XResizeWindow(Display *display, Window w, unsigned int width, unsigned int heigh
 	orig_xresizewindow = _env_dump_resolve_symbol_by_name("XResizeWindow");
 
 	ret = orig_xresizewindow(display, w, width, height);
-	fprintf(env_file, "XORG_WINDOW_RESIZE,%lu,%i,%i\n", w, width, height);
+	if (!_env_ignored)
+		fprintf(env_file, "XORG_WINDOW_RESIZE,%lu,%i,%i\n", w, width, height);
 
 	return ret;
 }
@@ -224,7 +229,7 @@ xcb_dri3_open_reply_fds(xcb_connection_t *c, xcb_dri3_open_reply_t *reply)
 	orig_xcb_dri3_open_reply_fds = _env_dump_resolve_symbol_by_name("xcb_dri3_open_reply_fds");
 
 	ret = orig_xcb_dri3_open_reply_fds(c, reply);
-	if (ret && ret[0] >= 0)
+	if (!_env_ignored && ret && ret[0] >= 0)
 		fprintf(env_file, "XCB_CONNECTION,DRI3,unknown\n");
 
 	return ret;
@@ -242,7 +247,7 @@ xcb_dri2_connect_reply(xcb_connection_t *c, xcb_dri2_connect_cookie_t cookie,
 
 	orig_xcb_dri2_connect_reply = _env_dump_resolve_symbol_by_name("xcb_dri2_connect_reply");
 	ret = orig_xcb_dri2_connect_reply(c, cookie, e);
-	if (ret)
+	if (!_env_ignored && ret)
 		fprintf(env_file, "XCB_CONNECTION,DRI2,%s\n", xcb_dri2_connect_driver_name(ret));
 
 	return ret;

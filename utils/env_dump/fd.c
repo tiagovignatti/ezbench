@@ -100,24 +100,25 @@ ioctl(int fd, unsigned long int request, ...)
 	va_start(ap, request);
 	arg = va_arg(ap, void *);
 
-	/* If it is the first time we see an ioctl on this fd */
-	pthread_mutex_lock(&fd_mp);
-
 	orig_ioctl = _env_dump_resolve_symbol_by_id(SYMB_IOCTL);
+	if (!_env_ignored) {
+		/* If it is the first time we see an ioctl on this fd */
+		pthread_mutex_lock(&fd_mp);
 
-	if (!bit_read(fd)) {
-		char path[101];
-		size_t len = get_path_from_fd(fd, path, sizeof(path));
-		path[len] = '\0';
-		if (path[0] == '/')
-			fprintf(env_file, "IOCTL,%s\n", path);
-		bit_write(fd, 1);
+		if (!bit_read(fd)) {
+			char path[101];
+			size_t len = get_path_from_fd(fd, path, sizeof(path));
+			path[len] = '\0';
+			if (path[0] == '/')
+				fprintf(env_file, "IOCTL,%s\n", path);
+			bit_write(fd, 1);
 
-		pthread_mutex_unlock(&fd_mp);
+			pthread_mutex_unlock(&fd_mp);
 
-		_env_dump_drm_dump_info(path, fd);
-	} else
-		pthread_mutex_unlock(&fd_mp);
+			_env_dump_drm_dump_info(path, fd);
+		} else
+			pthread_mutex_unlock(&fd_mp);
+	}
 
 	return orig_ioctl(fd, request, arg);
 }
@@ -181,12 +182,14 @@ close(int fd)
 
 	orig_close = _env_dump_resolve_symbol_by_name("close");
 
-	/* call the callbacks */
-	call_fd_close_callbacks(fd);
+	if (!_env_ignored) {
+		/* call the callbacks */
+		call_fd_close_callbacks(fd);
 
-	pthread_mutex_lock(&fd_mp);
-	bit_write(fd, 0);
-	pthread_mutex_unlock(&fd_mp);
+		pthread_mutex_lock(&fd_mp);
+		bit_write(fd, 0);
+		pthread_mutex_unlock(&fd_mp);
+	}
 
 	return orig_close(fd);
 }

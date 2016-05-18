@@ -150,7 +150,7 @@ putenv(char *string)
 	orig_putenv = _env_dump_resolve_symbol_by_name("putenv");
 
 	ret = orig_putenv(string);
-	if (!ret)
+	if (!_env_ignored && !ret)
 		dump_env_var("ENV_SET", string);
 
 	return ret;
@@ -169,7 +169,7 @@ setenv(const char *name, const char *value, int replace)
 		orig_value = getenv(name);
 
 	ret = orig_setenv(name, value, replace);
-	if (!ret && !(!replace && orig_value)) // do not print the message if nothing changed
+	if (!_env_ignored && !ret && !(!replace && orig_value)) // do not print the message if nothing changed
 		fprintf(env_file, "ENV_SET,%s,%s\n", name, value);
 
 	return ret;
@@ -184,7 +184,7 @@ unsetenv(const char *name)
 	orig_unsetenv = _env_dump_resolve_symbol_by_name("unsetenv");
 
 	ret = orig_unsetenv(name);
-	if (!ret)
+	if (!_env_ignored && !ret)
 		fprintf(env_file, "ENV_UNSET,%s\n", name);
 
 	return ret;
@@ -199,7 +199,7 @@ clearenv(void)
 	orig_clearenv = _env_dump_resolve_symbol_by_name("clearenv");
 
 	ret = orig_clearenv();
-	if (!ret)
+	if (!_env_ignored && !ret)
 		fprintf(env_file, "ENV_CLEAR\n");
 
 	return ret;

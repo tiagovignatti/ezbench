@@ -45,7 +45,7 @@ connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
 	orig_connect = _env_dump_resolve_symbol_by_name("connect");
 
 	ret = orig_connect(sockfd, addr, addrlen);
-	if (!ret && addr->sa_family == AF_UNIX) {
+	if (!_env_ignored && !ret && addr->sa_family == AF_UNIX) {
 		struct ucred ucred;
 		const char *filepath = NULL;
 

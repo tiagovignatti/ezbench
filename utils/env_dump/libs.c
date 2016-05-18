@@ -246,7 +246,8 @@ dlopen(const char *filename, int flags)
 	orig_dlopen = _env_dump_resolve_symbol_by_name("dlopen");
 
 	handle = orig_dlopen(filename, flags);
-	_dlopen_check_result(handle, filename, flags);
+	if (!_env_ignored)
+		_dlopen_check_result(handle, filename, flags);
 
 	return handle;
 }
@@ -260,7 +261,8 @@ dlmopen(Lmid_t lmid, const char *filename, int flags)
 	orig_dlmopen = _env_dump_resolve_symbol_by_name("dlmopen");
 
 	handle = orig_dlmopen(lmid, filename, flags);
-	_dlopen_check_result(handle, filename, flags);
+	if (!_env_ignored)
+		_dlopen_check_result(handle, filename, flags);
 
 	return handle;
 }
@@ -434,28 +436,31 @@ void *
 dlsym(void *handle, const char *symbol)
 {
 	static void *(*orig_dlsym)(void *, const char *);
-	void *orig_ptr, *ptr;
+	void *orig_ptr, *ptr = NULL;
 
 	if (orig_dlsym == NULL)
 		orig_dlsym = _dl_sym(RTLD_NEXT, "dlsym", dlsym);
 
-	/* try to resolve the symbol to an internal one first to avoid issues
-	 * with dlerror().
-	 */
-	ptr = _env_dump_resolve_local_symbol_by_name(symbol);
+	if (!_env_ignored) {
+		/* try to resolve the symbol to an internal one first to avoid issues
+		* with dlerror().
+		*/
+		ptr = _env_dump_resolve_local_symbol_by_name(symbol);
 
-	/* resolve the symbol as expected by the client */
-	orig_ptr = orig_dlsym(handle, symbol);
-	if (!orig_ptr)
-		return orig_ptr;
+		/* resolve the symbol as expected by the client */
+		orig_ptr = orig_dlsym(handle, symbol);
+		if (!orig_ptr)
+			return orig_ptr;
 
-	/* add the symbol to our DB */
-	_env_dump_replace_symbol(symbol, orig_ptr);
+		/* add the symbol to our DB */
+		_env_dump_replace_symbol(symbol, orig_ptr);
 
-	if (ptr)
-		return ptr;
-	else
-		return orig_ptr;
+		if (ptr)
+			return ptr;
+		else
+			return orig_ptr;
+	} else
+		return orig_dlsym(handle, symbol);
 }
 
 int dlclose(void *handle)
@@ -465,14 +470,16 @@ int dlclose(void *handle)
 
 	orig_dlclose = _env_dump_resolve_symbol_by_name("dlclose");
 
-	pthread_mutex_lock(&found_so_list_mp);
-	for (i = 0; i < dlopen_local_handles_count; i++) {
-		if (dlopen_local_handles[i] == handle) {
-			dlopen_local_handles[i] = NULL;
-			break;
+	if (!_env_ignored) {
+		pthread_mutex_lock(&found_so_list_mp);
+		for (i = 0; i < dlopen_local_handles_count; i++) {
+			if (dlopen_local_handles[i] == handle) {
+				dlopen_local_handles[i] = NULL;
+				break;
+			}
 		}
+		pthread_mutex_unlock(&found_so_list_mp);
 	}
-	pthread_mutex_unlock(&found_so_list_mp);
 
 	return orig_dlclose(handle);
 }

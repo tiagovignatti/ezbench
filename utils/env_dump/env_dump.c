@@ -40,6 +40,7 @@
 
 FILE *env_file = NULL;
 int _env_debug = 0;
+int _env_ignored = 0;
 
 static void fini();
 
@@ -197,45 +198,49 @@ init()
 		env_file = stderr;
 	}
 
-	if (!env_file)
+	if (!env_file) {
+		_env_ignored = 1;
 		env_file = fopen("/dev/null", "w");
+	} else {
+		/* handle some signals that would normally result in an exit without
+		* calling the fini functions. This will hopefully be done before any
+		* other library does it. It is however OK if the program replaces the
+		* handler as long as it calls exit() or _exit().
+		*/
+		register_signal_handler(SIGHUP);
+		register_signal_handler(SIGINT);
+		register_signal_handler(SIGPIPE);
+		register_signal_handler(SIGTERM);
+		register_signal_handler(SIGSEGV);
 
-	/* handle some signals that would normally result in an exit without
-	 * calling the fini functions. This will hopefully be done before any
-	 * other library does it. It is however OK if the program replaces the
-	 * handler as long as it calls exit() or _exit().
-	 */
-	register_signal_handler(SIGHUP);
-	register_signal_handler(SIGINT);
-	register_signal_handler(SIGPIPE);
-	register_signal_handler(SIGTERM);
-	register_signal_handler(SIGSEGV);
+		fprintf(env_file, "-- Env dump start (version 1) --\n");
 
-	fprintf(env_file, "-- Env dump start (version 1) --\n");
+		print_date_and_time();
 
-	print_date_and_time();
-
-	_env_dump_posix_env_init();
-	_env_dump_fd_init();
-	_env_dump_gl_init();
-	_env_dump_linux_init();
-	_env_dump_cpu_init();
-	_env_dump_libs_init();
-	_env_dump_net_init();
-	_env_dump_metrics_init();
+		_env_dump_posix_env_init();
+		_env_dump_fd_init();
+		_env_dump_gl_init();
+		_env_dump_linux_init();
+		_env_dump_cpu_init();
+		_env_dump_libs_init();
+		_env_dump_net_init();
+		_env_dump_metrics_init();
+	}
 }
 
 __attribute__((destructor))
 static void fini() {
-	_env_dump_metrics_fini();
-	_env_dump_net_fini();
-	_env_dump_libs_fini();
-	_env_dump_cpu_fini();
-	_env_dump_linux_fini();
-	_env_dump_gl_fini();
-	_env_dump_fd_init();
-	_env_dump_posix_env_fini();
+	if (!_env_ignored) {
+		_env_dump_metrics_fini();
+		_env_dump_net_fini();
+		_env_dump_libs_fini();
+		_env_dump_cpu_fini();
+		_env_dump_linux_fini();
+		_env_dump_gl_fini();
+		_env_dump_fd_init();
+		_env_dump_posix_env_fini();
 
-	fprintf(env_file, "-- Env dump end --\n");
-	fclose(env_file);
+		fprintf(env_file, "-- Env dump end --\n");
+		fclose(env_file);
+	}
 }
