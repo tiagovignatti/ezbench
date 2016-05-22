@@ -849,7 +849,8 @@ class SmartEzbench:
 
         return git_history
 
-    def report(self, git_history=list(), reorder_commits = True, cached_only = False):
+    def report(self, git_history=list(), reorder_commits = True,
+               cached_only = False, restrict_to_commits = []):
         if cached_only:
             return self._report_cached
 
@@ -857,7 +858,8 @@ class SmartEzbench:
             git_history = self.git_history()
 
         # Generate the report, order commits based on the git history
-        r = genPerformanceReport(self.log_folder, silentMode = True)
+        r = genPerformanceReport(self.log_folder, silentMode = True,
+                                 restrict_to_commits = restrict_to_commits)
         r.enhance_report([c.sha1 for c in git_history])
         return r
 
@@ -1752,7 +1754,7 @@ def readNotes():
     except:
         return []
 
-def genPerformanceReport(log_folder, silentMode = False):
+def genPerformanceReport(log_folder, silentMode = False, restrict_to_commits = []):
     benchmarks = []
     commits = []
     labels = dict()
@@ -1809,6 +1811,9 @@ def genPerformanceReport(log_folder, silentMode = False):
         compile_log = sha1 + "_compile_log"
         patch = sha1 + ".patch"
         label = labels.get(sha1, sha1)
+        if (len(restrict_to_commits) > 0 and sha1 not in restrict_to_commits
+            and label not in restrict_to_commits):
+            continue
         commit = Commit(sha1, full_name, compile_log, patch, label)
 
         # Add the commit to the list of commits
