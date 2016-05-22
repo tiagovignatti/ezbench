@@ -1407,7 +1407,10 @@ class EventCommitRange:
 
     def distance(self):
         if self.old is not None:
-            return self.old.git_distance_head - self.new.git_distance_head
+            if hasattr(self.old, "git_distance_head") and hasattr(self.new, "git_distance_head"):
+                return self.old.git_distance_head - self.new.git_distance_head
+            else:
+                return -1
         else:
             return sys.maxsize
 
@@ -1418,8 +1421,11 @@ class EventCommitRange:
         if self.is_single_commit():
             return "commit {}".format(self.new.sha1)
         elif self.old is not None:
+            distance = self.distance()
+            if distance == -1:
+                distance = "unkown"
             return "commit range {}:{}({})".format(self.old.sha1, self.new.sha1,
-                                                   self.distance())
+                                                   distance)
         else:
             return "commit before {}".format(self.new.sha1)
 
@@ -1454,8 +1460,12 @@ class EventBuildFixed:
         return None
 
     def broken_for_commit_count(self):
-        return (self.broken_commit_range.new.git_distance_head -
-                self.fixed_commit_range.new.git_distance_head)
+        if (hasattr(self.broken_commit_range.new, "git_distance_head") and
+            hasattr(self.fixed_commit_range.new, "git_distance_head")):
+            return (self.broken_commit_range.new.git_distance_head -
+                    self.fixed_commit_range.new.git_distance_head)
+        else:
+            return -1
 
     def __str__(self):
         parenthesis = ""
@@ -1467,7 +1477,10 @@ class EventBuildFixed:
         time = self.broken_for_time()
         if time is not None and time != "":
             parenthesis += time + " and "
-        parenthesis += "{} commits".format(self.broken_for_commit_count())
+        commits = self.broken_for_commit_count()
+        if commits == -1:
+            commits = "unknown"
+        parenthesis += "{} commits".format(commits)
 
         main = "{} fixed the build regression introduced by {}"
         main = main.format(self.fixed_commit_range, self.broken_commit_range)
