@@ -558,37 +558,37 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 					if (currentCommit == "${commit}") {
 						dataTable.addRows([
 						% for report in db["reports"]:
-							% if report in db["commits"][commit]['reports']:
-								["${report}", ${db["commits"][commit]['reports'][report]["average"]}, "<h3>${report} - Average</h3><p>\\
+							% if report.name in db["commits"][commit]['reports']:
+								["${report.name}", ${db["commits"][commit]['reports'][report.name]["average"]}, "<h3>${report.name} - Average</h3><p>\\
 								% for r in db["reports"]:
 	<%
-										if not r in db["commits"][commit]:
+										if not r.name in db["commits"][commit]:
 											continue
-										diff = compute_perf_difference(output_unit, db["commits"][commit]['reports'][report]["average"], db["commits"][commit]['reports'][r]["average"])
+										diff = compute_perf_difference(output_unit, db["commits"][commit]['reports'][report.name]["average"], db["commits"][commit]['reports'][r.name]["average"])
 										diff = float("{0:.2f}".format(diff))
 										btag = btagend = ""
-										if r == report:
+										if r.name == report.name:
 											btag="<b>"
 											btagend="</b>"
 									%>\\
-	${btag}${r}: ${db["commits"][commit]['reports'][r]["average"]} ${output_unit} (${diff}%)${btagend}<br/>\\
+	${btag}${r.name}: ${db["commits"][commit]['reports'][r.name]["average"]} ${output_unit} (${diff}%)${btagend}<br/>\\
 								% endfor
 	</p>"\\
 								% for benchmark in db["benchmarks"]:
-									% if benchmark in db["commits"][commit]['reports'][report]:
-	, ${db["commits"][commit]['reports'][report][benchmark].average}, "<h3>${report} - ${benchmark}</h3><p>\\
+									% if benchmark in db["commits"][commit]['reports'][report.name]:
+	, ${db["commits"][commit]['reports'][report.name][benchmark].average}, "<h3>${report.name} - ${benchmark}</h3><p>\\
 										% for r in db["reports"]:
 	<%
-												if not r in db["commits"][commit]['reports'] or benchmark not in db["commits"][commit]['reports'][r]:
+												if not r.name in db["commits"][commit]['reports'] or benchmark not in db["commits"][commit]['reports'][r.name]:
 													continue
-												diff = compute_perf_difference(output_unit, db["commits"][commit]['reports'][report][benchmark].average, db["commits"][commit]['reports'][r][benchmark].average)
+												diff = compute_perf_difference(output_unit, db["commits"][commit]['reports'][report.name][benchmark].average, db["commits"][commit]['reports'][r.name][benchmark].average)
 												diff = float("{0:.2f}".format(diff))
 												btag = btagend = ""
-												if r == report:
+												if r.name == report.name:
 													btag="<b>"
 													btagend="</b>"
 											%>\\
-	${btag}${r}: ${db["commits"][commit]['reports'][r][benchmark].average} ${output_unit} (${diff}%)${btagend}<br/>\\
+	${btag}${r.name}: ${db["commits"][commit]['reports'][r.name][benchmark].average} ${output_unit} (${diff}%)${btagend}<br/>\\
 										% endfor
 	</p>"\\
 							% else:
@@ -663,18 +663,18 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 						% for commit in db["commits"]:
 						if (currentCommit == "${commit}") {
 							% for report1 in db["reports"]:
-								% if report1 in db["commits"][commit]['reports']:
+								% if report1.name in db["commits"][commit]['reports']:
 									% for report2 in db["reports"]:
-										% if report2 != report1 and report2 in db["commits"][commit]['reports']:
+										% if report2.name != report1.name and report2.name in db["commits"][commit]['reports']:
 											% for benchmark in db["benchmarks"]:
-												% if (benchmark in db["commits"][commit]['reports'][report1] and benchmark in db["commits"][commit]['reports'][report2]):
+												% if (benchmark in db["commits"][commit]['reports'][report1.name] and benchmark in db["commits"][commit]['reports'][report2.name]):
 												<%
-													r1 = db["commits"][commit]['reports'][report1][benchmark]
-													r2 = db["commits"][commit]['reports'][report2][benchmark]
+													r1 = db["commits"][commit]['reports'][report1.name][benchmark]
+													r2 = db["commits"][commit]['reports'][report2.name][benchmark]
 													perf_diff = compute_perf_difference(r1.unit_str, r1.average_raw, r2.average_raw)
 													perf_diff = "{0:.2f}".format(perf_diff)
 												%>
-							dataTable.addRows([['${benchmark}', '${report1}', '${report2}', ${perf_diff}, "${r1.average_raw} => ${r2.average_raw} ${r1.unit_str}"]])
+							dataTable.addRows([['${benchmark}', '${report1.name}', '${report2.name}', ${perf_diff}, "${r1.average_raw} => ${r2.average_raw} ${r1.unit_str}"]])
 												% endif
 											% endfor
 										% endif
@@ -693,15 +693,15 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 						% for commit in db["commits"]:
 						if (currentCommit == "${commit}") {
 							% for report1 in db["reports"]:
-								% if report1 in db["commits"][commit]['reports']:
+								% if report1.name in db["commits"][commit]['reports']:
 									% for benchmark in db["benchmarks"]:
-										% if (benchmark in db["commits"][commit]['reports'][report1] and benchmark in db["targets"]):
+										% if (benchmark in db["commits"][commit]['reports'][report1.name] and benchmark in db["targets"]):
 										<%
-											r1 = db["commits"][commit]['reports'][report1][benchmark]
+											r1 = db["commits"][commit]['reports'][report1.name][benchmark]
 											perf_diff = compute_perf_difference(r1.unit_str, db["targets_raw"][benchmark], r1.average_raw)
 											perf_diff = "{0:.2f}".format(perf_diff)
 										%>\\
-dataTable.addRows([['${benchmark}', '${report1}', ${perf_diff}, "${r1.average_raw}(${report1}) => ${db["targets_raw"][benchmark]}(target) ${r1.unit_str}"]])
+dataTable.addRows([['${benchmark}', '${report1.name}', ${perf_diff}, "${r1.average_raw}(${report1.name}) => ${db["targets_raw"][benchmark]}(target) ${r1.unit_str}"]])
 										% endif
 									% endfor
 								% endif
