@@ -109,7 +109,7 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 
 	# set all the targets
 	if reference_report is not None and len(reference_report.commits) > 0:
-		db['reference_name'] = "{} ({})".format(reference_report.name, reference_report.commits[-1].sha1)
+		db['reference_name'] = "{} ({})".format(reference_report.name, reference_report.commits[-1].label)
 		db['reference'] = reference_report
 		for result in reference_report.commits[-1].results:
 			average_raw = result.result()[0]
@@ -156,16 +156,16 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 			if len(commit.results) == 0 and not hasattr(commit, 'annotation'):
 				continue
 
-			if not commit.sha1 in db["commits"]:
-				db["commits"][commit.sha1] = dict()
-				db["commits"][commit.sha1]['reports'] = dict()
-				db["commits"][commit.sha1]['commit'] = commit
+			if not commit.label in db["commits"]:
+				db["commits"][commit.label] = dict()
+				db["commits"][commit.label]['reports'] = dict()
+				db["commits"][commit.label]['commit'] = commit
 				if not commit.build_broken():
-					db["commits"][commit.sha1]['build_color'] = "#00FF00"
+					db["commits"][commit.label]['build_color'] = "#00FF00"
 				else:
-					db["commits"][commit.sha1]['build_color'] = "#FF0000"
-				db["commits"][commit.sha1]['build_error'] = str(EzbenchExitCode(commit.compil_exit_code)).split('.')[1]
-			db["commits"][commit.sha1]['reports'][report.name] = dict()
+					db["commits"][commit.label]['build_color'] = "#FF0000"
+				db["commits"][commit.label]['build_error'] = str(EzbenchExitCode(commit.compil_exit_code)).split('.')[1]
+			db["commits"][commit.label]['reports'][report.name] = dict()
 
 			# Add the results and perform some stats
 			score_sum = 0
@@ -174,7 +174,7 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 				if not result.benchmark.full_name in db["benchmarks"]:
 					db["benchmarks"].append(result.benchmark.full_name)
 					db["metrics"][result.benchmark.full_name] = ['default']
-				db["commits"][commit.sha1]['reports'][report.name][result.benchmark.full_name] = result
+				db["commits"][commit.label]['reports'][report.name][result.benchmark.full_name] = result
 				average_raw = result.result()[0]
 				average = convert_unit(average_raw, result.unit_str, output_unit)
 				score_sum += average
@@ -204,8 +204,8 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 				avg = score_sum / count
 			else:
 				avg = 0
-			db["commits"][commit.sha1]['reports'][report.name]["average"] = float("{0:.2f}".format(avg))
-			db["commits"][commit.sha1]['reports'][report.name]["average_unit"] = output_unit
+			db["commits"][commit.label]['reports'][report.name]["average"] = float("{0:.2f}".format(avg))
+			db["commits"][commit.label]['reports'][report.name]["average_unit"] = output_unit
 
 	# Generate the environment
 	for bench in human_envs:
@@ -780,7 +780,7 @@ dataTable.addRows([['${benchmark}', '${report1}', ${perf_diff}, "${r1.average_ra
 								for user in env_set['users']:
 									if len(users) > 0:
 										users += "<br/>"
-									users += "{}.{}#{}".format(user['log_folder'], user['commit'].sha1, user['run'])
+									users += "{}.{}#{}".format(user['log_folder'], user['commit'].label, user['run'])
 							%>\\
 							<th>${users}</th>
 							% endfor
@@ -879,7 +879,7 @@ dataTable.addRows([['${benchmark}', '${report1}', ${perf_diff}, "${r1.average_ra
 										continue
 									if result.test_type != "unit":
 										continue
-									result.name = "{}.{}".format(report.name, commit.sha1)
+									result.name = "{}.{}".format(report.name, commit.label)
 									stats_status[result.name] = dict()
 									target_changes[result.name] = dict()
 									unit_results.append(result)
