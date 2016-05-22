@@ -1013,13 +1013,14 @@ dataTable.addRows([['${benchmark}', '${report1}', ${perf_diff}, "${r1.average_ra
 			if verbose:
 				print("Output HTML generated at: {}".format(output))
 
-def gen_report(log_folder):
+def gen_report(log_folder, restrict_commits):
 	report_name = [x for x in log_folder.split(os.sep) if x][-1]
 	try:
 		sbench = SmartEzbench(ezbench_dir, report_name, readonly=True)
-		report = sbench.report()
+		report = sbench.report(restrict_to_commits = restrict_commits)
 	except RuntimeError:
-		report = genPerformanceReport(log_folder)
+		report = genPerformanceReport(log_folder,
+                                restrict_to_commits = restrict_commits)
 		report.enhance_report([])
 	return report
 
@@ -1034,17 +1035,23 @@ if __name__ == "__main__":
 	parser.add_argument("--commit_url", help="HTTP URL pattern, {commit} contains the SHA1")
 	parser.add_argument("--quiet", help="Be quiet when generating the report", action="store_true")
 	parser.add_argument("--reference", help="Compare the benchmarks to this reference report")
+	parser.add_argument("--restrict_commits", help="Restrict commits to this list (space separated)")
 	parser.add_argument("log_folder", nargs='+')
 	args = parser.parse_args()
 
+	# Restrict the report to this list of commits
+	restrict_commits = []
+	if args.restrict_commits is not None:
+		restrict_commits = args.restrict_commits.split(' ')
+
 	reports = []
 	for log_folder in set(args.log_folder):
-		reports.append(gen_report(log_folder))
+		reports.append(gen_report(log_folder, restrict_commits))
 
 	# Reference report
 	reference = None
 	if args.reference is not None:
-		reference = gen_report(args.reference)
+		reference = gen_report(args.reference, [])
 
 	reports_to_html(reports, args.output, args.unit, args.title,
 			   args.commit_url, not args.quiet, reference)
