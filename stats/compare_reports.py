@@ -59,6 +59,7 @@ def __env_add_result__(db, human_envs, report, commit, result):
 		fullpath = report.log_folder + "/" + envfile
 		r = EnvDumpReport(fullpath, False).to_set(['^DATE',
 													'^ENV.ENV_DUMP_FILE',
+													'^ENV.ENV_DUMP_METRIC_FILE',
 													'_PID',
 													'SHA1$',
 													'.pid$',
