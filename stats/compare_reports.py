@@ -958,7 +958,11 @@ dataTable.addRows([['${benchmark}', '${report1}', ${perf_diff}, "${r1.average_ra
 						% for change in sorted(changes):
 						<tr><td>${change}</td>
 							% for result in target_changes:
+								% if change in target_changes[result]:
 							<td>${target_changes[result][change]}</td>
+								% else:
+							<td>0</td>
+								% endif
 							% endfor
 						</tr>
 						% endfor
