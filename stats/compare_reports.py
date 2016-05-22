@@ -730,7 +730,7 @@ dataTable.addRows([['${benchmark}', '${report1.name}', ${perf_diff}, "${r1.avera
 
 			<center><div id="details_chart" style="width: 100%; height: 500px;"></div></center>
 
-			<center><div id="details_table" style="width: 100%; max-height: 500px;"></div></center>
+			<center><div id="details_table" style="width: 100%; height: 500px;"></div></center>
 
 			<h2>Events</h2>
 
