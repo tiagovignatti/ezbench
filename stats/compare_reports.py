@@ -185,7 +185,7 @@ def reports_to_html(reports, output, output_unit = None, title = None,
 
 				# Compare to the target
 				if (not result.benchmark.full_name in db["targets"] or
-				db["targets"][result.benchmark.full_name] == 0):
+				(db["targets"][result.benchmark.full_name] == 0 and 'reference_name' not in db)):
 					db["targets"][result.benchmark.full_name] = result.average
 					db["targets_raw"][result.benchmark.full_name] = result.average_raw
 				result.diff_target = compute_perf_difference(output_unit,
