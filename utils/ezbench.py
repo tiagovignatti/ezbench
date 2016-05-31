@@ -355,6 +355,7 @@ class SmartEzbench:
     def __init__(self, ezbench_dir, report_name, readonly = False):
         self.readonly = readonly
         self.ezbench_dir = ezbench_dir
+        self.report_name = report_name
         self.log_folder = ezbench_dir + '/logs/' + report_name
         self.smart_ezbench_state = self.log_folder + "/smartezbench.state"
         self.smart_ezbench_lock = self.log_folder + "/smartezbench.lock"
@@ -362,7 +363,6 @@ class SmartEzbench:
         self._report_cached = None
 
         self.state = dict()
-        self.state['report_name'] = report_name
         self.state['commits'] = dict()
         self.state['mode'] = RunningMode.INITIAL.value
 
@@ -455,11 +455,9 @@ class SmartEzbench:
     def __create_ezbench(self, ezbench_path = None, profile = None, report_name = None):
         if profile is None:
             profile = self.profile()
-        if report_name is None:
-            report_name=self.state['report_name']
 
         return Ezbench(ezbench_dir = self.ezbench_dir, profile = profile,
-                       report_name = report_name)
+                       report_name = self.report_name)
 
     def __read_attribute_unlocked__(self, attr, default = None):
         if attr in self.state:
@@ -537,9 +535,6 @@ class SmartEzbench:
             self.__log(Criticality.II, "Ezbench profile configuration script set to '{0}'".format(conf_script))
         else:
             self.__log(Criticality.EE, "You cannot change the configuration script of a report that already has results. Start a new one.")
-
-    def report_name(self):
-        return self.__read_attribute__('report_name')
 
     def commit_url(self):
         return self.__read_attribute__('commit_url')
@@ -719,7 +714,7 @@ class SmartEzbench:
 
     def run(self):
         self.__log(Criticality.II, "----------------------")
-        self.__log(Criticality.II, "Starting a run: {report} ({path})".format(report=self.state['report_name'], path=self.log_folder))
+        self.__log(Criticality.II, "Starting a run: {report} ({path})".format(report=self.report_name, path=self.log_folder))
 
         # Change state to RUN or fail if we are not in the right mode
         if not self.__change_state_to_run__():

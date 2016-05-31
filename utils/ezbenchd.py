@@ -61,7 +61,7 @@ def setup_http_server(bind_ip = "0.0.0.0", port = 8080):
         % for sbench in sbenches:
         <%
             sbench = sbenches[sbench]
-            report_name = sbench.report_name()
+            report_name = sbench.report_name
         %>
         <li>${report_name}: <a href="/report/${report_name}/">report</a>, <a href="/status/${report_name}/">status</a> (${sbench.running_mode().name})</li>
         % endfor
@@ -291,7 +291,7 @@ while not stop_requested:
                 report = sbench.report(cached_only = True)
                 clock_start = time.clock()
                 compare_reports.reports_to_html([report],
-                                                "{}/logs/{}/index.html".format(ezbench_dir, sbench.report_name()),
+                                                "{}/logs/{}/index.html".format(ezbench_dir, sbench.report_name),
                                                 output_unit = "fps",
                                                 commit_url = sbench.commit_url(),
                                                 verbose = False)
