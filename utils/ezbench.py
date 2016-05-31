@@ -34,6 +34,7 @@ from scipy import stats
 from enum import Enum
 from numpy import *
 import subprocess
+import threading
 import atexit
 import pprint
 import fcntl
@@ -372,6 +373,16 @@ class TaskEntry:
         self.commit = commit
         self.benchmark = benchmark
         self.rounds = rounds
+        self.start_date = None
+
+    def started(self):
+        self.start_date = datetime.now()
+
+    def __str__(self):
+        string = "{}: {}: {} run(s)".format(self.commit, self.benchmark, self.rounds)
+        if self.start_date is not None:
+            string += "(started {} ago)".format(datetime.now() - self.start_date)
+        return string
 
 class SmartEzbench:
     def __init__(self, ezbench_dir, report_name, readonly = False):
@@ -387,6 +398,10 @@ class SmartEzbench:
         self.state = dict()
         self.state['commits'] = dict()
         self.state['mode'] = RunningMode.INITIAL.value
+
+        self._task_lock = threading.Lock()
+        self._task_current = None
+        self._task_list = None
 
         # Create the log directory
         first_run = False
@@ -650,6 +665,13 @@ class SmartEzbench:
         else:
             return 0
 
+    def task_info(self):
+        self._task_lock.acquire()
+        tl = self._task_list
+        c = self._task_current
+        self._task_lock.release()
+        return c, tl
+
     def __prioritize_runs(self, task_tree, deployed_version):
         task_list = list()
 
@@ -726,6 +748,10 @@ class SmartEzbench:
         running_state=RunningMode(self.__read_attribute_unlocked__('mode'))
         if running_state == RunningMode.RUNNING or running_state == RunningMode.RUN:
             self.__write_attribute_unlocked__('mode', RunningMode.RUN.value, allow_updates = True)
+
+        self._task_current = None
+        self._task_list = None
+        self._task_lock.release()
 
     def __remove_task_from_tasktree__(self, task_tree, commit, full_name, rounds):
         if commit.sha1 not in task_tree:
@@ -804,17 +830,17 @@ class SmartEzbench:
         task_tree_str = pprint.pformat(task_tree)
         self.__log(Criticality.II, "Task list: {tsk_str}".format(tsk_str=task_tree_str))
 
-        # Prioritize --> return a list of commits to do in order
-        task_list = self.__prioritize_runs(task_tree, run_info.deployed_commit)
-
         # Let's start!
         if not self.__change_state_to_running__():
             return False
         self.state['beenRunBefore'] = True
 
+        # Prioritize --> return a list of commits to do in order
+        self._task_lock.acquire()
+        self._task_list = self.__prioritize_runs(task_tree, run_info.deployed_commit)
+
         # Start generating ezbench calls
-        commit_broken = []
-        for e in task_list:
+        while len(self._task_list) > 0:
             running_mode = self.running_mode()
             if running_mode != RunningMode.RUNNING:
                 self.__log(Criticality.II,
@@ -822,17 +848,17 @@ class SmartEzbench:
                 self.__done_running__()
                 return False
 
-            if e.commit in commit_broken:
-                msg = "Commit {commit} got marked as broken, cancel the {count} runs for benchmark {benchmark}"
-                self.__log(Criticality.WW, msg.format(count=e.rounds, commit=e.commit, benchmark=e.benchmark))
-                continue
-
+            self._task_current = e = self._task_list.pop(0)
             short_name=e.benchmark[:80].rsplit('|', 1)[0]+'...'
             self.__log(Criticality.DD,
                        "make {count} runs for benchmark {benchmark} using commit {commit}".format(count=e.rounds,
                                                                                                   commit=e.commit,
                                                                                                   benchmark=short_name))
+            self._task_current.started()
+            self._task_lock.release()
             run_info = ezbench.run_commits([e.commit], [e.benchmark + '$'], rounds=e.rounds)
+            self._task_lock.acquire()
+
             if run_info.success():
                 continue
 
@@ -844,8 +870,9 @@ class SmartEzbench:
             elif (run_info.exit_code == EzbenchExitCode.COMPILATION_FAILED or
                   run_info.exit_code == EzbenchExitCode.DEPLOYMENT_FAILED):
                 # Cancel any other test on this commit
-                commit_broken.append(e.commit)
+                self._task_list = [x for x in self._task_list if not x.commit == e.commit]
 
+        self._task_current = None
 
         self.__done_running__()
         self.__log(Criticality.II, "Done")

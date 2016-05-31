@@ -92,6 +92,8 @@ def setup_http_server(bind_ip = "0.0.0.0", port = 8080):
 <%
     report = sbench.report(cached_only = True)
     mode = sbench.running_mode().name
+
+    task_cur, task_list = sbench.task_info()
 %>
 
 <body>
@@ -110,6 +112,23 @@ def setup_http_server(bind_ip = "0.0.0.0", port = 8080):
         </td></tr>
         <tr><td>Log file</td><td></td><td><a href="/file/${report_name}/smartezbench.log" class="button">View</a></td></tr>
     </table>
+    <h2>Tasks</h2>
+    % if task_cur is not None:
+    <p>Current task: ${task_cur}</p>
+    %endif
+
+    <p><ul>
+    % if task_list is not None and len(task_list) > 0:
+    % for task in task_list:
+        <li>${task}</li>
+    % endfor
+    %elif task_list is not None:
+    <li>No tasks left</li>
+    % else:
+    <li>Unknown task list</li>
+    % endif
+    </ul></p>
+
     <h2>Events</h2>
     <ul>
         % if report is not None:
