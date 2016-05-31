@@ -40,7 +40,7 @@ from ezbench import *
 
 def perf_bisect_repo_dir():
 	if not hasattr(perf_bisect_repo_dir, 'repo_dir'):
-		ezbench = Ezbench(ezbench_dir + "/core.sh", "bisect_test")
+		ezbench = Ezbench(ezbench_dir, "bisect_test")
 		run = ezbench.run_commits(['HEAD'], ['no-op'], dry_run=True)
 		perf_bisect_repo_dir.repo_dir = run.repo_dir
 	return perf_bisect_repo_dir.repo_dir

@@ -86,7 +86,7 @@ if args.testsets is not None:
      # remove duplicates in the lists
     testsets = list(set(break_lists(args.testsets)))
 
-    ezbench = Ezbench(ezbench_path=ezbench_dir + "/core.sh")
+    ezbench = Ezbench(ezbench_dir=ezbench_dir)
     benchmarks = ezbench.available_benchmarks()
 
     # Check all the testsets
@@ -129,7 +129,7 @@ if args.commits is not None and args.benchmarks is not None:
         sys.exit(1)
 
     # get the list of benchmarks that actually need to be ran
-    ezbench = Ezbench(ezbench_path=ezbench_dir + "/core.sh",
+    ezbench = Ezbench(ezbench_dir=ezbench_dir,
                   profile=sbench.profile(),
                   report_name="tmp")
     run_info = ezbench.run_commits(commits, benchmarks, benchmarks_exclude, dry_run=True)
@@ -152,7 +152,7 @@ if args.commits is not None and len(testsets_to_be_added) > 0:
         sys.exit(1)
 
     # get the list of benchmarks that actually need to be ran
-    ezbench = Ezbench(ezbench_path=ezbench_dir + "/core.sh",
+    ezbench = Ezbench(ezbench_dir=ezbench_dir,
                   profile=sbench.profile(),
                   report_name="tmp")
     run_info = ezbench.run_commits(commits, [], dry_run=True)

@@ -82,10 +82,11 @@ class EzbenchRun:
         return self.exit_code == EzbenchExitCode.NO_ERROR
 
 class Ezbench:
-    def __init__(self, ezbench_path, profile = None, repo_path = None,
+    def __init__(self, ezbench_dir, profile = None, repo_path = None,
                  make_command = None, report_name = None, tests_folder = None,
                  run_config_script = None):
-        self.ezbench_path = ezbench_path
+        self.ezbench_dir = ezbench_dir
+        self.ezbench_path = "{}/core.sh".format(ezbench_dir)
         self.profile = profile
         self.repo_path = repo_path
         self.make_command = make_command
@@ -452,14 +453,12 @@ class SmartEzbench:
             return False
 
     def __create_ezbench(self, ezbench_path = None, profile = None, report_name = None):
-        if ezbench_path is None:
-            ezbench_path = self.ezbench_dir + "/core.sh"
         if profile is None:
             profile = self.profile()
         if report_name is None:
             report_name=self.state['report_name']
 
-        return Ezbench(ezbench_path = ezbench_path, profile = profile,
+        return Ezbench(ezbench_dir = self.ezbench_dir, profile = profile,
                        report_name = report_name)
 
     def __read_attribute_unlocked__(self, attr, default = None):
