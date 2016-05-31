@@ -1639,7 +1639,7 @@ class Report:
                             self.events.append(EventPerfChange(result.benchmark,
                                                             commit_range,
                                                             old_perf, perf, confidence))
-                        bench_prev[bench] = result
+                    bench_prev[bench] = result
                 elif result.test_type == "unit":
                     # Aggregate the results
                     for run in result.runs:
