@@ -94,6 +94,20 @@ class Ezbench:
         self.tests_folder = tests_folder
         self.run_config_script = run_config_script
 
+        self.abortFileName = None
+        if report_name is not None:
+            self.abortFileName = "{}/logs/{}/requestExit".format(ezbench_dir, report_name)
+
+    @classmethod
+    def requestEarlyExit(self, ezbench_dir, report_name):
+        abortFileName = "{}/logs/{}/requestExit".format(ezbench_dir, report_name)
+        try:
+            f = open(abortFileName, 'w')
+            f.close()
+            return True
+        except IOError:
+            return False
+
     def __ezbench_cmd_base(self, benchmarks = [], benchmark_excludes = [], rounds = None, dry_run = False, list_benchmarks = False):
         ezbench_cmd = []
         ezbench_cmd.append(self.ezbench_path)
@@ -140,6 +154,14 @@ class Ezbench:
 
         if verbose:
             print(cmd); print(stdin)
+
+        # Remove the abort file before running anything as it would result in an
+        # immediate exit
+        if not dry_run and self.abortFileName is not None:
+            try:
+                os.remove(self.abortFileName)
+            except FileNotFoundError:
+                pass
 
         try:
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT,
@@ -490,8 +512,17 @@ class SmartEzbench:
             self.__log(Criticality.EE, "Ezbench running mode cannot manually be set to 'RUNNING'")
             return False
 
-        self.__write_attribute__('mode', mode.value, allow_updates = True)
+        self.__reload_state(keep_lock=True)
+
+        # Request an early exit if we go from RUNNING to PAUSE
+        cur_mode = RunningMode(self.__read_attribute_unlocked__('mode'))
+        if cur_mode == RunningMode.RUNNING and mode == RunningMode.PAUSE:
+            Ezbench.requestEarlyExit(self.ezbench_dir, self.report_name)
+
+        self.__write_attribute_unlocked__('mode', mode.value, allow_updates = True)
         self.__log(Criticality.II, "Ezbench running mode set to '{mode}'".format(mode=mode.name))
+        self.__release_lock()
+
         return True
 
     def profile(self):
