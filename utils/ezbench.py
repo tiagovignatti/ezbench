@@ -69,9 +69,10 @@ class EzbenchExitCode(Enum):
     UNK_ERROR = 255
 
 class EzbenchRun:
-    def __init__(self, commits, benchmarks, predicted_execution_time, repo_type, repo_dir, repo_head, deployed_commit, exit_code):
+    def __init__(self, commits, benchmarks, versions, predicted_execution_time, repo_type, repo_dir, repo_head, deployed_commit, exit_code):
         self.commits = commits
         self.benchmarks = benchmarks
+        self.versions = versions
         self.predicted_execution_time = predicted_execution_time
         self.repo_type = repo_type
         self.repo_dir = repo_dir
@@ -109,12 +110,16 @@ class Ezbench:
         except IOError:
             return False
 
-    def __ezbench_cmd_base(self, benchmarks = [], benchmark_excludes = [], rounds = None, dry_run = False, list_benchmarks = False):
+    def __ezbench_cmd_base(self, benchmarks = [], benchmark_excludes = [], rounds = None, dry_run = False, list_benchmarks = False, list_built_versions = False):
         ezbench_cmd = []
         ezbench_cmd.append(self.ezbench_path)
 
         if list_benchmarks:
             ezbench_cmd.append("-l")
+            return ezbench_cmd, ""
+
+        if list_built_versions:
+            ezbench_cmd.append("-L")
             return ezbench_cmd, ""
 
         if self.profile is not None:
@@ -177,6 +182,7 @@ class Ezbench:
         # we need to parse the output
         commits= []
         benchmarks = []
+        versions = []
         pred_exec_time = 0
         deployed_commit = ""
         repo_type = ""
@@ -191,6 +197,8 @@ class Ezbench:
                 benchmarks = line[24:].split(" ")
             elif line.startswith("Available tests:"):
                 benchmarks = line[17:].split(" ")
+            elif line.startswith("Available versions:"):
+                versions = line[19:].strip().split(" ")
             elif line.find("estimated finish date:") >= 0:
                 pred_exec_time = ""
             elif m_repo is not None:
@@ -208,7 +216,7 @@ class Ezbench:
         if exit_code != EzbenchExitCode.NO_ERROR:
             print("\n\nERROR: The following command '{}' failed with the error code {}. Here is its output:\n\n'{}'".format(" ".join(cmd), exit_code, output))
 
-        return EzbenchRun(commits, benchmarks, pred_exec_time, repo_type, repo_dir, head_commit, deployed_commit, exit_code)
+        return EzbenchRun(commits, benchmarks, versions, pred_exec_time, repo_type, repo_dir, head_commit, deployed_commit, exit_code)
 
     def run_commits(self, commits, benchmarks, benchmark_excludes = [],
                     rounds = None, dry_run = False, verbose = False):
@@ -222,6 +230,10 @@ class Ezbench:
     def available_benchmarks(self):
         ezbench_cmd, ezbench_stdin = self.__ezbench_cmd_base(list_benchmarks = True)
         return self.__run_ezbench(ezbench_cmd, ezbench_stdin).benchmarks
+
+    def available_versions(self):
+        ezbench_cmd, ezbench_stdin = self.__ezbench_cmd_base(list_built_versions = True)
+        return self.__run_ezbench(ezbench_cmd, ezbench_stdin).versions
 
 # Test sets, needed by SmartEzbench
 class Testset:
