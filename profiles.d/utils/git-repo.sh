@@ -105,6 +105,19 @@ function profile_get_version_list() {
     echo $versionList
 }
 
+# MANDATORY: List all the versions we previously compiled
+# Outputs:
+#   - Space-separated list of versions
+function profile_get_built_versions() {
+    pushd  $PROFILE_DEPLOY_BASE_DIR > /dev/null || return 1
+    for file in *; do
+        echo -n "$file "
+    done
+    popd > /dev/null
+
+    return 0
+}
+
 # MANDATORY: Print the average compilation time
 # Inputs:
 #   - $repoDir

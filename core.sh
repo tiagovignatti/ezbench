@@ -169,17 +169,21 @@ function show_help {
     echo "    Other actions:"
     echo "        -h/?: Show this help message"
     echo "        -l: List the available tests"
+    echo "        -L: List the already-built versions (requires -P)"
 }
 
 # Read the user parameters
 source "$ezBenchDir/user_parameters.sh"
 
 # First find the profile, if it is set
-optString="h?P:p:n:N:H:r:b:B:m:T:lkc:"
+optString="h?P:p:n:N:H:r:b:B:m:T:lLkc:"
 profile="default"
+list_built_versions=0
 while getopts "$optString" opt; do
     case "$opt" in
     P)  profile=$OPTARG
+        ;;
+    L)  list_built_versions=1
         ;;
     :)
       echo "Option -$OPTARG requires an argument." >&2
@@ -206,6 +210,14 @@ for conf in $profileDir/conf.d/**/*.conf; do
     source "$conf"
 done
 source "$profileDir/profile"
+
+if [ "$list_built_versions" -eq 1 ]; then
+    display_repo_info
+    echo -n "Available versions: "
+    profile_get_built_versions
+    echo ""
+    exit 0
+fi
 
 # Parse the list of tests
 typeset -A availTestNames

@@ -74,6 +74,13 @@ function profile_get_version_list() {
     echo $(profile_repo_deployed_version)
 }
 
+# MANDATORY: List all the versions we previously compiled
+# Outputs:
+#   - Space-separated list of versions
+function profile_get_built_versions() {
+    echo $(profile_repo_deployed_version)
+}
+
 # MANDATORY: Print the average compilation time
 # Inputs:
 #   - $repoDir
