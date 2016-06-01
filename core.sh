@@ -364,6 +364,23 @@ if [ $? -ne 0 ]; then
     exit 50
 fi
 
+# Get the list of commits that will need to be recompiled
+compilations_needed=0
+avail_versions=$(profile_get_built_versions)
+for version in $versionList; do
+    found=0
+    for avail_version in $avail_versions; do
+        if [ "$version" == "$avail_version" ]; then
+            found=1
+            break
+        fi
+    done
+
+    if [ $found -eq "0" ]; then
+        compilations_needed=$(($compilations_needed + 1))
+    fi
+done
+
 # Seed the results with the last round?
 versionListLog="$logsFolder/commit_list"
 last_version=$(tail -1 "$versionListLog" 2>/dev/null | cut -f 1 -d ' ')
@@ -468,7 +485,8 @@ num_versions=$(wc -w <<< $versionList)
 printf "Testing %d versions: %s\n" $num_versions "$(echo "$versionList" | tr '\n' ' ')"
 
 # Estimate the execution time
-secs=$(( ($total_round_time * $rounds + $avgBuildTime) * $num_versions))
+secs=$(( ($total_round_time * $rounds) * $num_versions + $compilations_needed * $avgBuildTime))
+
 finishDate=$(date +"%y-%m-%d - %T" --date="$secs seconds")
 printf "Estimated finish date: $finishDate (%02dh:%02dm:%02ds)\n\n" $(($secs/3600)) $(($secs%3600/60)) $(($secs%60))
 startTime=`date +%s`
