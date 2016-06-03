@@ -442,7 +442,7 @@ for (( t=0; t<${#testsList[@]}; t++ )); do
         testMissing[$idx]=$basetest
     fi
 done
-total_round_time=${total_round_time%.*}
+total_round_time=$(printf '%.0f' "$total_round_time")
 unset last_version
 
 # Check if there are any tests that were not found
