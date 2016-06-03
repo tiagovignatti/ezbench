@@ -10,7 +10,7 @@ function __unigine_valley_run__ {
     LD_LIBRARY_PATH=bin:bin/x64:$LD_LIBRARY_PATH \
     MESA_EXTENSION_OVERRIDE="-GL_ARB_sample_shading -GL_ARB_blend_func_extended" \
     MESA_GL_VERSION_OVERRIDE="3.2" \
-    run_bench 0 ./bin/valley_x64 \
+    run_bench 215 ./bin/valley_x64 \
         -video_app opengl \
         -data_path ../ \
         -sound_app null \
@@ -37,4 +37,4 @@ EOL
 eval "unigine:valley:cpu_run() { INTEL_NO_HW=1 __unigine_valley_run__ 0 $width $height; }"
 test_name="$test_name unigine:valley:cpu"
 
-test_exec_time=190
+test_exec_time=200

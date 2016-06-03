@@ -59,7 +59,7 @@ function __gl30run__ {
     esac
 
     LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${GLBENCHMARK30_FOLDER}/build/linux/poco_Release/lib/ \
-    run_bench 0 ./mainapp -data ${GLB30_DATA} -w $W -h $H -ow $W -oh $H -t $1 -fullscreen $F |\
+    run_bench 90 ./mainapp -data ${GLB30_DATA} -w $W -h $H -ow $W -oh $H -t $1 -fullscreen $F |\
     grep fps | cut -d : -f 2- | cut -d " " -f 2 | cut -d ',' -f 1
 
     unset MESA_GL_VERSION_OVERRIDE

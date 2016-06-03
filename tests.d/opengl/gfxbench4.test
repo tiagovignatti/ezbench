@@ -63,7 +63,7 @@ function __gfxbench4run__ {
         export MESA_GLSL_VERSION_OVERRIDE=400
     esac
 
-    run_bench 0 bin/testfw_app --gfx glfw --gl_api desktop_core --width $W --height $H --test_id $benchmark --fullscreen $F |\
+    run_bench 80 bin/testfw_app --gfx glfw --gl_api desktop_core --width $W --height $H --test_id $benchmark --fullscreen $F |\
     grep fps | cut -d : -f 2- | cut -d " " -f 2 | cut -d ',' -f 1
 
     unset MESA_GL_VERSION_OVERRIDE

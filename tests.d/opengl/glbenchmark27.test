@@ -16,7 +16,7 @@ function __gl27__ {
     if [ $4 -eq 0 ]
     then
         ENV_DUMP_RESTRICT_TO_BINARY=${GLB27} \
-        run_bench 0 $cmdline | sed '/fps/!d; s#.*: \(.*\) msec.*#1000000 / \1#' | bc -l
+        run_bench 130 $cmdline | sed '/fps/!d; s#.*: \(.*\) msec.*#1000000 / \1#' | bc -l
     else
         frames_count=$(ENV_DUMP_RESTRICT_TO_BINARY=${GLB27} \
                        run_bench 0 $cmdline | sed '/fps/!d; s#.*: \(.*\) frames.*#\1#')
