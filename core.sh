@@ -77,6 +77,8 @@ mkdir "$ezBenchDir/logs" 2> /dev/null
 
 # set the default run_bench function which can be overriden by the profiles:
 # Bash variables: $run_log_file : filename of the log report of the current run
+#                 $benchName : Name of the benchmark
+#                 $benchSubtests : List of subtests
 # Arguments: $1 : timeout (set to 0 for infinite wait)
 #            $2+: command line executing the test AND NOTHING ELSE!
 function run_bench {
@@ -593,6 +595,7 @@ do
     for (( t=0; t<${#testNames[@]}; t++ ));
     do
         benchName=${testNames[$t]}
+        benchSubtests="${testSubTests[$t]}"
 
         # Generate the logs file names
         fps_logs=$logsFolder/${version}_${testType[$t]}_${testNames[$t]}
@@ -632,7 +635,7 @@ do
             [ -e "$abortFile" ] && continue
 
             run_log_file="${fps_logs}#$c"
-            IFS='|' read -a run_sub_tests <<< "${testSubTests[$t]}"
+            IFS='|' read -a run_sub_tests <<< "$benchSubtests"
 
             callIfDefined "$preHookFuncName"
             callIfDefined benchmark_run_pre_hook
