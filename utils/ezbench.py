@@ -27,12 +27,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from email.utils import parsedate_tz, mktime_tz
 from collections import namedtuple
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil import relativedelta
 from array import array
 from scipy import stats
 from enum import Enum
 from numpy import *
+import statistics
 import subprocess
 import threading
 import atexit
@@ -46,6 +47,11 @@ import csv
 import sys
 import os
 import re
+
+# Import ezbench from the timings/ folder
+ezbench_dir = os.path.abspath(sys.path[0]+"/..")
+sys.path.append(ezbench_dir + '/timing_DB/')
+from timing import *
 
 # Ezbench runs
 class EzbenchExitCode(Enum):
@@ -386,14 +392,49 @@ class TaskEntry:
         self.benchmark = benchmark
         self.rounds = rounds
         self.start_date = None
+        self.exec_time = None
 
     def started(self):
         self.start_date = datetime.now()
 
+    def set_timing_information(self, timingsDB):
+        time = timingsDB.data("benchmark", self.benchmark)
+        if len(time) > 0:
+            self.exec_time = statistics.median(time)
+        else:
+            self.exec_time = None
+
+    def remaining_seconds(self):
+        if self.exec_time is None:
+            return None
+
+        total = timedelta(0, self.exec_time * self.rounds)
+        if self.start_date is not None:
+            elapsed = timedelta(seconds=(datetime.now() - self.start_date).total_seconds())
+        else:
+            elapsed = timedelta(0)
+        return total - elapsed
+
     def __str__(self):
         string = "{}: {}: {} run(s)".format(self.commit, self.benchmark, self.rounds)
-        if self.start_date is not None:
-            string += "(started {} ago)".format(datetime.now() - self.start_date)
+
+        if self.exec_time is not None:
+            total_delta = timedelta(0, self.exec_time * self.rounds)
+
+            if self.start_date is not None:
+                elapsed = timedelta(seconds=(datetime.now() - self.start_date).total_seconds())
+                progress = elapsed.total_seconds() * 100 / total_delta.total_seconds()
+
+                seconds_left=timedelta(seconds=int((total_delta - elapsed).total_seconds()))
+                string += "({:.2f}%, {}s remaining)".format(progress, seconds_left)
+            else:
+                string += "(estimated exec time: {}s)".format(timedelta(0, int(total_delta.total_seconds())))
+        else:
+            if self.start_date is not None:
+                string += "(started {} ago)".format(datetime.now() - self.start_date)
+            else:
+                string += "(no estimation available)"
+
         return string
 
 class SmartEzbench:
@@ -679,9 +720,17 @@ class SmartEzbench:
 
     def task_info(self):
         self._task_lock.acquire()
-        tl = self._task_list
-        c = self._task_current
+        tl = copy.deepcopy(self._task_list)
+        c = copy.deepcopy(self._task_current)
         self._task_lock.release()
+
+        db = TimingsDB(self.ezbench_dir + "/timing_DB")
+
+        if c is not None:
+            c.set_timing_information(db)
+        if tl is not None:
+            for t in tl:
+                t.set_timing_information(db)
         return c, tl
 
     def __prioritize_runs(self, task_tree, deployed_version):
