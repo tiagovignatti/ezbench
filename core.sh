@@ -107,6 +107,11 @@ function run_bench {
     local test_exec_time=$(echo "$time_after - $time_before" | bc -l)
     callIfDefined run_bench_post_hook
 
+    # If the test does not have subtests, then store the execution time
+    if [ -z "$benchSubtests" ]; then
+        "$ezBenchDir/timing_DB/timing.py" -n benchmark -k "$benchName" -a $test_exec_time
+    fi
+
     if [ -f "$env_dump_path" ]; then
         $ezBenchDir/utils/env_dump/env_dump_extend.sh "$SHA1_DB" "$run_log_file.env_dump"
     fi
@@ -435,6 +440,11 @@ for (( t=0; t<${#testsList[@]}; t++ )); do
                 testPrevFps[$total_tests]=$(cat "$last_result")
             fi
             unset last_result
+
+            time=$("$ezBenchDir/timing_DB/timing.py" -n benchmark -k "${availTestNames[$a]}" -r median 2> /dev/null)
+            if [ -n "$time" ] && [[ "$time" != "-1" ]]; then
+                availTestExecTime[$a]=$time
+            fi
 
             total_round_time=$(dc <<<"$total_round_time ${availTestExecTime[$a]} +p")
         fi
