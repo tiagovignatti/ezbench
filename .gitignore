@@ -2,5 +2,7 @@
 *.so
 __pycache__
 
+builds/
 logs/
+SHA1_DB/db/
 user_parameters.sh
