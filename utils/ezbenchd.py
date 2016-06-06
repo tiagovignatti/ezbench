@@ -90,10 +90,27 @@ def setup_http_server(bind_ip = "0.0.0.0", port = 8080):
 </head>
 
 <%
+    from datetime import timedelta
+
     report = sbench.report(cached_only = True)
     mode = sbench.running_mode().name
 
     task_cur, task_list = sbench.task_info()
+
+    total_time_left = 0
+    if task_cur is not None:
+        time = task_cur.remaining_seconds()
+        if time is not None:
+            total_time_left += time.total_seconds()
+
+    if task_list is not None:
+        for task in task_list:
+            if task is None:
+                continue
+            time = task.remaining_seconds()
+            if time is not None:
+                total_time_left += time.total_seconds()
+    total_time_left = timedelta(seconds=int(total_time_left))
 %>
 
 <body>
@@ -128,6 +145,7 @@ def setup_http_server(bind_ip = "0.0.0.0", port = 8080):
     <li>Unknown task list</li>
     % endif
     </ul></p>
+    <p>Total remaining time: ${total_time_left}s</p>
 
     <h2>Events</h2>
     <ul>
