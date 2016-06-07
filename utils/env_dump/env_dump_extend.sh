@@ -28,8 +28,13 @@ function get_binary_version() {
 	else
 		# We did not find the file, add it to the sha1 DB. First check if it was
 		# provided by the distro
-		if [[ $distro =~ ^Ubuntu ]]; then
+		if [[ "$distro" =~ ^Ubuntu ]]; then
 			pkg=$(dpkg -S $filename 2> /dev/null | cut -d ':' -f 2 | xargs)
+		elif [[ "$distro" =~ ^Fedora || "$distro" == hif ]]; then
+			pkg=$(rpm -qf $filename 2> /dev/null)
+			if [ $? -ne 0 ]; then
+				pkg=''
+			fi
 		else
 			pkg=$(pkcon search file $filename 2> /dev/null | grep Installed | xargs | cut -d ' ' -f 2)
 		fi
