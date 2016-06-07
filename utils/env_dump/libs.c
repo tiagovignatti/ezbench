@@ -281,13 +281,17 @@ const char *symbol_key_str[SYMB_END] = {
 	"eglSwapBuffers",
 	"glXMakeCurrent",
 	"eglMakeCurrent",
+	"dlsym",
 };
+
+
 
 extern void *_dl_sym(void *, const char *, void *);
 void *
 _env_dump_resolve_symbol_by_name(const char *symbol)
 {
 	void *ret = NULL, *tmp_ret = NULL;
+	void *(*orig_dlsym)(void *handle, const char *symbol);
 	int i;
 
 	pthread_mutex_lock(&symbols_mp);
@@ -299,19 +303,20 @@ _env_dump_resolve_symbol_by_name(const char *symbol)
 			break;
 		}
 	}
-
 	pthread_mutex_unlock(&symbols_mp);
 
+	if (ret)
+		return ret;
+
 	/* Then try to see if there is another version somewhere else */
-	if (ret == NULL)
-		ret = _dl_sym(RTLD_NEXT, symbol, _env_dump_resolve_symbol_by_name);
+	orig_dlsym = _env_dump_resolve_symbol_by_id(SYMB_DLSYM);
+	ret = orig_dlsym(RTLD_NEXT, symbol);
 
 	if (ret == NULL) {
 		/* Try to resolve the symbol from the local handles */
 		pthread_mutex_lock(&found_so_list_mp);
 		for (i = 0; i < dlopen_local_handles_count; i++) {
-			tmp_ret = _dl_sym(dlopen_local_handles[i], symbol,
-						  _env_dump_resolve_symbol_by_name);
+			tmp_ret = orig_dlsym(dlopen_local_handles[i], symbol);
 			if (tmp_ret) {
 				if (ret == NULL || ret == tmp_ret)
 					ret = tmp_ret;

@@ -80,6 +80,7 @@ enum symbol_key_t {
 	SYMB_EGLSWAPBUFFERS,
 	SYMB_GLXMAKECURRENT,
 	SYMB_EGLMAKECURRENT,
+	SYMB_DLSYM,
 	SYMB_END
 }; /* do not forget to duplicate the name in libs.c's symbol_key_str */
 
