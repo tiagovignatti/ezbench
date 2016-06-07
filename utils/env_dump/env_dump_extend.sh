@@ -53,8 +53,8 @@ function resolve_SHA1() {
 
 	# Try to get the name of the distro from lsb-release, revert to pkcon if not
 	# available
-	distro=$(grep DISTRIB_ID /etc/lsb-release 2> /dev/null | cut -d '=' -f2)
-	distro_version=$(grep DISTRIB_RELEASE /etc/lsb-release 2> /dev/null | cut -d '=' -f2)
+	distro=$(lsb_release -si 2> /dev/null)
+	distro_version=$(lsb_release -sr 2> /dev/null)
 	if [ -z "$distro" ]
 	then
 		distro=$(pkcon backend-details 2> /dev/null | grep Name | xargs | cut -d ' ' -f 2)
