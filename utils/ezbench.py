@@ -49,8 +49,10 @@ import os
 import re
 
 # Import ezbench from the timings/ folder
-ezbench_dir = os.path.abspath(sys.path[0]+"/..")
-sys.path.append(ezbench_dir + '/timing_DB/')
+timing_dir = os.path.abspath(sys.path[0]+"/../timing_DB/")
+if not os.path.isdir(timing_dir):
+    timing_dir = os.path.abspath(sys.path[0]+"/timing_DB/")
+sys.path.append(timing_dir)
 from timing import *
 
 # Ezbench runs
