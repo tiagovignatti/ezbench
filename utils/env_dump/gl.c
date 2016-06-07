@@ -241,6 +241,7 @@ eglMakeCurrent(EGLDisplay display, EGLSurface draw, EGLSurface read,
 	EGLBoolean (*orig_eglMakeCurrent)(Display *, EGLSurface,
 					  EGLSurface, EGLContext);
 	char const *(*orig_eglQueryString)(EGLDisplay, EGLint);
+	EGLenum (*orig_eglQueryAPI)(void);
 	EGLBoolean ret = False;
 	EGLenum api;
 	int entry_count, i;
@@ -249,6 +250,7 @@ eglMakeCurrent(EGLDisplay display, EGLSurface draw, EGLSurface read,
 
 	orig_eglMakeCurrent = _env_dump_resolve_symbol_by_id(SYMB_EGLMAKECURRENT);
 	orig_eglQueryString = _env_dump_resolve_symbol_by_name("eglQueryString");
+	orig_eglQueryAPI = _env_dump_resolve_symbol_by_name("eglQueryAPI");
 
 	ret = orig_eglMakeCurrent(display, draw, read, context);
 	if (_env_ignored || ret == False)
@@ -278,7 +280,7 @@ eglMakeCurrent(EGLDisplay display, EGLSurface draw, EGLSurface read,
 		orig_eglQueryString(display, EGL_EXTENSIONS));
 
 	/* dump the gl-related informations */
-	api = eglQueryAPI();
+	api = orig_eglQueryAPI();
 	if (api == EGL_OPENGL_API || api == EGL_OPENGL_ES_API)
 		dump_gl_info();
 
