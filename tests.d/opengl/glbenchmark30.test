@@ -85,6 +85,8 @@ done<<EOL
         GLB30:Manhattan gl_manhattan
         GLB30:Manhattan31 gl_manhattan31
         GLB30:ALU gl_alu
+        GLB30:Fill gl_fill
+        GLB30:Blending gl_blending
         GLB30:Driver gl_driver
 EOL
 test_exec_time=70
