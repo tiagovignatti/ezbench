@@ -35,6 +35,7 @@
 #       - 0: No errors, the execution ran as expected
 #       - 1: Unknown error
 #       - 5: An instance of core.sh is already running
+#       - 6: The report is locked
 #
 #   Argument parsing:
 #       - 11: Need a profile name after the -P option
@@ -608,6 +609,13 @@ fi
 # Execute the user-defined environment deployment hook
 callIfDefined ezbench_env_deploy_hook
 
+# Lock the report, to let smart-ezbench know if the report really is being used
+(
+flock -w 0.1 -x 201 || {
+        echo "ERROR: the report is being locked even though no other instance of core should be running"
+        exit 6
+    }
+
 # Iterate through the versions
 for version in $versionList
 do
@@ -739,6 +747,8 @@ do
     fi
     echo
 done
+
+) 201>"$logsFolder/lock"
 
 rm $abortFile 2> /dev/null
 if [ $? -eq 0 ]; then
