@@ -59,6 +59,8 @@ from timing import *
 class EzbenchExitCode(Enum):
     UNKNOWN = -1
     NO_ERROR = 0
+    UNKNOWN_ERROR = 1
+    CORE_ALREADY_RUNNING = 5
     ARG_PROFILE_NAME_MISSING = 11
     ARG_PROFILE_INVALID = 12
     ARG_OPTARG_MISSING = 13

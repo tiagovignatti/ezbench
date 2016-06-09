@@ -31,6 +31,11 @@
 # - Chris Wilson <chris@chris-wilson.co.uk>
 
 # Error codes:
+#   Core Ezbench:
+#       - 0: No errors, the execution ran as expected
+#       - 1: Unknown error
+#       - 5: An instance of core.sh is already running
+#
 #   Argument parsing:
 #       - 11: Need a profile name after the -P option
 #       - 12: The profile does not exist
@@ -188,6 +193,9 @@ profile="default"
 list_built_versions=0
 while getopts "$optString" opt; do
     case "$opt" in
+    k)
+        dry_run=1
+        ;;
     P)  profile=$OPTARG
         ;;
     L)  list_built_versions=1
@@ -198,6 +206,15 @@ while getopts "$optString" opt; do
       ;;
     esac
 done
+
+# Lock core.sh against parallel executions
+(
+if [ -z "$dry_run" ]; then
+    flock -w 0.1 -x 200 || {
+        echo "ERROR: core.sh is already running (or flock is missing)"
+        exit 5
+    }
+fi
 
 # Check if the profile exists
 profileDir="$ezBenchDir/profiles.d/$profile"
@@ -731,3 +748,5 @@ fi
 endTime=$(date +%s)
 runtime=$((endTime-startTime))
 printf "Actual run time: %02dh:%02dm:%02ds\n\n" $((runtime/3600)) $((runtime%3600/60)) $((runtime%60))
+
+) 200>"$ezBenchDir/lock"
