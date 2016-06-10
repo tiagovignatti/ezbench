@@ -39,6 +39,8 @@ struct metric_t {
 	char *path;
 	float factor;
 	float offset;
+
+	double prev_timestamp_ms;
 };
 
 /* Not protected by a mutex because it is not changed after the initial
@@ -57,6 +59,9 @@ metric_add(char *name, char *path, float factor, float offset)
 	metrics[metrics_count].path = path;
 	metrics[metrics_count].factor = factor;
 	metrics[metrics_count].offset = offset;
+
+
+	metrics[metrics_count].prev_timestamp_ms = 0;
 	metrics_count++;
 }
 
@@ -221,12 +226,13 @@ add_rapl()
 }
 
 static float
-poll_metric(struct metric_t *metric)
+poll_metric(struct metric_t *metric, double timestamp_ms)
 {
 	long long val = _env_dump_read_file_intll(metric->path, 10);
 	if (val == -1)
 		return 0;
 
+	metric->prev_timestamp_ms = timestamp_ms;
 	return (val - metric->offset) * metric->factor;
 }
 
@@ -248,10 +254,14 @@ polling_thread(void *arg)
 
 	/* poll all the metrics */
 	while (1) {
+		double timestamp_ms;
+
 		clock_gettime(CLOCK_REALTIME, &ts);
-		fprintf(file, "%.0f", difftime(ts.tv_sec, 0) * 1000 + ts.tv_nsec / 1e6);
+		timestamp_ms = difftime(ts.tv_sec, 0) * 1000 + ts.tv_nsec / 1e6;
+
+		fprintf(file, "%.0f", timestamp_ms);
 		for (i = 0; i < metrics_count; i++)
-			fprintf(file, ",%.2f", poll_metric(&metrics[i]));
+			fprintf(file, ",%.2f", poll_metric(&metrics[i], timestamp_ms));
 		fprintf(file, "\n");
 
 		/* wait a 100ms and make the thread cancellable during this wait  */
