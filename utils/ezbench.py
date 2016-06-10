@@ -246,6 +246,30 @@ class Ezbench:
         ezbench_cmd, ezbench_stdin = self.__ezbench_cmd_base(list_built_versions = True)
         return self.__run_ezbench(ezbench_cmd, ezbench_stdin).versions
 
+    def reportIsLocked(self):
+        if self.report_name is None:
+            return False
+
+        lockFileName = "{}/logs/{}/lock".format(self.ezbench_dir, self.report_name)
+
+        try:
+            with open(lockFileName, 'w') as lock_fd:
+                try:
+                    fcntl.flock(lock_fd, fcntl.LOCK_EX|fcntl.LOCK_NB)
+                except IOError:
+                    return True
+
+                try:
+                    fcntl.flock(lock_fd, fcntl.LOCK_UN)
+                except Exception as e:
+                    pass
+
+                return False
+        except Exception:
+            return False
+            pass
+
+
 # Test sets, needed by SmartEzbench
 class Testset:
     def __init__(self, filepath, name):
@@ -478,6 +502,12 @@ class SmartEzbench:
             self.__log(Criticality.II,
                     "Created report '{report_name}' in {log_folder}".format(report_name=report_name,
                                                                             log_folder=self.log_folder))
+
+        # Set the state to RUN if the mode is RUNNING but it is not currently running
+        if (self.state['mode'] == RunningMode.RUNNING.value and
+            not Ezbench(self.ezbench_dir, report_name=self.report_name).reportIsLocked()):
+                self.set_running_mode(RunningMode.RUN)
+
 
     def __log(self, error, msg):
         time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
