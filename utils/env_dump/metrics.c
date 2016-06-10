@@ -135,6 +135,22 @@ add_hwmon()
 	closedir(dir);
 }
 
+static float
+rapl_process_value(struct metric_t *metric, double timestamp_ms,
+                   float calibrated_value)
+{
+	if (metric->prev_timestamp_ms == 0) {
+		return 0;
+	} else {
+		double time_diff_ms = timestamp_ms - metric->prev_timestamp_ms;
+		float val_diff = calibrated_value - metric->prev_value;
+
+		fprintf(stderr, "%s: %f J in %f ms\n", metric->name, val_diff, time_diff_ms);
+
+		return val_diff * 1000 / time_diff_ms;
+	}
+}
+
 static int
 add_rapl_device(const char *rapl_dir, int dev_id, const char *parent_base_name)
 {
@@ -163,7 +179,7 @@ add_rapl_device(const char *rapl_dir, int dev_id, const char *parent_base_name)
 		sprintf(base_name, "%s.%s", parent_base_name, block_name);
 	}
 	metric_name = malloc(strlen(base_name) + 4 + 1);
-	sprintf(metric_name, "%s (J)", base_name);
+	sprintf(metric_name, "%s (W)", base_name);
 
 	free(block_name);
 
@@ -194,7 +210,7 @@ add_rapl_device(const char *rapl_dir, int dev_id, const char *parent_base_name)
 	/* Add the metric */
 	snprintf(path, 4096, "%s/energy_uj", rapl_dir);
 	val = _env_dump_read_file_intll(path, 10);
-	metric_add(metric_name, strdup(path), 1e-6, val, NULL);
+	metric_add(metric_name, strdup(path), 1e-6, val, rapl_process_value);
 
 	/* Find all the subdevices */
 	if (parent_base_name == NULL) {
