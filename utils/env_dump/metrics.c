@@ -39,6 +39,8 @@ struct metric_t {
 	char *path;
 	float factor;
 	float offset;
+	float (*process)(struct metric_t *metric, double timestamp_ms,
+	                 float calibrated_value);
 
 	double prev_timestamp_ms;
 	float prev_value;
@@ -53,13 +55,15 @@ uint32_t metrics_count = 0;
 FILE *output_file;
 
 static void
-metric_add(char *name, char *path, float factor, float offset)
+metric_add(char *name, char *path, float factor, float offset,
+		   float (*process)(struct metric_t *metric, double, float))
 {
 	metrics = realloc(metrics, sizeof(struct metric_t) * (metrics_count + 1));
 	metrics[metrics_count].name = name;
 	metrics[metrics_count].path = path;
 	metrics[metrics_count].factor = factor;
 	metrics[metrics_count].offset = offset;
+	metrics[metrics_count].process = process;
 
 	metrics[metrics_count].prev_timestamp_ms = 0;
 	metrics[metrics_count].prev_value = 0.0;
@@ -102,7 +106,7 @@ add_hwmon_device(const char *hwmon_dir)
 				free(label);
 			}
 
-			metric_add(metric_name, input_file, factor[f], 0);
+			metric_add(metric_name, input_file, factor[f], 0, NULL);
 		}
 	}
 
@@ -190,7 +194,7 @@ add_rapl_device(const char *rapl_dir, int dev_id, const char *parent_base_name)
 	/* Add the metric */
 	snprintf(path, 4096, "%s/energy_uj", rapl_dir);
 	val = _env_dump_read_file_intll(path, 10);
-	metric_add(metric_name, strdup(path), 1e-6, val);
+	metric_add(metric_name, strdup(path), 1e-6, val, NULL);
 
 	/* Find all the subdevices */
 	if (parent_base_name == NULL) {
@@ -230,16 +234,20 @@ static float
 poll_metric(struct metric_t *metric, double timestamp_ms)
 {
 	long long val = _env_dump_read_file_intll(metric->path, 10);
-	float calib_val;
+	float calib_val, final_val;
 
 	if (val == -1)
 		return 0;
 
-	metric->prev_timestamp_ms = timestamp_ms;
 	calib_val = (val - metric->offset) * metric->factor;
+	if (metric->process)
+		final_val = metric->process(metric, timestamp_ms, calib_val);
+	else
+		final_val = calib_val;
+	metric->prev_timestamp_ms = timestamp_ms;
 	metric->prev_value = calib_val;
 
-	return calib_val;
+	return final_val;
 }
 
 static void *
