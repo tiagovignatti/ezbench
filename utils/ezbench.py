@@ -1350,6 +1350,11 @@ class BenchResult:
     def add_metrics(self, metric_file):
         values = dict()
         with open(metric_file, 'rt') as f:
+
+            # Do not try to open files bigger than 1MB
+            if os.fstat(f.fileno()).st_size > 1e6:
+                raise ValueError('The metric file is too big (> 1MB)')
+
             reader = csv.DictReader(f)
             try:
                 # Collect stats about each metrics
@@ -2041,7 +2046,10 @@ def genPerformanceReport(log_folder, silentMode = False, restrict_to_commits = [
                 # Look for metrics!
                 metrics_re = re.compile(r'^{}.metrics_.+$'.format(runFile))
                 for metric_file in [f for f,t in testFiles[sha1] if metrics_re.search(f)]:
-                    result.add_metrics(metric_file)
+                    try:
+                        result.add_metrics(metric_file)
+                    except ValueError:
+                        pass
 
             # Add the result to the commit's results
             commit.results.append(result)
