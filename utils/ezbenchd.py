@@ -217,7 +217,7 @@ def setup_http_server(bind_ip = "0.0.0.0", port = 8080):
                 report_name = m.groups()[1]
                 args = m.groups()[2]
 
-                if cmd != "" and report_name != "":
+                if cmd != "" and report_name != "" and report_name in sbenches:
                     if cmd == "report":
                         return self.__serve_file__(report_name, "index.html", "text/html")
                     if cmd == "file":
