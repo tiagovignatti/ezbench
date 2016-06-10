@@ -41,6 +41,7 @@ struct metric_t {
 	float offset;
 
 	double prev_timestamp_ms;
+	float prev_value;
 };
 
 /* Not protected by a mutex because it is not changed after the initial
@@ -60,8 +61,8 @@ metric_add(char *name, char *path, float factor, float offset)
 	metrics[metrics_count].factor = factor;
 	metrics[metrics_count].offset = offset;
 
-
 	metrics[metrics_count].prev_timestamp_ms = 0;
+	metrics[metrics_count].prev_value = 0.0;
 	metrics_count++;
 }
 
@@ -229,11 +230,16 @@ static float
 poll_metric(struct metric_t *metric, double timestamp_ms)
 {
 	long long val = _env_dump_read_file_intll(metric->path, 10);
+	float calib_val;
+
 	if (val == -1)
 		return 0;
 
 	metric->prev_timestamp_ms = timestamp_ms;
-	return (val - metric->offset) * metric->factor;
+	calib_val = (val - metric->offset) * metric->factor;
+	metric->prev_value = calib_val;
+
+	return calib_val;
 }
 
 static void *
