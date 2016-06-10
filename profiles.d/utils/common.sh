@@ -110,7 +110,7 @@ function xserver_setup_start() {
 function xserver_setup_stop() {
     [[ $dry_run -eq 1 ]] && return
 
-    if [[ -n "$EZBENCH_VT_ORIG" ]]; then
+    if [[ -n "$EZBENCH_X_PID" ]]; then
         kill_random_pid $EZBENCH_X_PID
         unset EZBENCH_X_PID
     fi
