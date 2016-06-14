@@ -12,11 +12,9 @@ hash bc 2> /dev/null || return 1
 function __mpv__ {
     cd $VIDEOS_FOLDER # Set this variable in user_paramaters.sh
 
-    before=$(date +%s.%N)
     output=$(vblank_mode=0 ENV_DUMP_RESTRICT_TO_BINARY="$mpv_path" \
              run_bench 0 $mpv_path --no-audio --untimed --hwdec $1 --vo $2 $3 \
              $4 2> /dev/null)
-    after=$(date +%s.%N)
     if [ -z $(echo "$output" | grep "Video: no video") ]; then
         echo "$output" | grep "EZBENCH:test_exec_time:" | cut -d : -f 3
     else
