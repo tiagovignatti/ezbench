@@ -1,0 +1,16 @@
+[ ! -f "$SHADERDB_FOLDER/run" ] && return 1
+
+function shaderdb_run() {
+    cd $SHADERDB_FOLDER # Set this variable in user_paramaters.sh
+
+    cmdline='./run shaders/'
+    hash xterm && cmdline="xterm -e 'echo $cmdline; $cmdline'"
+
+    vblank_mode=0 ENV_DUMP_RESTRICT_TO_BINARY="no_dumps"\
+    run_bench 0 $cmdline | grep "EZBENCH:test_exec_time:" | cut -d : -f 3
+}
+
+test_name="shaderdb"
+test_exec_time=15
+test_unit="s"
+test_invert=1

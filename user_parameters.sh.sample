@@ -109,6 +109,9 @@ CAIRO_DEMOS=/opt/benchmarks/cairo-demos
 # cairo-traces repo. Make sure you ran make there before running benchmarks
 CAIRO_TRACES="/opt/benchmarks//cairo-traces"
 
+# Shader-db
+SHADERDB_FOLDER=/opt/benchmarks/shader-db
+
 # Chrome telemetry
 TELEMETRY_FOLDER="/opt/benchmarks/telemetry"
 CHROME_PATH="/opt/google/chrome/chrome"
