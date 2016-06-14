@@ -22,7 +22,7 @@ function __piglit_run__ {
 
     # start piglit
     local cmdline="./piglit run -p $backend $PIGLIT_RUN_PARAMS $testlist $testscript ${piglit_output}"
-    hash xterm && cmdline="xterm -e 'echo $cmdline; $cmdline'"
+    hash xterm && cmdline="xterm -geometry +0+300 -e 'echo $cmdline; $cmdline'"
 
     ENV_DUMP_RESTRICT_TO_BINARY=/usr/bin/glxinfo \
     run_bench 0 $cmdline > /dev/null 2> /dev/null
