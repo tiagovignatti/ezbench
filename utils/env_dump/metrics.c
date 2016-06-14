@@ -145,8 +145,6 @@ rapl_process_value(struct metric_t *metric, double timestamp_ms,
 		double time_diff_ms = timestamp_ms - metric->prev_timestamp_ms;
 		float val_diff = calibrated_value - metric->prev_value;
 
-		fprintf(stderr, "%s: %f J in %f ms\n", metric->name, val_diff, time_diff_ms);
-
 		return val_diff * 1000 / time_diff_ms;
 	}
 }
