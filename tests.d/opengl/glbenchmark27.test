@@ -1,7 +1,9 @@
 GLB27=$(realpath ${GLBENCHMARK27_PATH:-${GLBENCHMARK27_FOLDER}/build_x86_64/binaries/GLBenchmark} 2> /dev/null)
 GLB27_DATA=$(realpath ${GLBENCHMARK27_DATA:-${GLBENCHMARK27_FOLDER}/data} 2> /dev/null)
 
-test -e ${GLB27} || return 1
+if [ -z "${GLB27}" ] || [ ! -e "${GLB27}" ]; then
+	return 1
+fi
 hash unbuffer 2>/dev/null || return 1
 
 # Output:
