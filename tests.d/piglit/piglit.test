@@ -79,6 +79,7 @@ backends=$($REPO_PIGLIT/piglit run -h | grep "^  -p" | cut -d '{' -f 2 | cut -d 
 for backend in $backends; do
     for test_script in $REPO_PIGLIT/tests/*.py; do
         [ "$(basename $test_script)" == "__init__.py" ] && continue
+        [ "$(basename $test_script)" == "igt.py" ] && continue
 
         name="piglit:$backend:$(basename ${test_script} | cut -d '.' -f 1)"
         eval "${name}_run() { __piglit_run__ $backend $test_script \$@; }"
