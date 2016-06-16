@@ -26,9 +26,9 @@ function __compile__archlinux__() {
 
 function __compile__ubuntu__() {
     deploy_dir="$(profile_repo_deployment_version_dir)"
-    sudo cp arch/x86_64/boot/bzImage "$deploy_dir/boot/vmlinuz-linux-ezbench" || return 72
+    sudo cp arch/x86_64/boot/bzImage "$deploy_dir/boot/linux-ezbench" || return 72
     sudo update-initramfs -c -t -k "$kernel_id" || return 72
-    sudo mv /boot/initrd.img-$kernel_id "$deploy_dir/boot/vmlinuz-linux-ezbench_initrd.img" || return 72
+    sudo mv /boot/initrd.img-$kernel_id "$deploy_dir/boot/linux-ezbench_initrd.img" || return 72
     return 0
 }
 
