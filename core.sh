@@ -538,6 +538,8 @@ function compile_and_deploy {
     # $version     [RO]: SHA1 id of the current version
     # $versionName [RO]: Name of the version
 
+    profile_repo_get_patch $version > "$logsFolder/$1.patch"
+
     # early exit if the deployed version is the wanted version
     deployed_version=$(profile_repo_deployed_version)
 
@@ -551,8 +553,6 @@ function compile_and_deploy {
     [ $? -eq 0 ] && [[ "$deployed_version" =~ "$version" ]] && return 0
 
     compile_logs=$logsFolder/${version}_compile_log
-
-    profile_repo_get_patch $version > "$logsFolder/$1.patch"
 
     # Compile the version and check for failure. If it failed, go to the next version.
     export REPO_COMPILE_AND_DEPLOY_VERSION=$version
