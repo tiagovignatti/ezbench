@@ -70,14 +70,13 @@ function profile_repo_version_to_human() {
    GIT_DIR="$repoDir/.git" git show --format="%h %s" -s "$1"
 }
 
-# Print the version pointed by the tip of the repo (HEAD for git for example)
-# Only mandatory if your repo supports compiling/deploying versions
+# Print on stdout the patch for the version id given as a parameter
 # Inputs:
 #   - $repoDir
 #   - $1 = version to get the patch for
 function profile_repo_get_patch() {
     [ -z "$1" ] && { echo "ERROR: No version specified"; return 71; }
-    GIT_DIR="$repoDir/.git" git format-patch $1 --format=fuller --stdout
+    GIT_DIR="$repoDir/.git" git show $1 --format=fuller
 }
 
 # MANDATORY: Check the list of versions to test as provided by the user and
