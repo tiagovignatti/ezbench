@@ -1032,13 +1032,21 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument("--title", help="Set the title for the report")
 	parser.add_argument("--unit", help="Set the output unit (Default: FPS)")
-	parser.add_argument("--output", help="Report html file path", required=True)
+	parser.add_argument("--output", help="Report html file path")
 	parser.add_argument("--commit_url", help="HTTP URL pattern, {commit} contains the SHA1")
 	parser.add_argument("--quiet", help="Be quiet when generating the report", action="store_true")
 	parser.add_argument("--reference", help="Compare the benchmarks to this reference report")
 	parser.add_argument("--restrict_commits", help="Restrict commits to this list (space separated)")
 	parser.add_argument("log_folder", nargs='+')
 	args = parser.parse_args()
+
+	# Set the output folder if not set
+	if args.output is None:
+		if len(args.log_folder) == 1:
+			args.output = "{}/index.html".format(args.log_folder[0])
+		else:
+			print("Error: The output html file has to be specified when comparing multiple reports!")
+			sys.exit(1)
 
 	# Restrict the report to this list of commits
 	restrict_commits = []
