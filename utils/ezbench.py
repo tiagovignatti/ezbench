@@ -722,13 +722,12 @@ class SmartEzbench:
         self.__save_state()
         self.__release_lock()
 
-    def force_benchmark_rounds(self, commit, benchmark, at_least):
+    def __force_benchmark_rounds_unlocked__(self, commit, benchmark, at_least):
         if at_least < 1:
             return 0
         else:
             at_least = int(at_least)
 
-        self.__reload_state(keep_lock=True)
         if commit not in self.state['commits']:
             self.state['commits'][commit] = dict()
             self.state['commits'][commit]["benchmarks"] = dict()
@@ -744,14 +743,19 @@ class SmartEzbench:
                        "Schedule {} more runs for the benchmark {} on commit {}".format(to_add, benchmark, commit))
 
             self.state['commits'][commit]['benchmarks'][benchmark]['rounds'] += to_add
-            self.__save_state()
-
-        self.__release_lock()
 
         if to_add > 0:
             return to_add
         else:
             return 0
+
+    def force_benchmark_rounds(self, commit, benchmark, at_least):
+        self.__reload_state(keep_lock=True)
+        ret = self.__force_benchmark_rounds_unlocked__(commit, benchmark, at_least)
+        self.__save_state()
+        self.__release_lock()
+
+        return ret
 
     def task_info(self):
         self._task_lock.acquire()
@@ -1012,12 +1016,12 @@ class SmartEzbench:
         return r
 
     def __find_middle_commit__(self, git_history, old, new):
-        if not hasattr(self.__find_middle_commit__, "cache"):
-            self.__find_middle_commit__.cache = dict()
+        if not hasattr(self, "__find_middle_commit__cache"):
+            self.__find_middle_commit__cache = dict()
 
         key = "{}->{}".format(old, new)
-        if key in self.__find_middle_commit__.cache:
-            return self.__find_middle_commit__.cache[key]
+        if key in self.__find_middle_commit__cache:
+            return self.__find_middle_commit__cache[key]
 
         old_idx = git_history.index(old)
         new_idx = git_history.index(new)
@@ -1027,7 +1031,7 @@ class SmartEzbench:
         else:
             middle = None
 
-        self.__find_middle_commit__.cache[key] = middle
+        self.__find_middle_commit__cache[key] = middle
         return middle
 
     # WARNING: benchmark may be None!
