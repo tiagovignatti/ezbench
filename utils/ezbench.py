@@ -1012,14 +1012,23 @@ class SmartEzbench:
         return r
 
     def __find_middle_commit__(self, git_history, old, new):
+        if not hasattr(self.__find_middle_commit__, "cache"):
+            self.__find_middle_commit__.cache = dict()
+
+        key = "{}->{}".format(old, new)
+        if key in self.__find_middle_commit__.cache:
+            return self.__find_middle_commit__.cache[key]
+
         old_idx = git_history.index(old)
         new_idx = git_history.index(new)
         middle_idx = int(old_idx - ((old_idx - new_idx) / 2))
         if middle_idx != old_idx and middle_idx != new_idx:
             middle = git_history[middle_idx]
-            return middle
         else:
-            return None
+            middle = None
+
+        self.__find_middle_commit__.cache[key] = middle
+        return middle
 
     # WARNING: benchmark may be None!
     def __score_event__(self, git_history, commit_sha1, benchmark, severity):
