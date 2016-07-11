@@ -819,8 +819,10 @@ dataTable.addRows([['${benchmark}', '${report1.name}', ${perf_diff}, "${r1.avera
 							<th>Target</th>
 							%endif
 							% for commit in db["commits"]:
+							% if benchmark in db["commits"][commit]['reports'][report.name]:
 							<th>${commit}</th>
-							%endfor
+							% endif
+							% endfor
 
 							% for metric in sorted(db["metrics"][benchmark]):
 <% target_value = None %>\\
@@ -836,7 +838,8 @@ dataTable.addRows([['${benchmark}', '${report1.name}', ${perf_diff}, "${r1.avera
 									% endif
 								%endif
 								% for commit in db["commits"]:
-									% if (benchmark in db["commits"][commit]['reports'][report.name] and (metric == "default" or metric in db["commits"][commit]['reports'][report.name][benchmark].metrics)):
+									% if benchmark in db["commits"][commit]['reports'][report.name]:
+									% if metric == "default" or metric in db["commits"][commit]['reports'][report.name][benchmark].metrics:
 									<%
 										value, unit = db["commits"][commit]['reports'][report.name][benchmark].result(metric)
 									%>
@@ -849,6 +852,7 @@ dataTable.addRows([['${benchmark}', '${report1.name}', ${perf_diff}, "${r1.avera
 </td>
 									% else:
 										<td>N/A</td>
+									% endif
 									% endif
 								% endfor
 								</tr>
