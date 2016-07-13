@@ -1226,7 +1226,8 @@ class SmartEzbench:
             else:
                 self.__log(Criticality.DD, "No work scheduled using commit {}, try another one".format(commit))
             del tasks_sorted[-1]
-        self.__save_state()
+        if added > 0:
+            self.__save_state()
         self.__release_lock()
 
         self.__log(Criticality.II, "Done enhancing the report")
