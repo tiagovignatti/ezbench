@@ -6,3 +6,4 @@ builds/
 logs/
 SHA1_DB/db/
 user_parameters.sh
+lock
