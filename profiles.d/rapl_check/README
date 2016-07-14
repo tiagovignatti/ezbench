@@ -1,0 +1,65 @@
+# RAPL checker
+
+## Introduction
+
+The point of this profile is to check how accurate the power value reported by
+RAPL actually is, when compared to an actual power meter.
+
+Right now, only the Yokogawa WT310 power meter is supported as a comparaison.
+
+## Dependencies
+
+### Hardware
+- Having a yokogawa WT310 power meter connected in USB and properly configured.
+  See user_paramaters.sh for more information.
+
+### Software
+
+- Ezbench's core.sh properly configured to run benchmarks
+- Python3
+- Scipy/Numpy
+- Matplotlib with a GUI backend
+
+## How to?
+
+The following example shows you what you need to do to run test RAPL:
+
+    ./core.sh -P rapl_check -N MY_UNIQUE_NAME -r 1 -b $as_many_bencharks_as_possible
+    profiles.d/rapl_check/rapl_check.py -c logs/MY_UNIQUE_NAME/rapl_report
+
+This will take some time and then open a window containing the results.
+
+### Interpretating the results
+
+In the window created by rapl_check.py, you can see multiple plots:
+
+ - The raw power consumption reported by RAPL (package domain), and the system
+   power, as reported by the external power meter
+
+ - The normalized power consumptions. Same view as the raw view, except that
+   we substracted the average of each plot to every sample point. This should
+   make the two plots closely track each others
+
+ - The time correlation view allows checking if RAPL and the power meter are
+   in sync. Make sure that the highest value is aligned with the expected peak.
+
+   WARNING: If it is not aligned, you will need to add support for compensating
+   for this :s
+
+ - The difference histogram view allows visualising as an histogram the
+   difference between RAPL and the power meter. This allows to get an estimate
+   about how accurate the readings are and what is the margin of error for RAPL
+   at whatever percentile you want.
+
+ - The scaling factor view allows checking if the power output reported by the
+   power meter would be affine with the power reported by RAPL. As strong slope
+   in the regression line may indicate that the computer's power supply's
+   efficiency varies greatly depending on the power consumption.
+
+ - Finally, the last view takes the result of the previous view to show a
+   compensated version of the normalized power consumption. This view should
+   show the reported values by both RAPL and the power meter to be very close to
+   each others. Check out the difference in Joules and verify that it is close
+   to 0.
+
+That's all, folks!
